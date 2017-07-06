@@ -21,17 +21,42 @@ action="<?php echo $form_action_report; ?>" enctype="multipart/form-data">
      
     <div class="form-group">
         <label class="control-label col-md-3 col-sm-3 col-xs-12"> Category </label>
-        <div class="col-md-9 col-sm-9 col-xs-12">
+        <div class="col-md-7 col-sm-9 col-xs-12">
           <?php $js = "class='form-control' id='ccategory' tabindex='-1' style='width:100%;' "; 
            echo form_dropdown('ccategory', $category, isset($default['category']) ? $default['category'] : '', $js); ?>
         </div>
     </div>
     
-     <div class="form-group">
+    <div class="form-group">
         <label class="control-label col-md-3 col-sm-3 col-xs-12"> Manufacture </label>
-        <div class="col-md-9 col-sm-9 col-xs-12">
+        <div class="col-md-7 col-sm-9 col-xs-12">
           <?php $js = "class='form-control' id='cmanufacture' style='width:100%;'"; 
-           echo form_dropdown('cmanufacture', $manufacture, isset($default['manufacture']) ? $default['manufacture'] : '', $js); ?>
+         echo form_dropdown('cmanufacture', $manufacture, isset($default['manufacture']) ? $default['manufacture'] : '', $js); ?>
+        </div>
+    </div>
+    
+    <div class="form-group">
+        <label class="control-label col-md-3 col-sm-3 col-xs-12"> Branch </label>
+        <div class="col-md-7 col-sm-9 col-xs-12">
+          <?php $js = "class='form-control' id='cmanufacture' style='width:100%;'"; 
+         echo form_dropdown('cbranch', $branch_all, isset($default['branch']) ? $default['branch'] : '', $js); ?>
+        </div>
+    </div>
+    
+    <div class="form-group">
+        <label class="control-label col-md-3 col-sm-3 col-xs-12"> Period </label>
+        <div class="col-md-6 col-sm-6 col-xs-12">
+          <table>
+           <tr> 
+               <td>
+                   <?php $js = "class='form-control' id='cmonth' style='width:150px;'"; 
+                   echo form_dropdown('cmonth', $month, isset($default['month']) ? $default['month'] : '', $js); ?>
+               </td>
+               <td>
+                   <input class="form-control" name="tyear" type="number" maxlength="4" value="<?php echo date('Y'); ?>">
+               </td>
+           </tr>
+          </table>
         </div>
     </div>
     

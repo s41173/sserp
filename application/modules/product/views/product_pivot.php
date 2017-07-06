@@ -86,6 +86,12 @@
               } 
               
               function pstatus($val){ if ($val == 0){ return 'N'; }else{ return 'Y'; } }
+              
+               function qty($pid,$branch,$month,$year){
+                  
+                $st = new Stock_ledger_lib();  
+                return $st->get_qty($pid, $branch, $month, $year);  
+              }
 
 		      $i=1; 
 			  if ($reports)
@@ -100,10 +106,10 @@
                        <td class=\"strongs\">".strtoupper($res->name)."</td>
                        <td class=\"strongs\">".strtoupper($res->model)."</td>
                        <td class=\"strongs\">".$res->currency."</td>
-                       <td class=\"strongs\">".$res->qty."</td>
+                       <td class=\"strongs\">".qty($res->id, $branch_id, $month, $year)."</td>
                        <td class=\"strongs\">".$res->min_order."</td>
                        <td class=\"strongs\">".$res->price."</td>
-                       <td class=\"strongs\">".intval($res->discount/$res->price*100)."</td>
+                       <td class=\"strongs\">".@intval($res->discount/$res->price*100)."</td>
                        <td class=\"strongs\">".intval($res->price-$res->discount)."</td>
                 <td class=\"strongs\"> <img class=\"img_product\" src=\"".base_url().'images/product/'.$res->image."\"> </td>
 					   <td class=\"strongs\">".$res->dimension.' '.$res->dimension_class."</td> 

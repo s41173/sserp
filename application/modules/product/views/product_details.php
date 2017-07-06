@@ -38,6 +38,9 @@
 <tr> <td> <span class="left"> Color / Size </span> </td> <td> </td> <td> <span id="color"></span> </td> </tr>
 <tr> <td> <span class="left"> Weight (kg) </span> </td> <td> </td> <td> <span id="weight"></span> </td> </tr>
 <tr> <td> <span class="left"> Dimension - <span id="dimensionclass"></span> </span> </td> <td> </td> <td> <span id="dimension"></span> </td> </tr>
+
+<tr> <td> <span class="left"> Unit Cost </span> </td> <td> </td> <td> <span id="unitcost"> <strong></strong> </span> </td> </tr>
+<tr> <td> <span class="left"> Last Cost </span> </td> <td> </td> <td> <span id="lastcost"> <strong></strong> </span> </td> </tr>
 <tr> <td> <span class="left"> Price </span> </td> <td> </td> <td> <span id="price"> <strong></strong> </span> </td> </tr>
               </table>
               

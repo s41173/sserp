@@ -80,15 +80,17 @@ $(document).ready(function (e) {
 			   $("#category").html(res[1]+" / "+res[2]);
 			   $("#name").html(res[3]);
 			   $("#model").html(res[4]);
-			   $("#color").html(res[13]+" / "+res[14]);
-			   $("#weight").html(res[11]);
-			   $("#dimension").html(res[12]);
-			   $("#dimensionclass").html(res[10]);
-			   $("#price").html(res[7]);
+			   $("#color").html(res[12]+" / "+res[13]);
+			   $("#weight").html(res[10]);
+			   $("#dimension").html(res[11]);
+			   $("#dimensionclass").html(res[9]);
+			   $("#price").html(res[6]);
 			   $("#title_name").html(res[3]+" - "+res[4]);
-			   $("#proimage").attr("src",res[9]);
+			   $("#proimage").attr("src",res[8]);
+			   $("#unitcost").html(res[15]);
+			   $("#lastcost").html(res[16]);
 
-			   console.log(res[9]);
+			   console.log(res[15]);
 
 			//    $("#tphone_update").val(res[4]);
 			//    $('#ccity_update').val(res[5]).change();

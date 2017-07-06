@@ -164,6 +164,8 @@
 		<table border="0">
 			<tr> <td> Manufacture </td> <td> : </td> <td> <?php echo $manufacture; ?> </td> </tr>
             <tr> <td> Category </td> <td> : </td> <td> <?php echo $category; ?> </td> </tr>
+            <tr> <td> Branch / Outlet </td> <td> : </td> <td> <?php echo $branch; ?> </td> </tr>
+            <tr> <td> Period </td> <td> : </td> <td> <?php echo $month.'-'.$year; ?> </td> </tr>
 			<tr> <td> Run Date </td> <td> : </td> <td> <?php echo $rundate; ?> </td> </tr>
 			<tr> <td> Log </td> <td> : </td> <td> <?php echo $log; ?> </td> </tr>
 		</table>
@@ -219,6 +221,12 @@
               } 
               
               function pstatus($val){ if ($val == 0){ return 'N'; }else{ return 'Y'; } }
+              
+              function qty($pid,$branch,$month,$year){
+                  
+                $st = new Stock_ledger_lib();  
+                return $st->get_qty($pid, $branch, $month, $year);  
+              }
 			  		  
 		      $i=1; 
 			  if ($reports)
@@ -233,10 +241,10 @@
                        <td class=\"strongs\">".strtoupper($res->name)."</td>
                        <td class=\"strongs\">".strtoupper($res->model)."</td>
                        <td class=\"strongs\">".$res->currency."</td>
-                       <td class=\"strongs\">".$res->qty."</td>
+                       <td class=\"strongs\">".qty($res->id, $branch_id, $month, $year)."</td>
                        <td class=\"strongs\">".$res->min_order."</td>
                        <td class=\"strongs\">".$res->price."</td>
-                       <td class=\"strongs\">".intval($res->discount/$res->price*100)."</td>
+                       <td class=\"strongs\">".@intval($res->discount/$res->price*100)."</td>
                        <td class=\"strongs\">".intval($res->price-$res->discount)."</td>
                 <td class=\"strongs\"> <img class=\"img_product\" src=\"".base_url().'images/product/'.$res->image."\"> </td>
 					   <td class=\"strongs\">".$res->dimension.' '.$res->dimension_class."</td> 

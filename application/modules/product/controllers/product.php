@@ -27,9 +27,10 @@ class Product extends MX_Controller
         $this->period = new Period_lib();
         $this->period = $this->period->get();
         $this->stockledger = new Stock_ledger_lib();
+        $this->stock = new Stock_lib();
     }
 
-    private $properti, $modul, $title, $product, $wt, $branch, $conversi, $period, $stockledger;
+    private $properti, $modul, $title, $product, $wt, $branch, $conversi, $period, $stockledger, $stock;
     private $role, $category, $manufacture, $attribute, $attribute_product, $attribute_list, $currency;
 
     function index()
@@ -40,7 +41,7 @@ class Product extends MX_Controller
         
 //       $first_day_this_month = date('m-01-Y'); // hard-coded '01' for first day
 //       $last_day_this_month  = date('m-t-Y');
-//       
+       
 //       $last_day_april_2010 = date('m-t-Y', strtotime('April 21, 2010'));
 //       echo $last_day_april_2010;
     }
@@ -91,7 +92,10 @@ class Product extends MX_Controller
         $data['size'] = $this->attribute->combo_size();
         $data['currency'] = $this->currency->combo();
         $data['branch'] = $this->branch->combo();
+        $data['branch_all'] = $this->branch->combo_all();
         $data['array'] = array('','');
+        $data['month'] = combo_month();
+        $data['default']['month'] = $this->period->month;
         
 	// ---------------------------------------- //
  
@@ -356,9 +360,9 @@ class Product extends MX_Controller
 	$this->session->set_userdata('langid', $product->id);
         
         echo $product->sku.'|'. $this->category->get_name($product->category).'|'. $this->manufacture->get_name($product->manufacture).'|'.$product->name.'|'.$product->model.'|'.$product->currency.'|'.
-             $this->conversi->calculate($product->price).'|'.$product->qty.'|'.base_url().'images/product/'.$product->image.'|'.
+             idr_format($product->price).'|'.$product->qty.'|'.base_url().'images/product/'.$product->image.'|'.
              $product->dimension_class.'|'.$product->weight.'|'.$product->dimension.'|'.$product->color.'|'.$product->size.'|'.
-             $product->dimension;
+             $product->dimension.'|'. $this->conversi->calculate($this->stock->unit_cost($uid)).'|'. $this->conversi->calculate($this->stock->get_last_stock_price($uid));
     }
     
     // Fungsi update untuk menset texfield dengan nilai dari database
@@ -850,6 +854,11 @@ class Product extends MX_Controller
         $data['manufacture'] = $this->manufacture->get_name($this->input->post('cmanufacture'));
         $data['year'] = $this->input->post('tyear');
         $data['month'] = $this->input->post('cmonth');
+        
+        $data['branch_id'] = $this->input->post('cbranch');
+        $data['branch'] = $this->branch->get_name($this->input->post('cbranch'));
+        $data['month'] = $this->input->post('cmonth');
+        $data['year'] = $this->input->post('tyear');
 
 //        Property Details
         $data['company'] = $this->properti['name'];

@@ -161,6 +161,20 @@ class Stock_lib extends Custom_Model {
        return intval($res['qty']);
     }
     
+    function get_sum_amount_stock($pid)
+    {
+       $this->db->select('sum(qty*amount) as amount'); 
+       $this->db->where('product_id', $pid);
+       $res = $this->db->get($this->tableName)->row_array();  
+       return floatval($res['amount']);
+    }
+    
+    function unit_cost($pid){ 
+        
+        return round($this->get_sum_amount_stock($pid)/$this->get_sum_qty_stock($pid)); 
+        
+    }
+    
     function get_last_stock_price($pid) // fungsi get harga terakhir stock
     {
       $this->db->where('product_id', $pid);
