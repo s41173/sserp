@@ -136,7 +136,7 @@ class Product extends MX_Controller
         echo json_encode($datax, JSON_NUMERIC_CHECK);
     }
     
-    function get_list($target='titem',$type=null)
+    function get_list($target='titem',$branchid=null)
     {
         $this->acl->otentikasi1($this->title);
 
@@ -148,7 +148,9 @@ class Product extends MX_Controller
         $data['manufacture'] = $this->manufacture->combo_all();
         $data['branch'] = $this->branch->combo();
 
-        if (!$this->input->post('cbranch')){ $branch = $this->branch->get_branch_session(); }else{ $branch = $this->input->post('cbranch'); }
+        if ($branchid){ $branch = $branchid; }
+        elseif (!$this->input->post('cbranch')){ $branch = $this->branch->get_branch_session(); }
+        else{ $branch = $this->input->post('cbranch'); }
         $currency = $this->input->post('ccurrency');
         $brand = $this->input->post('cmanufacture');
         $category = $this->input->post('ccategory');

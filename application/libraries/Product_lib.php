@@ -140,6 +140,17 @@ class Product_lib extends Custom_Model {
            return $res->unit;
         }
     }
+    
+    function get_sku($id=null)
+    {
+        if ($id)
+        {
+           $this->db->select('sku');
+           $this->db->where('id', $id);
+           $res = $this->db->get('product')->row();
+           return $res->sku;
+        }
+    }
 
     function get_qty($id=null)
     {
