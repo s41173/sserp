@@ -61,6 +61,14 @@ class Branch_lib extends Main_model {
        if (!$this->session->userdata('branch')){ return $val->id; }else{ return $this->session->userdata('branch'); }
     }
     
+    function get_default_acc_branch()
+    {
+       $this->db->select($this->field); 
+       $this->db->where('defaults', 1);
+       $val = $this->db->get($this->tableName)->row();
+       return $val->stock_account; 
+    }
+    
     function get_branch_session()
     {
        if (!$this->session->userdata('branch')){ return null; }else{ return $this->session->userdata('branch'); }

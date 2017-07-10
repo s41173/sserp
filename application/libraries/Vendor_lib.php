@@ -8,6 +8,10 @@ class Vendor_lib extends Custom_Model {
         $this->tableName = 'vendor';
     }
 
+    protected $field = array('id', 'prefix', 'name', 'type', 'cp1', 'npwp', 'address', 'shipping_address', 'phone1', 'phone2',
+                             'fax', 'hp', 'email', 'website', 'city', 'zip', 'notes', 'status', 'acc_name', 'acc_no', 'bank', 
+                             'created', 'updated', 'deleted');
+    
     function valid_vendor($name=null)
     {
         $this->db->select('name');
@@ -60,7 +64,6 @@ class Vendor_lib extends Custom_Model {
         $this->db->select('id, name');
         $this->db->where('deleted', $this->deleted);
         $this->db->where('status', 1);
-        $data['options'][''] = '--';
         $val = $this->db->get($this->tableName)->result();
         foreach($val as $row){$data['options'][$row->id] = $row->name;}
         return $data; 

@@ -69,11 +69,6 @@ $(document).ready(function (e) {
 			{id:$(this).attr('data-id')},
 			function(result)
 			{
-			// 	 echo $product->sku.'|'.$product->category.'|'.$product->manufacture.'|'.$product->name.'|'.$product->model.'|'.$product->currency.'|'.
-            //  $product->branch_id.'|'.$product->price.'|'.$product->qty.'|'.base_url().'images/product/'.$product->image.'|'.
-            //  $product->dimension_class.'|'.$product->weight.'|'.$product->dimension.'|'.$product->color.'|'.$product->size.'|'.
-            //  $product->dimension;
-
 			   res = result.split("|");
 				
 			   $("#sku").html(res[0]);
@@ -89,14 +84,6 @@ $(document).ready(function (e) {
 			   $("#proimage").attr("src",res[8]);
 			   $("#unitcost").html(res[15]);
 			   $("#lastcost").html(res[16]);
-
-			   console.log(res[15]);
-
-			//    $("#tphone_update").val(res[4]);
-			//    $('#ccity_update').val(res[5]).change();
-			//    $("#tmail_update").val(res[6]);
-			//    $('#crole_update').val(res[7]).change();
-			//    $('#cbranch_update').val(res[9]).change();
 			   
 			}   
 		);
