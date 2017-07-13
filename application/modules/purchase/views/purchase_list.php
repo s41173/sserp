@@ -1,65 +1,73 @@
-<style type="text/css">@import url("<?php echo base_url() . 'css/style.css'; ?>");</style>
-<style type="text/css">@import url("<?php echo base_url() . 'development-bundle/themes/base/ui.all.css'; ?>");</style>
-<style type="text/css">@import url("<?php echo base_url() . 'css/jquery.fancybox-1.3.4.css'; ?>");</style>
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title> Purchase - List </title>
 
-<script type="text/javascript" src="<?php echo base_url();?>js/register.js"></script>
-<script type="text/javascript" src="<?php echo base_url();?>js/jquery-1.3.2.js"></script>
-<script type="text/javascript" src="<?php echo base_url();?>js/datetimepicker_css.js"></script>
-<script type="text/javascript" src="<?php echo base_url();?>/development-bundle/ui/ui.core.js"></script>
-<script type="text/javascript" src="<?php echo base_url();?>js/jquery.tools.min.js"></script>
-<script type="text/javascript" src="<?php echo base_url();?>js/hoverIntent.js"></script>
-<script type="text/javascript" src="<?php echo base_url();?>js/jquery.fancybox-1.3.4.pack.js"></script>
-<script type="text/javascript" src="<?php echo base_url();?> js/complete.js"></script> 
-<script type="text/javascript" src="<?php echo base_url();?>js/jquery.tablesorter.js"></script>
-<script type="text/javascript" src="<?php echo base_url();?>js/sortir.js"></script>
-<script type="text/javascript" src="<?php echo base_url();?>js/jquery.maskedinput-1.3.min.js"></script>
-<script type="text/javascript" src="<?php echo base_url();?>js/validate.js"></script> 
-<script type='text/javascript' src='<?php echo base_url();?>js/jquery.validate.js'></script>  
+<!-- Latest compiled and minified CSS -->
+<link rel="stylesheet" href="<?php echo base_url(); ?>js/bs/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+
+<!-- Latest compiled and minified JavaScript -->
+<script src="<?php echo base_url(); ?>js/bs/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+
+
+<script type="text/javascript" src="<?php echo base_url();?>js-old/register.js"></script>
+<script type="text/javascript" src="<?php echo base_url();?>js-old/jquery.min.js"></script>
+<!--<script type="text/javascript" src="<?php //echo base_url();?>js-old/complete.js"></script> -->
+<script type="text/javascript" src="<?php echo base_url();?>js-old/jquery.tablesorter.js"></script>
+<script type="text/javascript" src="<?php echo base_url();?>js-old/sortir.js"></script> 
 
 <script type="text/javascript">
 var uri = "<?php echo site_url('ajax')."/"; ?>";
 var baseuri = "<?php echo base_url(); ?>";
-</script>
+    
+$(document).ready(function() 
+    { 
+        $("#myTable").tablesorter(); 
+    } 
+); 
+    
+function closeWindow() {
+setTimeout(function() {
+window.close();
+}, 30000);
+}
+    
+</script>    
+    
+</head>
 
-<?php 
-		
-$atts1 = array(
-	  'class'      => 'refresh',
-	  'title'      => 'add cust',
-	  'width'      => '600',
-	  'height'     => '400',
-	  'scrollbars' => 'yes',
-	  'status'     => 'yes',
-	  'resizable'  => 'yes',
-	  'screenx'    =>  '\'+((parseInt(screen.width) - 600)/2)+\'',
-	  'screeny'    =>  '\'+((parseInt(screen.height) - 400)/2)+\'',
-);
+<body onload="closeWindow()">
+    
+<div class="container-fluid">
+    
+    <style type="text/css">
+        .border{ border: 0px solid red; }
+        .acctable{ width: 100%; margin: 25px 0 20px 0;  } 
+        .field{ margin: 10px;}
+    </style>
+    
+    <div class="row">
+        <div class="col-lg-12 border">
+        
+    <fieldset class="field"> <legend> Purchase List </legend>
+    <form name="modul_form" class="form-inline" method="post" action="">              
+              
+        
+    </form>
+    </fieldset>
 
-?>
-
-<div id="webadmin">
-<div class="title"> <?php $flashmessage = $this->session->flashdata('message'); ?> </div>
-<p class="message"> <?php echo ! empty($message) ? $message : '' . ! empty($flashmessage) ? $flashmessage : ''; ?> </p>
-
-<fieldset class="field"> <legend> Purchase List </legend>
-<form name="modul_form" class="myform" id="form" method="post" action="<?php echo $form_action; ?>">
-<table>
-	<tr> 
-			<td> <label for="tvendor"> Vendor </label> </td> <td>:</td>
-			<td> <input type="text" class="" name="tvendor" id="tcust" size="25" title="Vendor" /> &nbsp; 
-			<?php echo anchor_popup(site_url("vendor/get_list/"), '[ ... ]', $atts1); ?> </td>	
-			
-			<td> <label for="tname"> Currency </label> </td> <td>:</td>
-			<td> <?php $js = 'class="required"'; echo form_dropdown('ccurrency', $currency, isset($default['currency']) ? $default['currency'] : '', $js); ?> &nbsp; <br /> </td>	
-			
-			<td> <input type="submit" value="SUBMIT" /> </td>
-	</tr>
-</table>
-</form>
-</fieldset>
-
-<?php echo ! empty($table) ? $table : ''; ?>
+    <?php echo ! empty($table) ? $table : ''; ?>
+    <button type="button" onclick="window.close()" class="btn btn-danger">  Close </button> <br> <br>
+        </div>
+    </div>
+    
 </div>
 
-<div class="buttonplace"> <?php if (!empty($link)){foreach($link as $links){echo $links . '';}} ?> </div>
 
+
+    
+    
+</body>
+
+</html>

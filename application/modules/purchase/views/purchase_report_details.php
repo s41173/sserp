@@ -61,7 +61,7 @@
 		   
 		  <?php 
 		  
-		  	  function status($val)
+		  	  function purchase_status($val)
 			  { if ($val == 0){ $val = 'debt'; } else { $val = 'settled'; } return $val; }	
 			  
 			  function product($pid){ $pro = new Products_lib(); return $pro->get_name($pid); }
@@ -70,7 +70,7 @@
 			  function poder($po)
 			  {
 				 $CI =& get_instance();
-				 $poder = $CI->Purchase_item_model->get_last_item($po)->result();
+				 $poder = $CI->transmodel->get_last_item($po)->result();
 				 $i=1;
 			
 				foreach ($poder as $res)
@@ -100,7 +100,7 @@
 				   echo " 
 				   <tr> 
 				       <td class=\"strongs\">".$i."</td> 
-					   <td class=\"strongs\">".tgleng($purchase->dates)."</td> 
+					   <td class=\"strongs\">".tglin($purchase->dates)."</td> 
 					   <td class=\"strongs\"> PO-00".$purchase->no."</td> 
 					   <td class=\"strongs\">".$purchase->prefix.' '.$purchase->name."</td> 
 					   <td class=\"strongs\" align=\"right\">".number_format($purchase->total - $purchase->tax)."</td> 
@@ -109,7 +109,7 @@
 					   <td class=\"strongs\" align=\"right\">".number_format($purchase->total + $purchase->costs)."</td> 
 					   <td class=\"strongs\" align=\"right\">".number_format($purchase->p1)."</td>
 					   <td class=\"strongs\" align=\"right\">".number_format($purchase->p2)."</td> 
-					   <td class=\"strongs\" align=\"center\">".status($purchase->status)."</td> 
+					   <td class=\"strongs\" align=\"center\">".purchase_status($purchase->status)."</td> 
 				   </tr>";
 				   poder($purchase->no); echo "<br/>";
 				   $i++; 
@@ -134,6 +134,8 @@
 	</div>
 
 </div>
-
+<a style="float:left; margin:10px;" title="Back" href="<?php echo site_url('purchase'); ?>"> 
+  <img src="<?php echo base_url().'images/back.png'; ?>"> 
+</a>
 </body>
 </html>

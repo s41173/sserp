@@ -24,9 +24,12 @@ class Purchase extends MX_Controller
         $this->product = new Product_lib();
         $this->ap = new Ap_payment_lib();
         $this->branch = new Branch_lib();
+        $this->stock = new Stock_lib();
+        $this->wt = new Warehouse_transaction_lib();
+        $this->trans = new Trans_ledger_lib();
     }
 
-    private $properti, $modul, $title, $request, $branch;
+    private $properti, $modul, $title, $request, $branch, $stock, $wt, $trans;
     private $vendor,$user,$tax,$journalgl,$product,$currency,$unit,$ap;
  
     function index()
@@ -159,14 +162,12 @@ class Purchase extends MX_Controller
         $data['form_action'] = site_url($this->title.'/get_list');
         $data['main_view'] = 'vendor_list';
         $data['currency'] = $this->currency->combo();
+        $data['vendor'] = $this->vendor->combo();
         $data['link'] = array('link_back' => anchor($this->title.'/get_list','<span>back</span>', array('class' => 'back')));
-
-        $currency = $this->input->post('ccurrency');
-        $vendor = $this->vendor->get_vendor_id($this->input->post('tvendor'));
 
         $purchases = $this->model->get_purchase_list($currency,$vendor)->result();
 
-        $tmpl = array('table_open' => '<table cellpadding="2" cellspacing="1" class="tablemaster">');
+        $tmpl = array('table_open' => '<table id="example" width="100%" cellspacing="0" class="table table-striped table-bordered">');
 
         $this->table->set_template($tmpl);
         $this->table->set_empty("&nbsp;");
@@ -180,13 +181,14 @@ class Purchase extends MX_Controller
            $datax = array(
                             'name' => 'button',
                             'type' => 'button',
+                            'class' => 'btn btn-primary',
                             'content' => 'Select',
                             'onclick' => 'setvalue(\''.$purchase->no.'\',\'titem\')'
                          );
 
             $this->table->add_row
             (
-                ++$i, 'PO-00'.$purchase->no, tgleng($purchase->dates), ucfirst($purchase->acc), $purchase->currency, $purchase->notes, number_format($purchase->total,2), number_format($purchase->p2,2),
+                ++$i, 'PO-00'.$purchase->no, tglin($purchase->dates), ucfirst($purchase->acc), strtoupper($purchase->currency), $purchase->notes, number_format($purchase->total,2), number_format($purchase->p2,2),
                 form_button($datax)
             );
         }
@@ -211,7 +213,7 @@ class Purchase extends MX_Controller
         
         $purchases = $this->model->get_purchase_list_all($currency,$vendor,$st)->result();
 
-        $tmpl = array('table_open' => '<table cellpadding="2" cellspacing="1" class="tablemaster">');
+        $tmpl = array('table_open' => '<table id="example" width="100%" cellspacing="0" class="table table-striped table-bordered">');
 
         $this->table->set_template($tmpl);
         $this->table->set_empty("&nbsp;");
@@ -222,7 +224,7 @@ class Purchase extends MX_Controller
         $i = 0;
         foreach ($purchases as $purchase)
         {
-           $datax = array('name' => 'button', 'type' => 'button', 'content' => 'Select', 'onclick' => 'setvalue(\''.$purchase->no.'\',\'titem\')');
+           $datax = array('name' => 'button', 'type' => 'button', 'class' => 'btn btn-primary', 'content' => 'Select', 'onclick' => 'setvalue(\''.$purchase->no.'\',\'titem\')');
 
            $this->table->add_row
            (
@@ -286,19 +288,49 @@ class Purchase extends MX_Controller
             else
             {
                 $this->over_status($purchase->no); // over status
+                                
+                // add stock & warehouse transaction
+                $this->add_stock($pid);
                 
-                $data = array('approved' => 1);
-                $this->model->update($pid, $data);
+                // membuat kartu hutang
+                if ($purchase->status == 0){ $this->trans->add($purchase->acc, 'PO', $purchase->no, $purchase->currency, $purchase->dates, 0, $purchase->p2, $purchase->vendor, 'AP'); }
 
                 //  create journal
                 $this->create_po_journal($pid, $purchase->dates, strtoupper($purchase->currency), 'PO-00'.$purchase->no.'-'.$purchase->notes, 'PJ',
                                          $purchase->no, 'AP', $purchase->total + $purchase->costs, $purchase->p1,$purchase->p2);
+                
+                $data = array('approved' => 1);
+                $this->model->update($pid, $data);
 
                echo "true|$this->title PO-00$purchase->no confirmed..!";
             }
         }
         
         }else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
+    }
+    
+    private function add_stock($pid)
+    {
+       $purchase = $this->model->get_by_id($pid)->row();
+       $list = $this->transmodel->get_last_item($pid)->result();
+       
+       foreach ($list as $res) {
+           $this->stock->add_stock($res->product, $purchase->dates, $res->qty, $res->amount); // adding stock
+           $this->wt->add($purchase->dates, 'PO-00'.$purchase->no, $this->branch->get_branch(), $purchase->currency, $res->product, $res->qty, 0,
+                           $res->price, $res->price*$res->qty,
+                           $this->session->userdata('log'));
+       }
+    }
+    
+    private function rollback_stock($pid)
+    {
+       $purchase = $this->model->get_by_id($pid)->row();
+       $list = $this->transmodel->get_last_item($pid)->result();
+       
+       foreach ($list as $res) {
+           $this->stock->increase_stock($res->product, $purchase->dates,$res->qty); // rollback stock
+       }
+       $this->wt->remove($purchase->dates, 'PO-00'.$purchase->no);    
     }
     
     private function cek_confirmation($po=null,$page=null)
@@ -383,6 +415,13 @@ class Purchase extends MX_Controller
       $this->journalgl->remove_journal('PJ', '0'.$po); // journal gl
       $this->journalgl->remove_journal('CD', '0'.$po);   
       $this->over_status($po, 1);
+      
+      // rollback stock & warehouse transaction
+      $this->rollback_stock($uid);
+      
+      // rollback kartu hutang
+      $val = $this->model->get_by_id($uid)->row();
+      $this->trans->remove($val->dates, 'PO', $val->no);
       
       $trans = array('approved' => 0);
       $this->model->update($uid, $trans);
@@ -561,7 +600,7 @@ class Purchase extends MX_Controller
         $this->form_validation->set_rules('tqty', 'Qty', 'required|numeric');
         $this->form_validation->set_rules('tamount', 'Unit Price', 'required');
 
-        if ($this->form_validation->run($this) == TRUE && $this->valid_confirmation($po->no) == TRUE)
+        if ($this->form_validation->run($this) == TRUE && $this->valid_confirmation($po->no) == TRUE && $pid != null)
         {   
             $pitem = array('product' => $this->product->get_id_by_sku($this->input->post('titem')), 'purchase_id' => $pid, 'qty' => $this->input->post('tqty'),
                            'price' => $this->input->post('tamount'),
@@ -572,6 +611,7 @@ class Purchase extends MX_Controller
             echo 'true';
         }
         elseif ( $this->valid_confirmation($po->no) != TRUE ){ echo "error|Can't change value - Journal approved..!"; }
+        elseif (!$pid){ echo "error|Can't change value - Journal not created..!"; }
         else{ echo 'error|'.validation_errors(); } 
     }
 

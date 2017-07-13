@@ -3,8 +3,8 @@
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
         <group>
-            <file>file:/opt/lampp/htdocs/ssadministrator/application/modules/stock_transfer/models/stock_transfer_item_model.php</file>
-            <file>file:/opt/lampp/htdocs/ssadministrator/application/modules/stock_transfer/controllers/stock_transfer.php</file>
+            <file>file:/opt/lampp/htdocs/ssadministrator/application/modules/ap_payment/models/appayment_model.php</file>
+            <file>file:/opt/lampp/htdocs/ssadministrator/application/modules/ap_payment/controllers/ap_payment.php</file>
         </group>
     </open-files>
 </project-private>

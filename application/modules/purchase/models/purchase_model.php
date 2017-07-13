@@ -122,7 +122,7 @@ class Purchase_model extends Custom_Model
         $this->db->from('purchase, vendor');
         $this->db->where('purchase.vendor = vendor.id');
         $this->db->where("purchase.dates BETWEEN '".setnull($start)."' AND '".setnull($end)."'");
-        $this->cek_null($vendor,"vendor.name");
+        $this->cek_null($vendor,"purchase.vendor");
         $this->cek_null($cur,"purchase.currency");
         $this->cek_null($status,"purchase.status");
         $this->cek_null($acc,"purchase.acc");

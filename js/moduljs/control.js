@@ -83,10 +83,10 @@ $(document).ready(function (e) {
 						  if (s[i][0] == 1){ stts = 'btn btn-success'; }else { stts = 'btn btn-danger'; }	
 						  oTable.fnAddData([
 '<input type="checkbox" name="cek[]" value="'+s[i][0]+'" id="cek'+i+'" style="margin:0px"  />',
-										i+1,
 										s[i][1],
 										s[i][2],
 										s[i][3],
+										s[i][4],
 '<div class="btn-group" role"group">'+
 '<a href="" class="btn btn-primary btn-xs text-primary" id="' +s[i][0]+ '" title=""> <i class="fa fas-2x fa-edit"> </i> </a>'+
 '<a href="#" class="btn btn-danger btn-xs text-danger" id="'+s[i][0]+'" title="delete"> <i class="fa fas-2x fa-trash"> </i> </a>'+

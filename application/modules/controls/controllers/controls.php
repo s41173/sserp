@@ -36,7 +36,7 @@ class Controls extends MX_Controller
         if ($result){
 	foreach($result as $res)
 	{  
-	   $output[] = array ($res->id, $res->desc, $this->account->get_code($res->account_id).' : '.$this->account->get_name($res->account_id), ucfirst($this->component->get_name($res->modul)), $res->status);
+	   $output[] = array ($res->id, $res->no, $res->desc, $this->account->get_code($res->account_id).' : '.$this->account->get_name($res->account_id), ucfirst($this->component->get_name($res->modul)), $res->status);
 	}
             $this->output
             ->set_status_header(200)

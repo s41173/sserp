@@ -182,48 +182,41 @@ $(document).ready(function (e) {
 		return false;
 	});
 
-// 	// fungsi calculate purchase form
-	$('#cover').change(function() {
+	$('#bget').click(function() {
 		
-		var pid = $("#cover").val();
-		
-		alert(site);
+		var pid = $("#titem").val();
+	
 		$.ajax({
 		type: 'POST',
-		url: sites_ajax +"/get_over",
-		data: "tno="+ pid,
+		url: sites +"/get_po",
+		data: "po="+ pid,
 		success: function(data)
 		{
-//		   res = data.split("|");
-		//    document.getElementById("toveramount").value = data;
-		   $("#toveramount").val = data;
+            $("#tnominal").val(data);
+			$("#tdiscount").val(0);
+			$("#tamounts").val(data);
 		}
 		})
 		return false;
 		
 	});
 	
-	$('#tp1').keyup(function() {
-				
-		var cost = parseFloat($("#tcosts").val());
-		var totaltax = parseFloat($('#ttotaltax').val());
-		var total = parseFloat(cost + totaltax);
-		var p1 = parseFloat($(this).val());
-		var over = parseFloat($('#toveramount').val());
-		var res = parseFloat(total - p1 - over);
-		$('#tbalance').val(res);
+	$('#tdiscount').keyup(function() {
+		
+		var discount = parseFloat($("#tdiscount").val());
+		var nominal = parseFloat($("#tnominal").val());
+		var res = nominal-discount;
+		
+		if (res < 0)
+		{
+ 		  document.getElementById("tdiscount").value = '0';	
+		  document.getElementById("tamounts").value = nominal;
+		}
+		else { document.getElementById("tamounts").value = res; }
+			
 	});
 	
-	$('#tcosts').keyup(function() {
 	
-		var cost = parseFloat($(this).val());
-		var totaltax = parseFloat($('#ttotaltax').val());
-		var total = parseFloat(cost + totaltax);
-		var p1 = parseFloat($('#tp1').val());
-		var over = parseFloat($('#toveramount').val());
-		var res = parseFloat(total - p1 - over);
-		$('#tbalance').val(res);
-	});
 
 	// fungsi calculate purchase form
 	
@@ -279,19 +272,17 @@ $(document).ready(function (e) {
 	
 		$("#chkbox").append('<input type="checkbox" name="newsletter" value="accept1" onclick="cekall('+s.length+')" id="chkselect" class="chkselect">');
 							
-					 for(var i = 0; i < s.length; i++) {
-						  if (s[i][10] == 1){ stts = 'btn btn-success'; }else { stts = 'btn btn-danger'; }	
+		for(var i = 0; i < s.length; i++) {
+						  if (s[i][7] == 1){ stts = 'btn btn-success'; }else { stts = 'btn btn-danger'; }	
 						  oTable.fnAddData([
 '<input type="checkbox" name="cek[]" value="'+s[i][0]+'" id="cek'+i+'" style="margin:0px"  />',
 										i+1,
-										"PO-0"+s[i][1],
+										"CD-0"+s[i][1],
 										s[i][2],
 										s[i][3],
 										s[i][4],
 										s[i][5],
-										s[i][7],
-										s[i][8],
-										s[i][9],
+										s[i][6],
 '<div class="btn-group" role"group">'+
 '<a href="" class="'+stts+' btn-xs primary_status" id="' +s[i][0]+ '" title="Primary Status"> <i class="fa fa-power-off"> </i> </a> '+
 '<a href="" class="btn btn-warning btn-xs text-invoice" id="' +s[i][0]+ '" title=""> <i class="fa fas-2x fa-book"> </i> </a>'+
@@ -337,18 +328,16 @@ $(document).ready(function (e) {
 		$("#chkbox").append('<input type="checkbox" name="newsletter" value="accept1" onclick="cekall('+s.length+')" id="chkselect" class="chkselect">');
 							
 							for(var i = 0; i < s.length; i++) {
-						  if (s[i][10] == 1){ stts = 'btn btn-success'; }else { stts = 'btn btn-danger'; }	
+						  if (s[i][7] == 1){ stts = 'btn btn-success'; }else { stts = 'btn btn-danger'; }	
 						  oTable.fnAddData([
 '<input type="checkbox" name="cek[]" value="'+s[i][0]+'" id="cek'+i+'" style="margin:0px"  />',
 										i+1,
-										"PO-0"+s[i][1],
+										"CD-0"+s[i][1],
 										s[i][2],
 										s[i][3],
 										s[i][4],
 										s[i][5],
-										s[i][7],
-										s[i][8],
-										s[i][9],
+										s[i][6],
 '<div class="btn-group" role"group">'+
 '<a href="" class="'+stts+' btn-xs primary_status" id="' +s[i][0]+ '" title="Primary Status"> <i class="fa fa-power-off"> </i> </a> '+
 '<a href="" class="btn btn-warning btn-xs text-invoice" id="' +s[i][0]+ '" title=""> <i class="fa fas-2x fa-book"> </i> </a>'+
