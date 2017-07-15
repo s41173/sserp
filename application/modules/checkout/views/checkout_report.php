@@ -60,7 +60,7 @@
 		   
 		  <?php 
 			  
-			  function status($due)
+			  function purchase_status($due)
 			  {
 				$due = strtotime($due);
 				$now = strtotime(date('Y-m-d'));
@@ -104,14 +104,14 @@
 				   echo " 
 				   <tr> 
 				       <td class=\"strongs\">".$i."</td> 
-					   <td class=\"strongs\">".tgleng($res->dates)."</td> 
-					   <td class=\"strongs\">".tgleng($res->due)."</td> 
+					   <td class=\"strongs\">".tglin($res->dates)."</td> 
+					   <td class=\"strongs\">".tglin($res->due)."</td> 
 					   <td class=\"strongs\">".$res->check_no."</td> 
 					   <td class=\"strongs\">".get_bank_name($res->bank)."</td> 
 					   <td class=\"strongs\">".code($type).$res->no."</td> 
 					   <td class=\"strongs\">".get_vendor_name($res->vendor)."</td> 
 					   <td class=\"strongs\" align=\"right\">".number_format($res->amount)."</td> 
-					   <td class=\"strongs\" align=\"center\">".status($res->due)."</td> 
+					   <td class=\"strongs\" align=\"center\">".purchase_status($res->due)."</td> 
 				   </tr>";
 				   $i++;
 				}
@@ -120,20 +120,10 @@
 		   
 		</table>
 	</div>
-	
-	<div style="border:0px solid red; float:left; margin:15px 0px 0px 0px;">
-		<p> Prepared By : <br/> <br/> <br/>  <br/> <br/>
-		    (_______________________) 
-		</p>
-	</div>
-	
-	<div style="border:0px solid red; float:left; margin:15px 0px 0px 40px;">
-		<p> Approval By : <br/> <br/> <br/>  <br/> <br/>
-		    (_______________________) 
-		</p>
-	</div>
 
 </div>
-
+<a style="float:left; margin:10px;" title="Back" href="<?php echo site_url('checkout'); ?>"> 
+  <img src="<?php echo base_url().'images/back.png'; ?>"> 
+</a>
 </body>
 </html>

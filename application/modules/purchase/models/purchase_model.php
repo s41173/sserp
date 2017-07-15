@@ -35,27 +35,26 @@ class Purchase_model extends Custom_Model
         return $this->db->get();
     }
 
-    function get_purchase_list($currency=null,$vendor=null,$st=0)
+    function get_purchase_list($currency=null,$vendor=null,$st=null)
     {
         $this->db->select($this->field);
         $this->db->from($this->tableName);
         $this->cek_null($currency,"purchase.currency");
-        $this->db->where('purchase.stock_in_stts', $st);
         $this->cek_null($vendor,"purchase.vendor");
+        $this->cek_null($st,"purchase.status");
         $this->db->where('purchase.approved', 1);
         $this->db->order_by('purchase.dates', 'asc');
         return $this->db->get();
     }
 
-    function get_purchase_list_all($currency=null,$vendor=null,$st=0)
+    function get_settled_purchase($currency=null,$vendor=null) // tarik PO yang sudah lunas
     {
         $this->db->select($this->field);
         $this->db->from($this->tableName);
         $this->cek_null($currency,"purchase.currency");
         $this->cek_null($vendor,"purchase.vendor");
         $this->db->where('purchase.approved', 1);
-        $this->db->where('purchase.status', $st);
-        $this->db->where('purchase.stock_in_stts', 1);
+        $this->db->where('purchase.status', 1);
         $this->db->order_by('purchase.dates', 'asc');
         return $this->db->get();
     }

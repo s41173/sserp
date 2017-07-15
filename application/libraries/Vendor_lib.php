@@ -19,7 +19,14 @@ class Vendor_lib extends Custom_Model {
         $val = $this->db->get($this->tableName)->num_rows();
         if ($val > 0){return TRUE;} else{ return FALSE; }
     }
-
+    
+    function get_detail($id)
+    {
+       $this->db->select($this->field);
+       $this->db->where('id', $id);
+       return $this->db->get($this->tableName)->row();
+    }
+    
     function get_vendor_id($name=null)
     {
         if ($name != null)

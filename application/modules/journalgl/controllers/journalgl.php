@@ -330,6 +330,8 @@ class Journalgl extends MX_Controller
     function add_trans($id)
     {
         $this->acl->otentikasi2($this->title);
+        $this->jm->valid_add_trans($id, $this->title);
+        
         $this->session->unset_userdata('jid');
                 
         $data['title'] = $this->properti['name'].' | Administrator '.ucwords($this->modul['title']);

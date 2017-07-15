@@ -27,11 +27,10 @@ class Purchase extends MX_Controller
         $this->stock = new Stock_lib();
         $this->wt = new Warehouse_transaction_lib();
         $this->trans = new Trans_ledger_lib();
-        $this->pr = new Purchase_return_lib();
     }
 
     private $properti, $modul, $title, $request, $branch, $stock, $wt, $trans;
-    private $vendor,$user,$tax,$journalgl,$product,$currency,$unit,$ap,$pr;
+    private $vendor,$user,$tax,$journalgl,$product,$currency,$unit,$ap;
  
     function index()
     {
@@ -153,7 +152,8 @@ class Purchase extends MX_Controller
         
     }
     
-    function get_list($currency=null,$vendor=null,$st=null)
+
+    function get_list($currency=null,$vendor=null)
     {
         $this->acl->otentikasi1($this->title);
 
@@ -165,7 +165,7 @@ class Purchase extends MX_Controller
         $data['vendor'] = $this->vendor->combo();
         $data['link'] = array('link_back' => anchor($this->title.'/get_list','<span>back</span>', array('class' => 'back')));
 
-        $purchases = $this->model->get_purchase_list($currency,$vendor,$st)->result();
+        $purchases = $this->model->get_purchase_list($currency,$vendor)->result();
 
         $tmpl = array('table_open' => '<table id="example" width="100%" cellspacing="0" class="table table-striped table-bordered">');
 
@@ -197,19 +197,21 @@ class Purchase extends MX_Controller
         $this->load->view('purchase_list', $data);
     }
 
-    function get_list_settled($currency=null,$vendor=null)
+    function get_list_all($currency=null,$vendor=null,$st=0)
     {
         $this->acl->otentikasi1($this->title);
 
         $data['title'] = $this->properti['name'].' | Administrator  '.ucwords($this->modul['title']);
         $data['h2title'] = $this->modul['title'];
-        $data['form_action'] = site_url($this->title.'/get_list');
         $data['main_view'] = 'vendor_list';
+        $data['form_action'] = site_url($this->title.'/get_list_all');
+        $data['link'] = array('link_back' => anchor($this->title.'/get_list_all','<span>back</span>', array('class' => 'back')));
         $data['currency'] = $this->currency->combo();
-        $data['vendor'] = $this->vendor->combo();
-        $data['link'] = array('link_back' => anchor($this->title.'/get_list','<span>back</span>', array('class' => 'back')));
 
-        $purchases = $this->model->get_purchase_list($currency,$vendor,1)->result();
+        $currency = $this->input->post('ccurrency');
+        $vendor = $this->vendor->get_vendor_id($this->input->post('tvendor'));
+        
+        $purchases = $this->model->get_purchase_list_all($currency,$vendor,$st)->result();
 
         $tmpl = array('table_open' => '<table id="example" width="100%" cellspacing="0" class="table table-striped table-bordered">');
 
@@ -222,25 +224,19 @@ class Purchase extends MX_Controller
         $i = 0;
         foreach ($purchases as $purchase)
         {
-           $datax = array(
-                            'name' => 'button',
-                            'type' => 'button',
-                            'class' => 'btn btn-primary',
-                            'content' => 'Select',
-                            'onclick' => 'setvalue(\''.$purchase->no.'\',\'titem\')'
-                         );
+           $datax = array('name' => 'button', 'type' => 'button', 'class' => 'btn btn-primary', 'content' => 'Select', 'onclick' => 'setvalue(\''.$purchase->no.'\',\'titem\')');
 
-            $this->table->add_row
-            (
-                ++$i, 'PO-00'.$purchase->no, tglin($purchase->dates), ucfirst($purchase->acc), strtoupper($purchase->currency), $purchase->notes, number_format($purchase->total,2), number_format($purchase->p2,2),
-                form_button($datax)
-            );
+           $this->table->add_row
+           (
+              ++$i, 'PO-00'.$purchase->no, tgleng($purchase->dates), ucfirst($purchase->acc), $purchase->currency, $purchase->notes, number_format($purchase->total,2), number_format($purchase->p2,2),
+              form_button($datax)
+           );
         }
 
         $data['table'] = $this->table->generate();
         $this->load->view('purchase_list', $data);
     }
-    
+
     function item_list($po)
     {
         $this->acl->otentikasi($this->title);
@@ -405,7 +401,7 @@ class Purchase extends MX_Controller
         if ($this->acl->otentikasi_admin($this->title,'ajax') == TRUE){
         $val = $this->model->get_by_id($uid)->row();
         
-            if ( $this->valid_period($val->dates) == TRUE && $this->ap->cek_relation_trans($val->no,'no','PO') == TRUE && $this->pr->cek_relation($val->no, 'purchase'))
+            if ( $this->valid_period($val->dates) == TRUE && $val->stock_in_stts == 0 && $this->ap->cek_relation_trans($val->no,'no','PO') == TRUE )
             {
                if ($val->approved == 1){ $this->rollback($uid,$val->no); } else { $this->remove($uid,$val->no); }
             }
@@ -512,8 +508,7 @@ class Purchase extends MX_Controller
     function add_trans($pid=null)
     {
         $this->acl->otentikasi2($this->title);
-        $this->model->valid_add_trans($pid, $this->title);
-        
+
         $purchase = $this->model->get_by_id($pid)->row();
         
         $data['title'] = $this->properti['name'].' | Administrator '.ucwords($this->modul['title']);

@@ -23,7 +23,7 @@ class Purchase_lib {
 
     function get_po($no)
     {
-        $this->ci->db->select('p2, notes, docno, vendor, dates, currency');
+        $this->ci->db->select('id, p2, notes, docno, vendor, dates, currency');
         $this->ci->db->where('no', $no);
         $query = $this->ci->db->get('purchase')->row();
         return $query;

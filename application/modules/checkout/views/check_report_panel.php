@@ -20,7 +20,7 @@ $atts1 = array(
 <div class="modal-content">
 <div class="modal-header">
   <button type="button" class="close" data-dismiss="modal">&times;</button>
-  <h4 class="modal-title"> Ledger Report </h4>
+  <h4 class="modal-title"> Check - Out Report </h4>
 </div>
 <div class="modal-body">
  
@@ -43,26 +43,15 @@ action="<?php echo $form_action_report; ?>" enctype="multipart/form-data">
     </div>
     
     <div class="form-group">
-        <label class="control-label col-md-3 col-sm-3 col-xs-12"> Currency </label>
-        <div class="col-md-3 col-sm-12 col-xs-12">     
-            <?php $js = "class='form-control' id='ccur' tabindex='-1' style='min-width:170px;' "; 
-            echo form_dropdown('ccurrency', $currency, isset($default['currency']) ? $default['currency'] : '', $js); ?>
+        <label class="control-label col-md-3 col-sm-3 col-xs-12"> Type </label>
+        <div class="col-md-4 col-sm-4 col-xs-12">     
+  <select name="ctype" class="form-control">
+    <option value="purchase" selected="selected"> Purchasing </option>
+    <option value="ar_refund"> AR - Refund </option>
+ </select>
         </div>
     </div>
     
-    <div class="form-group">
-        <label class="control-label col-md-3 col-sm-3 col-xs-12"> Account </label>
-        <div class="col-md-9 col-sm-12 col-xs-12">    
-        <table>
-         <tr> 
-             <td> <input type="text" name="taccstart" id="titem1" class="form-control" style="width:90px; margin:0px; float:left;"> <?php echo anchor_popup(site_url("account/get_list/titem1/"), '[ ... ]', $atts1); ?> &nbsp; - &nbsp; </td>
-             
-             <td> <input type="text" name="taccend" id="titem2" class="form-control" style="width:90px; margin:0px; float:left;"> <?php echo anchor_popup(site_url("account/get_list/titem2/"), '[ ... ]', $atts1); ?> &nbsp; </td>
-         </tr>     
-        </table>    
-        </div>
-    </div>
-
       <div class="ln_solid"></div>
       <div class="form-group">
           <div class="col-md-6 col-sm-6 col-xs-12 col-md-offset-3">

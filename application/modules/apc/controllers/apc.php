@@ -43,7 +43,7 @@ class Apc extends MX_Controller
         if ($result){
 	foreach($result as $res)
 	{
-	   $output[] = array ($res->id, $res->no, $res->currency, tglin($res->dates), $res->notes, $this->get_acc($res->account), idr_format($res->amount), $res->approved);
+	   $output[] = array ($res->id, $res->no, strtoupper($res->currency), tglin($res->dates), $res->notes, $this->get_acc($res->account), idr_format($res->amount), $res->approved);
 	}
             $this->output
             ->set_status_header(200)
@@ -375,6 +375,8 @@ class Apc extends MX_Controller
     function add_trans($uid=null)
     {
         $this->acl->otentikasi2($this->title);
+        $this->Apc_model->valid_add_trans($uid, $this->title);
+        
         $ap = $this->model->where('id', $uid)->get();
 
         $data['title'] = $this->properti['name'].' | Administrator '.ucwords($this->modul['title']);

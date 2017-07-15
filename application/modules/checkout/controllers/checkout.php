@@ -57,6 +57,7 @@ class Checkout extends MX_Controller
         $data['h2title'] = $this->modul['title'];
         $data['main_view'] = 'check_view';
 	$data['form_action'] = site_url($this->title.'/search');
+        $data['form_action_report'] = site_url($this->title.'/report_process');
         $data['link'] = array('link_back' => anchor('main/','Back', array('class' => 'btn btn-danger')));
         
         $data['currency'] = $this->currency->combo();
@@ -93,6 +94,7 @@ class Checkout extends MX_Controller
         $data['h2title'] = 'Find '.$this->modul['title'];
         $data['main_view'] = 'check_view';
 	$data['form_action'] = site_url($this->title.'/search');
+        $data['form_action_report'] = site_url($this->title.'/report_process');
         $data['link'] = array('link_back' => anchor($this->title,'Back', array('class' => 'btn btn-danger')));
         $data['currency'] = $this->currency->combo();
         
@@ -117,7 +119,7 @@ class Checkout extends MX_Controller
             $this->table->add_row
             (
                 ++$i, strtoupper($ap->currency), $ap->check_no, $code.$ap->no, $this->account->get_code($ap->account).'-'.$this->account->get_name($ap->account), tglin($ap->dates), tglin($ap->due), number_format($ap->amount),
-                anchor($this->title.'/process/'.$ap->no.'/'.$this->input->post('ctype').'/'.$ap->amount.'/'.$ap->account.'/'.$ap->due.'/'.$ap->currency,'<i class="fa fas-2x fa-book"> </i>',array('class' => $this->alert_date($ap->due), 'title' => 'edit / update'))
+                anchor($this->title.'/process/'.$ap->no.'/'.$this->input->post('ctype').'/'.$ap->amount.'/'.$ap->account.'/'.$ap->due.'/'.$ap->currency,'<i class="fa fas-2x fa-book"> </i>',array('class' => $this->alert_date($ap->due), 'id' => 'bprocess', 'title' => 'edit / update'))
 //                anchor($this->title.'/details/'.$ap->no,'<span>details</span>',array('class' => 'update', 'title' => ''))
             );
         }
@@ -130,27 +132,25 @@ class Checkout extends MX_Controller
     
     function process($no,$type,$amount=0,$acc,$due,$cur)
     {
+       if ($this->journal->cek_journal('00'.$no, 'GJ', $due, strtoupper($cur)) == TRUE){
        $data = array('post_dated_stts' => 1);
        
        if ($type == 'purchase'){ $this->ap_payment->set_post_stts($no, $data); $notes = 'AP-Payment : CD-00'.$no; }
        elseif ($type == 'ap'){ $this->ap_payment_cash->set_post_stts($no, $data); $notes = 'AP : DJ-00'.$no; }
        
-       
-       
        $cm = new Control_model();
-
-       $ap       = $cm->get_id(48); // hutang giro
+       $ap       = $cm->get_id(35); // hutang giro
        $account  = $acc;                
         // create journal- GL
 
-       $this->journal->new_journal('00'.$no,$due,'GJ',$cur,'Cheque Process '.$notes,$amount, $this->session->userdata('log'));
+       $this->journal->new_journal('00'.$no,$due,'GJ', strtoupper($cur),'Cheque Process '.$notes,$amount, $this->session->userdata('log'));
        $dpid = $this->journal->get_journal_id('GJ','00'.$no);
        
        $this->journal->add_trans($dpid,$account,0,$amount); // kas
        $this->journal->add_trans($dpid,$ap,$amount,0); // hutang usaha
        
-       
-       $this->session->set_flashdata('message', "$this->title already processed..!");
+       $this->session->set_flashdata('message', "Checkout journal created..!");
+       } else{ $this->session->set_flashdata('message', "Journal already processed..!"); }
        redirect($this->title);
     }
 
@@ -179,9 +179,10 @@ class Checkout extends MX_Controller
         $this->acl->otentikasi2($this->title);
         $data['title'] = $this->properti['name'].' | Report '.ucwords($this->modul['title']);
 
-        $start = $this->input->post('tstart');
-        $end = $this->input->post('tend');
-        $type = $this->input->post('ctype');
+        $type = $this->input->post('ctype');        
+        $period = $this->input->post('reservation');  
+        $start = picker_between_split($period, 0);
+        $end = picker_between_split($period, 1);
 
         $data['start'] = $start;
         $data['end'] = $end;

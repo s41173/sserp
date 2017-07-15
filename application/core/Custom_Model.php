@@ -163,6 +163,13 @@ class Custom_Model extends CI_Model {
         return $this->db->get($this->tableName);
     }
     
+    function valid_add_trans($pid,$title='main')
+    {
+        if (!$pid){ redirect($title); }
+        $trans = $this->get_by_id($pid)->row();
+        if (!$trans){ redirect($title); }
+    }
+    
     function valid($field,$val)
     {
         $this->db->where($field, $val);

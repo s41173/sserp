@@ -245,6 +245,8 @@ class Transfer extends MX_Controller
     function add_trans($id)
     {
         $this->acl->otentikasi2($this->title);
+        $this->model->valid_add_trans($id, $this->title);
+        
         $cash = $this->model->where('id',$id)->get();
         
         $data['title'] = $this->properti['name'].' | Administrator '.ucwords($this->modul['title']);

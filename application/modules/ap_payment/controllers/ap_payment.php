@@ -457,7 +457,8 @@ class Ap_payment extends MX_Controller
     function add_trans($pid=null)
     {
         $this->acl->otentikasi2($this->title);
-
+        $this->model->valid_add_trans($pid, $this->title);
+        
         $appayment = $this->model->get_by_id($pid)->row();
         
         $data['title'] = $this->properti['name'].' | Administrator '.ucwords($this->modul['title']);

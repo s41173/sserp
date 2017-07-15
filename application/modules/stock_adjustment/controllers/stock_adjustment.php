@@ -450,6 +450,8 @@ class Stock_adjustment extends MX_Controller
     function add_trans($id)
     {
         $this->acl->otentikasi2($this->title);
+        $this->Stock_adjustment_model->valid_add_trans($id, $this->title);
+        
         $cash = $this->Stock_adjustment_model->get_by_id($id)->row();
         
         $data['title'] = $this->properti['name'].' | Administrator '.ucwords($this->modul['title']);

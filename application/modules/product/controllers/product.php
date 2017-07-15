@@ -50,7 +50,7 @@ class Product extends MX_Controller
     {
         if ($branch == 'null'){ $branch = $this->branch->get_branch(); }
         if(!$search){ $result = $this->Product_model->get_last($this->modul['limit'])->result(); }
-        else {$result = $this->Product_model->search($branch,$cat,$col,$size,$publish)->result(); }
+        else {$result = $this->Product_model->search($cat,$col,$size,$publish)->result(); }
 	
         $output = null;
         if ($result){
@@ -208,11 +208,13 @@ class Product extends MX_Controller
           $x = 0;
           for ($i=0; $i<$jumlah; $i++)
           {
-             if ($type == 'soft') { $this->delete($cek[$i]); }
-             else { $this->remove_img($cek[$i],'force');
-                    $this->attribute_product->force_delete_by_product($cek[$i]);
-                    $this->Product_model->force_delete($cek[$i]);  }
-             $x=$x+1;
+             if ($this->valid_qty($cek[$i]) == TRUE){
+                if ($type == 'soft') { $this->delete($cek[$i]); }
+                else { $this->remove_img($cek[$i],'force');
+                       $this->attribute_product->force_delete_by_product($cek[$i]);
+                       $this->Product_model->force_delete($cek[$i]);  }
+                $x=$x+1;
+             }
           }
           $res = intval($jumlah-$x);
           //$this->session->set_flashdata('message', "$res $this->title successfully removed &nbsp; - &nbsp; $x related to another component..!!");
@@ -370,6 +372,8 @@ class Product extends MX_Controller
     // Fungsi update untuk menset texfield dengan nilai dari database
     function update($uid=null)
     {        
+        $this->Product_model->valid_add_trans($uid, $this->title);
+        
         $data['title'] = $this->properti['name'].' | Administrator  '.ucwords($this->modul['title']);
         $data['h2title'] = 'Edit '.$this->modul['title'];
         $data['main_view'] = 'product_update';
@@ -628,7 +632,7 @@ class Product extends MX_Controller
     {
         $qty = $this->stockledger->get_qty($pid, null, $this->period->month, $this->period->year);
         if ($qty != 0){
-           $this->form_validation->set_message('valid_attribute', "Attribute Registered..!");
+           $this->form_validation->set_message('valid_qty', "Product Qty is greater than 0..!");
            return FALSE; 
         }else{ return TRUE; }
     }

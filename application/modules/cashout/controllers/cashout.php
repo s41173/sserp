@@ -269,9 +269,18 @@ class Cashout extends MX_Controller
 
     }
     
+    private function valid_add_trans($id)
+    {
+        if (!$id){ redirect($this->title); }
+        $cash = $this->model->where('id',$id)->get();
+        if (!$cash){ redirect($this->title); }
+    }
+    
     function add_trans($id)
     {
         $this->acl->otentikasi2($this->title);
+        $this->valid_add_trans($id);
+        
         $cash = $this->model->where('id',$id)->get();
         
         $data['title'] = $this->properti['name'].' | Administrator '.ucwords($this->modul['title']);

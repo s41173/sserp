@@ -23,7 +23,7 @@ class Journalgl_lib extends Custom_Model {
         { $this->db->insert('gls', $journal); $this->currency = $currency; }
     }
     
-    private function cek_journal($no,$code,$date,$currency)
+    function cek_journal($no,$code,$date,$currency)
     {
         $this->db->where('no', $no);
         $this->db->where('code', $code);

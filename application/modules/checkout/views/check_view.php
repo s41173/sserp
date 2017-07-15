@@ -55,8 +55,11 @@ $atts1 = array(
           
             <div class="col-md-12 col-sm-12 col-xs-12">
               <div class="x_panel" >
-                
-                <div class="x_content">
+                  
+    <div class="title"> <?php $flashmessage = $this->session->flashdata('message'); ?> </div>
+    <p class="message"> <?php echo ! empty($message) ? $message : '' . ! empty($flashmessage) ? $flashmessage : ''; ?> </p>  
+                  
+                <div class="x_content">  
            
            <!-- searching form -->
            
@@ -129,7 +132,7 @@ $atts1 = array(
       
       <!-- Modal - Report Form -->
       <div class="modal fade" id="myModal3" role="dialog">
-         <?php $this->load->view('ledger_report_panel'); ?>    
+         <?php $this->load->view('check_report_panel'); ?>    
       </div>
       <!-- Modal - Report Form -->
       
