@@ -402,6 +402,9 @@ class Ledger extends MX_Controller
         }
         else {  return TRUE; }
     }
+    
+    // ====================================== CLOSING ======================================
+    function reset_process(){ }
 
 
 }

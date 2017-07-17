@@ -26,7 +26,9 @@ class Branch_lib extends Main_model {
         $this->db->where('deleted', NULL);
         $this->db->order_by('code', 'asc');
         $val = $this->db->get($this->tableName)->result();
-        foreach($val as $row){ $data['options'][$row->id] = ucfirst($row->code.' : '.$row->name); }
+        if ($val){
+          foreach($val as $row){ $data['options'][$row->id] = ucfirst($row->code.' : '.$row->name); }    
+        }else{ $data['options'][''] = '--'; }
         return $data;
     }
     
@@ -72,6 +74,17 @@ class Branch_lib extends Main_model {
     function get_branch_session()
     {
        if (!$this->session->userdata('branch')){ return null; }else{ return $this->session->userdata('branch'); }
+    }
+    
+    function get_branch_default()
+    {
+       if (!$this->session->userdata('branch')){ 
+           $this->db->select($this->field); 
+           $this->db->where('defaults', 1);
+           $val = $this->db->get($this->tableName)->row();
+           return $val->id;
+       }
+       else{ return $this->session->userdata('branch'); }
     }
     
     function get_acc($val,$type='stock')

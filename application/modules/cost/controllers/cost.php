@@ -6,7 +6,7 @@ class Cost extends MX_Controller
     {
         parent::__construct();
         
-        $this->load->model('Cost_model', '', TRUE);
+        $this->load->model('Cost_model', 'model', TRUE);
 
         $this->properti = $this->property->get();
         $this->acl->otentikasi();
@@ -25,7 +25,7 @@ class Cost extends MX_Controller
     
     public function getdatatable($search=null)
     {
-        if(!$search){ $result = $this->Cost_model->get_last($this->modul['limit'])->result(); }
+        if(!$search){ $result = $this->model->get_last($this->modul['limit'])->result(); }
         
         if ($result){
 	foreach($result as $res)
@@ -93,7 +93,7 @@ class Cost extends MX_Controller
         {
            if ( $this->cek_relation($cek[$i]) == TRUE ) 
            {
-              $this->Cost_model->force_delete($cek[$i]); 
+              $this->model->force_delete($cek[$i]); 
            }
            else { $x=$x+1; }
            
@@ -115,7 +115,7 @@ class Cost extends MX_Controller
     {
         if ($this->acl->otentikasi_admin($this->title,'ajax') == TRUE){
         if ($type == 'soft'){
-           $this->Cost_model->delete($uid);
+           $this->model->delete($uid);
            $this->session->set_flashdata('message', "1 $this->title successfully removed..!");
            
            echo "true|1 $this->title successfully soft removed..!";
@@ -124,7 +124,7 @@ class Cost extends MX_Controller
        {
         if ( $this->cek_relation($uid) == TRUE )
         { 
-           $this->Cost_model->force_delete($uid);
+           $this->model->force_delete($uid);
            $this->session->set_flashdata('message', "1 $this->title successfully removed..!");
            
            echo "true|1 $this->title successfully removed..!";
@@ -162,7 +162,7 @@ class Cost extends MX_Controller
                           'account_id' => $this->account->get_id_code($this->input->post('titem')),
                           'descs' => $this->input->post('tdesc'), 'created' => date('Y-m-d H:i:s'));
 
-            $this->Cost_model->add($cost);
+            $this->model->add($cost);
             $this->session->set_flashdata('message', "One $this->title data successfully saved!");
             
             echo 'true|'.$this->title.' successfully saved..!|';
@@ -174,7 +174,7 @@ class Cost extends MX_Controller
     // Fungsi update untuk menset texfield dengan nilai dari database
     function update($uid=null)
     {        
-        $cost = $this->Cost_model->get_by_id($uid)->row();
+        $cost = $this->model->get_by_id($uid)->row();
 	$this->session->set_userdata('langid', $cost->id);
         
         echo $uid.'|'.$cost->name.'|'.$this->account->get_code($cost->account_id).'|'.$cost->descs;
@@ -183,7 +183,7 @@ class Cost extends MX_Controller
 
     public function valid_cost($name)
     {
-        if ($this->Cost_model->valid('name',$name) == FALSE)
+        if ($this->model->valid('name',$name) == FALSE)
         {
             $this->form_validation->set_message('valid_cost', "This $this->title is already registered.!");
             return FALSE;
@@ -194,7 +194,7 @@ class Cost extends MX_Controller
     function validation_cost($name)
     {
 	$id = $this->session->userdata('langid');
-	if ($this->Cost_model->validating('name',$name,$id) == FALSE)
+	if ($this->model->validating('name',$name,$id) == FALSE)
         {
             $this->form_validation->set_message('validation_cost', 'This cost is already registered!');
             return FALSE;
@@ -223,12 +223,15 @@ class Cost extends MX_Controller
             $cost = array('name' => ucfirst($this->input->post('tname')), 
                           'account_id' => $this->account->get_id_code($this->input->post('titem')),
                           'descs' => $this->input->post('tdesc'));
-	    $this->Cost_model->update($this->session->userdata('langid'), $cost);
+	    $this->model->update($this->session->userdata('langid'), $cost);
             echo 'true|Data successfully saved..';
         }
         else{ echo 'error|'.validation_errors(); }
         }else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
     }
+    
+    // ====================================== CLOSING ======================================
+    function reset_process(){ $this->model->closing(); } 
 
 }
 

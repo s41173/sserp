@@ -6,7 +6,7 @@ class Admin extends MX_Controller
     {
         parent::__construct();
         
-        $this->load->model('Admin_model', '', TRUE);
+        $this->load->model('Admin_model', 'model', TRUE);
 
         $this->properti = $this->property->get();
         $this->acl->otentikasi();
@@ -28,7 +28,7 @@ class Admin extends MX_Controller
      
     public function getdatatable($search=null)
     {
-        if(!$search){ $result = $this->Admin_model->get_last_user($this->modul['limit'])->result(); }
+        if(!$search){ $result = $this->model->get_last_user($this->modul['limit'])->result(); }
 	
         $output = null;
         if ($result){
@@ -103,7 +103,7 @@ class Admin extends MX_Controller
           $x = 0;
           for ($i=0; $i<$jumlah; $i++)
           {
-             $this->Admin_model->delete($cek[$i]);
+             $this->model->delete($cek[$i]);
              $x=$x+1;
           }
           $res = intval($jumlah-$x);
@@ -123,7 +123,7 @@ class Admin extends MX_Controller
     function delete($uid)
     {
         if ($this->acl->otentikasi_admin($this->title,'ajax') == TRUE){
-            $this->Admin_model->delete($uid);
+            $this->model->delete($uid);
             $this->session->set_flashdata('message', "1 $this->title successfully removed..!");
 
             echo "true|1 $this->title successfully removed..!";
@@ -160,7 +160,7 @@ class Admin extends MX_Controller
                                'email' => $this->input->post('tmail'), 'yahooid' => setnull($this->input->post('tid')), 'role' => $this->input->post('crole'), 
                                'branch_id' => $this->input->post('cbranch'), 'status' => $this->input->post('rstatus'), 'created' => date('Y-m-d H:i:s'));
 
-                $this->Admin_model->add($users);
+                $this->model->add($users);
                 $this->session->set_flashdata('message', "One $this->title data successfully saved!");
                 echo 'true|Data successfully saved..!';
             }
@@ -178,7 +178,7 @@ class Admin extends MX_Controller
     // Fungsi update untuk menset texfield dengan nilai dari database
     function update($uid=null)
     {        
-        $admin = $this->Admin_model->get_by_id($uid)->row();
+        $admin = $this->model->get_by_id($uid)->row();
                
 	$this->session->set_userdata('langid', $admin->id);
         
@@ -191,7 +191,7 @@ class Admin extends MX_Controller
     {
         $uname = $this->input->post('tusername');
         
-        if ($this->Admin_model->valid('username',$uname) == FALSE)
+        if ($this->model->valid('username',$uname) == FALSE)
         {
             $this->form_validation->set_message('valid_username', 'This user is already registered.!');
             return FALSE;
@@ -202,7 +202,7 @@ class Admin extends MX_Controller
     function validation_username($name)
     {
 	$id = $this->session->userdata('langid');
-	if ($this->Admin_model->validating('username',$name,$id) == FALSE)
+	if ($this->model->validating('username',$name,$id) == FALSE)
         {
             $this->form_validation->set_message('validation_username', 'This user is already registered!');
             return FALSE;
@@ -248,7 +248,7 @@ class Admin extends MX_Controller
                            'branch_id' => $this->input->post('cbranch'), 'status' => $this->input->post('rstatus'));
             }
 
-	    $this->Admin_model->update($this->session->userdata('langid'), $users);
+	    $this->model->update($this->session->userdata('langid'), $users);
             $this->session->set_flashdata('message', "One $this->title has successfully updated!");
           //  $this->session->unset_userdata('langid');
             echo "true|One $this->title has successfully updated..!";
@@ -257,6 +257,9 @@ class Admin extends MX_Controller
         else{ echo 'warning|'.validation_errors(); }
         }else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
     }
+    
+    // ====================================== CLOSING ======================================
+    function reset_process(){ $this->model->closing(); } 
 
 }
 

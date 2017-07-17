@@ -6,7 +6,7 @@ class Log extends MX_Controller
     {
         parent::__construct();
         
-        $this->load->model('Log_model', '', TRUE);
+        $this->load->model('Log_model', 'model', TRUE);
 
         $this->properti = $this->property->get();
         $this->acl->otentikasi();
@@ -27,7 +27,7 @@ class Log extends MX_Controller
      
     public function getdatatable($search=null)
     {
-        if(!$search){ $result = $this->Log_model->get_last_user($this->modul['limit'])->result(); }
+        if(!$search){ $result = $this->model->get_last_user($this->modul['limit'])->result(); }
 	
         $output = null;
         if ($result){
@@ -100,7 +100,7 @@ class Log extends MX_Controller
         $x = 0;
         for ($i=0; $i<$jumlah; $i++)
         {
-           $this->Log_model->delete($cek[$i]);
+           $this->model->delete($cek[$i]);
            $x=$x+1;
         }
         $res = intval($jumlah-$x);
@@ -119,7 +119,7 @@ class Log extends MX_Controller
     function delete($uid)
     {
         if ($this->acl->otentikasi_admin($this->title,'ajax') == TRUE){
-        $this->Log_model->delete($uid);
+        $this->model->delete($uid);
         $this->session->set_flashdata('message', "1 $this->title successfully removed..!");
            
         echo "true|1 $this->title successfully removed..!";
@@ -156,7 +156,7 @@ class Log extends MX_Controller
                            'email' => $this->input->post('tmail'), 'yahooid' => setnull($this->input->post('tid')), 'role' => $this->input->post('crole'), 
                            'status' => $this->input->post('rstatus'), 'created' => date('Y-m-d H:i:s'));
 
-            $this->Log_model->add($users);
+            $this->model->add($users);
             $this->session->set_flashdata('message', "One $this->title data successfully saved!");
             echo 'true|Data successfully saved..!';
         }
@@ -172,7 +172,7 @@ class Log extends MX_Controller
     // Fungsi update untuk menset texfield dengan nilai dari database
     function update($uid=null)
     {        
-        $admin = $this->Log_model->get_user_by_id($uid)->row();
+        $admin = $this->model->get_user_by_id($uid)->row();
                
 	$this->session->set_userdata('langid', $admin->id);
         
@@ -185,7 +185,7 @@ class Log extends MX_Controller
     {
         $uname = $this->input->post('tusername');
         
-        if ($this->Log_model->valid_name($uname) == FALSE)
+        if ($this->model->valid_name($uname) == FALSE)
         {
             $this->form_validation->set_message('valid_username', 'This user is already registered.!');
             return FALSE;
@@ -196,7 +196,7 @@ class Log extends MX_Controller
     function validation_username($name)
     {
 	$id = $this->session->userdata('langid');
-	if ($this->Log_model->validation_username($name,$id) == FALSE)
+	if ($this->model->validation_username($name,$id) == FALSE)
         {
             $this->form_validation->set_message('validation_username', 'This user is already registered!');
             return FALSE;
@@ -242,7 +242,7 @@ class Log extends MX_Controller
                            'status' => $this->input->post('rstatus'));
             }
 
-	    $this->Log_model->update($this->session->userdata('langid'), $users);
+	    $this->model->update($this->session->userdata('langid'), $users);
             $this->session->set_flashdata('message', "One $this->title has successfully updated!");
           //  $this->session->unset_userdata('langid');
             echo "true|One $this->title has successfully updated..!";
@@ -275,11 +275,16 @@ class Log extends MX_Controller
 
 //        Property Details
         $data['company'] = $this->properti['name'];
-        $data['reports'] = $this->Log_model->report($user,$modul,$start,$end)->result();
+        $data['reports'] = $this->model->report($user,$modul,$start,$end)->result();
 
         if ($this->input->post('ctype') == 0){ $this->load->view('log_report', $data); }
         else { $this->load->view('log_pivot', $data); } 
     }
+    
+            
+    // ====================================== CLOSING ======================================
+    function reset_process(){ $this->model->closing(); } 
+
 
 }
 

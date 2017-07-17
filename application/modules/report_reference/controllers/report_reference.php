@@ -356,6 +356,9 @@ class Report_reference extends MX_Controller
        $this->load->view('template', $data);
     }
     
+    // ====================================== CLOSING ======================================
+    function reset_process(){ } 
+    
 }
 
 ?>

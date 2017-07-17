@@ -26,10 +26,16 @@ class Branch_model extends Custom_Model
         return $this->db->get(); 
     }
     
-     function get_default()
+    function get_default()
     {
         $this->db->where('defaults', 1);
         return $this->db->get($this->tableName);
+    }
+    
+    function closing_defaults()
+    {
+        $this->db->where('defaults', 0);
+        $this->db->delete($this->tableName);
     }
 
 }

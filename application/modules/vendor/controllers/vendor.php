@@ -320,6 +320,9 @@ class Vendor extends MX_Controller
             echo form_dropdown('cdistrict', $district, isset($default['district']) ? $default['district'] : '', $js);
         }
     }
+    
+    // ====================================== CLOSING ======================================
+   function reset_process(){ $this->Vendor_model->closing(); }
    
 
 }

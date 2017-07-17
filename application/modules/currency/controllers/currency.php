@@ -6,7 +6,7 @@ class Currency extends MX_Controller
     {
         parent::__construct();
         
-        $this->load->model('Currency_model', '', TRUE);
+        $this->load->model('Currency_model', 'model', TRUE);
 
         $this->properti = $this->property->get();
         $this->acl->otentikasi();
@@ -24,7 +24,7 @@ class Currency extends MX_Controller
     
     public function getdatatable($search=null)
     {
-        if(!$search){ $result = $this->Currency_model->get_last($this->modul['limit'])->result(); }
+        if(!$search){ $result = $this->model->get_last($this->modul['limit'])->result(); }
         
         if ($result){
 	foreach($result as $res)
@@ -43,9 +43,9 @@ class Currency extends MX_Controller
     function publish($uid = null)
     {
        if ($this->acl->otentikasi2($this->title,'ajax') == TRUE){ 
-       $val = $this->Currency_model->get_by_id($uid)->row();
+       $val = $this->model->get_by_id($uid)->row();
        if ($val->publish == 0){ $lng = array('publish' => 1); }else { $lng = array('publish' => 0); }
-       $this->Currency_model->update($uid,$lng);
+       $this->model->update($uid,$lng);
        echo 'true|Status Changed...!';
        }else{ echo "error|Sorry, you do not have the right to change publish status..!"; }
     }
@@ -54,12 +54,12 @@ class Currency extends MX_Controller
     {        
        if ($this->acl->otentikasi2($this->title,'ajax') == TRUE){ 
            
-        $val = $this->Currency_model->get_default()->row();
+        $val = $this->model->get_default()->row();
         $lng = array('defaults' => 0);
-        $this->Currency_model->update($val->id,$lng);
+        $this->model->update($val->id,$lng);
 
         $lng = array('defaults' => 1);
-        $this->Currency_model->update($uid,$lng);  
+        $this->model->update($uid,$lng);  
         echo 'true|Defaults Changed..!';
            
        }else{ echo "error|Sorry, you do not have the right to change publish status..!"; }
@@ -115,11 +115,11 @@ class Currency extends MX_Controller
         {
            if ( $this->cek_relation($cek[$i]) == TRUE ) 
            {
-              $img = $this->Currency_model->get_by_id($cek[$i])->row();
+              $img = $this->model->get_by_id($cek[$i])->row();
               $img = $img->image;
               if ($img){ $img = "./images/currency/".$img; unlink("$img"); }
 
-              $this->Currency_model->delete($cek[$i]); 
+              $this->model->delete($cek[$i]); 
            }
            else { $x=$x+1; }
            
@@ -141,7 +141,7 @@ class Currency extends MX_Controller
     {
         if ($this->acl->otentikasi_admin($this->title,'ajax') == TRUE){
         if ($type == 'soft'){
-           $this->Currency_model->delete($uid);
+           $this->model->delete($uid);
            $this->session->set_flashdata('message', "1 $this->title successfully removed..!");
            
            echo "true|1 $this->title successfully soft removed..!";
@@ -150,7 +150,7 @@ class Currency extends MX_Controller
        {
         if ( $this->cek_relation($uid) == TRUE )
         {
-           $this->Currency_model->delete($uid);
+           $this->model->delete($uid);
            $this->session->set_flashdata('message', "1 $this->title successfully removed..!");
            
            echo "true|1 $this->title successfully removed..!";
@@ -185,7 +185,7 @@ class Currency extends MX_Controller
         {
             $currency = array('name' => strtolower($this->input->post('tname')), 'code' => $this->input->post('tcode'), 'created' => date('Y-m-d H:i:s'));
 
-            $this->Currency_model->add($currency);
+            $this->model->add($currency);
             $this->session->set_flashdata('message', "One $this->title data successfully saved!");
             
             echo 'true|'.$this->title.' successfully saved..!|';
@@ -197,7 +197,7 @@ class Currency extends MX_Controller
     // Fungsi update untuk menset texfield dengan nilai dari database
     function update($uid=null)
     {        
-        $currency = $this->Currency_model->get_by_id($uid)->row();
+        $currency = $this->model->get_by_id($uid)->row();
 	$this->session->set_userdata('langid', $currency->id);
         
         echo $uid.'|'.$currency->code.'|'.$currency->name;
@@ -206,7 +206,7 @@ class Currency extends MX_Controller
 
     public function valid_currency($name)
     {
-        if ($this->Currency_model->valid('code',$name) == FALSE)
+        if ($this->model->valid('code',$name) == FALSE)
         {
             $this->form_validation->set_message('valid_currency', "This $this->title is already registered.!");
             return FALSE;
@@ -217,7 +217,7 @@ class Currency extends MX_Controller
     function validation_currency($name)
     {
 	$id = $this->session->userdata('langid');
-	if ($this->Currency_model->validating('code',$name,$id) == FALSE)
+	if ($this->model->validating('code',$name,$id) == FALSE)
         {
             $this->form_validation->set_message('validation_currency', 'This currency is already registered!');
             return FALSE;
@@ -243,12 +243,15 @@ class Currency extends MX_Controller
         if ($this->form_validation->run($this) == TRUE)
         {
             $currency = array('name' => strtolower($this->input->post('tname')), 'code' => $this->input->post('tcode'));
-	    $this->Currency_model->update($this->session->userdata('langid'), $currency);
+	    $this->model->update($this->session->userdata('langid'), $currency);
             echo 'true|Data successfully saved..';
         }
         else{ echo 'error|'.validation_errors(); }
         }else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
     }
+    
+    // ====================================== CLOSING ======================================
+    function reset_process(){ $this->model->closing(); } 
 
 }
 

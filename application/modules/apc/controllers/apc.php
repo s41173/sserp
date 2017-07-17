@@ -25,6 +25,7 @@ class Apc extends MX_Controller
         $this->journalgl = new Journalgl_lib();
         $this->account = new Account_lib();
         $this->model = new Apcmodel();
+       
     }
 
     private $properti, $modul, $title, $cost,$ps, $model, $ledger, $account;
@@ -815,6 +816,8 @@ class Apc extends MX_Controller
         $this->load->view('cash_ledger_invoice', $data);
     }
     
+    // ====================================== CLOSING ======================================
+    function reset_process(){ $this->Apc_model->closing(); $this->Apc_trans_model->closing(); $this->Apc_trans_model->closing_trans(); }
 }
 
 ?>

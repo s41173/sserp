@@ -36,6 +36,10 @@ class Apc_trans_model extends Custom_Model
         $this->db->where('apc_id', $uid);
         $this->db->delete($this->tableName); // perintah untuk delete data dari db
     }
+    
+    function closing_trans(){
+        $this->db->truncate('cash_ledger'); 
+    }
    
 }
 

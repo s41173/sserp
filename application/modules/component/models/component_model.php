@@ -13,8 +13,8 @@ class Component_model extends Custom_Model
         $this->tableName = 'modul';
     }
     
-    protected $field = array('id', 'name', 'title', 'publish', 'status', 'aktif', 'limit', 'role', 'icon', 'order',
-                            'created', 'updated', 'deleted');
+    protected $field = array('id', 'name', 'title', 'publish', 'status', 'aktif', 'limit', 'role', 'icon', 'order', 'closing',
+                              'table_name', 'created', 'updated', 'deleted');
     protected $com;
             
 
@@ -39,6 +39,16 @@ class Component_model extends Custom_Model
         $this->db->order_by('name', 'asc'); 
         return $this->db->get(); 
     }    
+    
+    function get_closing_modul()
+    {
+        $this->db->select($this->field);
+        $this->db->from($this->tableName); 
+        $this->db->where('deleted', $this->deleted);
+        $this->db->where('closing', 1);
+        $this->db->order_by('name', 'asc'); 
+        return $this->db->get(); 
+    }
    
 }
 

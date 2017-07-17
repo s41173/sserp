@@ -638,6 +638,9 @@ class Journalgl extends MX_Controller
         $this->load->view('journal_report', $data); 
         
     }
+    
+        // ====================================== CLOSING ====================================== 
+   function reset_process(){ $this->jm->closing(); $this->jm->closing_trans(); }
 
 
 // ====================================== REPORT =========================================

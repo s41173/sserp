@@ -72,8 +72,11 @@ class Vendor_lib extends Custom_Model {
         $this->db->where('deleted', $this->deleted);
         $this->db->where('status', 1);
         $val = $this->db->get($this->tableName)->result();
-        foreach($val as $row){$data['options'][$row->id] = $row->name;}
-        return $data; 
+        if ($val){
+          foreach($val as $row){$data['options'][$row->id] = $row->name;}
+        }
+        else{ $data['options'][''] = '--'; }
+        return $data;
     }
 
     function combo_all()

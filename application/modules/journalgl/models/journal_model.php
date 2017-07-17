@@ -82,6 +82,11 @@ class Journal_model extends Custom_Model
         return $this->db->get(); 
     }
     
+    function closing_trans(){
+        $this->db->truncate('transactions'); 
+        $this->db->truncate('balances'); 
+    }
+    
 }
 
 ?>

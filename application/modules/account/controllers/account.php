@@ -486,6 +486,9 @@ class Account extends MX_Controller
 // ====================================== REPORT =========================================
     
    function get_ajax_code(){ echo $this->classification->get_no($this->input->post('value')); }
+   
+// ====================================== CLOSING ======================================
+   function reset_process(){ $this->Model->closing(); }
 
 }
 

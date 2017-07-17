@@ -6,7 +6,7 @@ class Product extends MX_Controller
     {
         parent::__construct();
         
-        $this->load->model('Product_model', '', TRUE);
+        $this->load->model('Product_model', 'model', TRUE);
 
         $this->properti = $this->property->get();
         $this->acl->otentikasi();
@@ -49,8 +49,8 @@ class Product extends MX_Controller
     public function getdatatable($search=null,$branch='null',$cat='null',$col='null',$size='null',$publish='null')
     {
         if ($branch == 'null'){ $branch = $this->branch->get_branch(); }
-        if(!$search){ $result = $this->Product_model->get_last($this->modul['limit'])->result(); }
-        else {$result = $this->Product_model->search($cat,$col,$size,$publish)->result(); }
+        if(!$search){ $result = $this->model->get_last($this->modul['limit'])->result(); }
+        else {$result = $this->model->search($cat,$col,$size,$publish)->result(); }
 	
         $output = null;
         if ($result){
@@ -155,7 +155,7 @@ class Product extends MX_Controller
         $brand = $this->input->post('cmanufacture');
         $category = $this->input->post('ccategory');
 
-        $products = $this->Product_model->search_list($category,$brand,$currency)->result();        
+        $products = $this->model->search_list($category,$brand,$currency)->result();        
         $qty = 0;
 
         $tmpl = array('table_open' => '<table id="example" width="100%" cellspacing="0" class="table table-striped table-bordered">');
@@ -188,9 +188,9 @@ class Product extends MX_Controller
     function publish($uid = null)
     {
        if ($this->acl->otentikasi2($this->title,'ajax') == TRUE){ 
-       $val = $this->Product_model->get_by_id($uid)->row();
+       $val = $this->model->get_by_id($uid)->row();
        if ($val->publish == 0){ $lng = array('publish' => 1); }else { $lng = array('publish' => 0); }
-       $this->Product_model->update($uid,$lng);
+       $this->model->update($uid,$lng);
        echo 'true|Status Changed...!';
        }else{ echo "error|Sorry, you do not have the right to change publish status..!"; }
     }
@@ -212,7 +212,7 @@ class Product extends MX_Controller
                 if ($type == 'soft') { $this->delete($cek[$i]); }
                 else { $this->remove_img($cek[$i],'force');
                        $this->attribute_product->force_delete_by_product($cek[$i]);
-                       $this->Product_model->force_delete($cek[$i]);  }
+                       $this->model->force_delete($cek[$i]);  }
                 $x=$x+1;
              }
           }
@@ -235,7 +235,7 @@ class Product extends MX_Controller
         if ($this->acl->otentikasi_admin($this->title,'ajax') == TRUE){
                 
             if ($this->valid_qty($uid) == TRUE){
-               $this->Product_model->delete($uid);
+               $this->model->delete($uid);
                $this->session->set_flashdata('message', "1 $this->title successfully removed..!");
                echo "true|1 $this->title successfully removed..!"; 
             }
@@ -295,7 +295,7 @@ class Product extends MX_Controller
 
             $this->load->library('upload', $config);
             
-            if (!$this->input->post('tsku')){ $sku = $this->category->get_code($this->input->post('ccategory')).'-0'.$this->Product_model->counter();
+            if (!$this->input->post('tsku')){ $sku = $this->category->get_code($this->input->post('ccategory')).'-0'.$this->model->counter();
             }else { $sku = $this->input->post('tsku'); }
 //
             if ( !$this->upload->do_upload("userfile")) // if upload failure
@@ -318,8 +318,8 @@ class Product extends MX_Controller
                                   'image' => $info['file_name'], 'created' => date('Y-m-d H:i:s'));
             }
 
-            $this->Product_model->add($product);
-            $this->stockledger->create($this->Product_model->max_id(), $this->branch->get_branch(), $this->period->month, $this->period->year);
+            $this->model->add($product);
+            $this->stockledger->create($this->model->max_id(), $this->branch->get_branch(), $this->period->month, $this->period->year);
             $this->session->set_flashdata('message', "One $this->title data successfully saved!");
 //            redirect($this->title);
             
@@ -342,7 +342,7 @@ class Product extends MX_Controller
     
     function remove_img($id,$type='primary')
     {
-        $img = $this->Product_model->get_by_id($id)->row();
+        $img = $this->model->get_by_id($id)->row();
         
         if ($type == 'primary'){
             $img = $img->image;
@@ -359,7 +359,7 @@ class Product extends MX_Controller
     
     function details($uid=null)
     {        
-        $product = $this->Product_model->get_by_id($uid)->row();
+        $product = $this->model->get_by_id($uid)->row();
         if (!$product){ redirect($this->title); }
 	$this->session->set_userdata('langid', $product->id);
         
@@ -372,7 +372,7 @@ class Product extends MX_Controller
     // Fungsi update untuk menset texfield dengan nilai dari database
     function update($uid=null)
     {        
-        $this->Product_model->valid_add_trans($uid, $this->title);
+        $this->model->valid_add_trans($uid, $this->title);
         
         $data['title'] = $this->properti['name'].' | Administrator  '.ucwords($this->modul['title']);
         $data['h2title'] = 'Edit '.$this->modul['title'];
@@ -391,7 +391,7 @@ class Product extends MX_Controller
         $data['color'] = $this->attribute->combo_color();
         $data['size'] = $this->attribute->combo_size();
         
-        $product = $this->Product_model->get_by_id($uid)->row();
+        $product = $this->model->get_by_id($uid)->row();
 	$this->session->set_userdata('langid', $product->id);
         
         $data['default']['sku'] = $product->sku;
@@ -450,7 +450,7 @@ class Product extends MX_Controller
 	$data['form_action'] = site_url($this->title.'/add_image/'.$pid);
         $data['link'] = array('link_back' => anchor($this->title,'Back', array('class' => 'btn btn-danger')));
 
-        $result = $this->Product_model->get_by_id($pid)->row();
+        $result = $this->model->get_by_id($pid)->row();
         
         // library HTML table untuk membuat template table class zebra
         $tmpl = array('table_open' => '<table id="" class="table table-striped table-bordered">');
@@ -509,7 +509,7 @@ class Product extends MX_Controller
 
             if ($this->form_validation->run($this) == TRUE)
             {  
-                $result = $this->Product_model->get_by_id($pid)->row();
+                $result = $this->model->get_by_id($pid)->row();
                 if ($result->url_upload == 1)               
                 {
                     switch ($this->input->post('cname')) {
@@ -541,7 +541,7 @@ class Product extends MX_Controller
                          $attr = array('url'.$this->input->post('cname') => $info['file_name'], 'url_upload' => 1); 
                     } 
                 
-                $this->Product_model->update($pid, $attr);
+                $this->model->update($pid, $attr);
                 $this->session->set_flashdata('message', "One $this->title data successfully saved!");
                 
                 echo 'true|Data successfully saved..!'; 
@@ -660,7 +660,7 @@ class Product extends MX_Controller
     
     function valid_sku($val)
     {
-        if ($this->Product_model->valid('sku',$val) == FALSE)
+        if ($this->model->valid('sku',$val) == FALSE)
         {
             $this->form_validation->set_message('valid_sku','SKU registered..!');
             return FALSE;
@@ -671,7 +671,7 @@ class Product extends MX_Controller
     function validating_sku($val)
     {
 	$id = $this->session->userdata('langid');
-	if ($this->Product_model->validating('sku',$val,$id) == FALSE)
+	if ($this->model->validating('sku',$val,$id) == FALSE)
         {
             $this->form_validation->set_message('validating_sku', "SKU registered!");
             return FALSE;
@@ -681,7 +681,7 @@ class Product extends MX_Controller
     
     function valid_name($val)
     {
-        if ($this->Product_model->valid('name',$val) == FALSE)
+        if ($this->model->valid('name',$val) == FALSE)
         {
             $this->form_validation->set_message('valid_name','Name registered..!');
             return FALSE;
@@ -692,7 +692,7 @@ class Product extends MX_Controller
     function validating_name($val)
     {
 	$id = $this->session->userdata('langid');
-	if ($this->Product_model->validating('name',$val,$id) == FALSE)
+	if ($this->model->validating('name',$val,$id) == FALSE)
         {
             $this->form_validation->set_message('validating_name', "Name registered!");
             return FALSE;
@@ -702,7 +702,7 @@ class Product extends MX_Controller
     
     function valid_model($val)
     {
-        if ($this->Product_model->valid('model',$val) == FALSE)
+        if ($this->model->valid('model',$val) == FALSE)
         {
             $this->form_validation->set_message('valid_model','Model registered..!');
             return FALSE;
@@ -713,7 +713,7 @@ class Product extends MX_Controller
     function validating_model($val)
     {
 	$id = $this->session->userdata('langid');
-	if ($this->Product_model->validating('model',$val,$id) == FALSE)
+	if ($this->model->validating('model',$val,$id) == FALSE)
         {
             $this->form_validation->set_message('validating_model', "Model registered!");
             return FALSE;
@@ -780,7 +780,7 @@ class Product extends MX_Controller
                                       'image' => $info['file_name']);
                 }
                 
-                $this->Product_model->update($this->session->userdata('langid'), $product);
+                $this->model->update($this->session->userdata('langid'), $product);
                 $this->session->set_flashdata('message', "One $this->title has successfully updated!");
                 redirect($this->title.'/update/'.$this->session->userdata('langid'));
                 
@@ -795,7 +795,7 @@ class Product extends MX_Controller
             $product = array('meta_title' => $this->input->post('tmetatitle'), 'meta_desc' => $this->input->post('tmetadesc'),
                              'meta_keywords' => $this->input->post('tmetakeywords'), 'spesification' => $this->input->post('tspec')
                              );
-            $this->Product_model->update($this->session->userdata('langid'), $product);
+            $this->model->update($this->session->userdata('langid'), $product);
             $this->session->set_flashdata('message', "One $this->title has successfully updated!");
             redirect($this->title.'/update/'.$this->session->userdata('langid'));
         }
@@ -810,7 +810,7 @@ class Product extends MX_Controller
             $product = array('price' => $this->input->post('tprice'), 'discount' => $this->input->post('tdiscount'),
                              'min_order' => $this->input->post('tmin'), 'qty' => $this->input->post('tqty')
                              );
-            $this->Product_model->update($this->session->userdata('langid'), $product);
+            $this->model->update($this->session->userdata('langid'), $product);
             echo 'true|One '.$this->title.' price and qty has successfully updated!';
         }
         elseif ($param == 4)
@@ -828,7 +828,7 @@ class Product extends MX_Controller
                              'weight' => $this->input->post('tweight'), 'color' => $this->input->post('ccolor'), 
                              'size' => $this->input->post('csize'), 'related' => !empty($this->input->post('crelated')) ? split_array($this->input->post('crelated')) : null
                              );
-            $this->Product_model->update($this->session->userdata('langid'), $product);
+            $this->model->update($this->session->userdata('langid'), $product);
             echo 'true|One '.$this->title.' dimension has successfully updated!';
         }
 
@@ -838,7 +838,7 @@ class Product extends MX_Controller
     
     private function edit_qty($pid,$eqty)
     {
-        $res = $this->Product_model->get_by_id($pid)->row();
+        $res = $this->model->get_by_id($pid)->row();
         $begin = $res->qty;
         if ($begin > $eqty){ // pengurangan
             $this->wt->add(date('Y-m-d H:i:s'), '', $res->currency, $pid, 0, intval($begin-$eqty), 0, 0, $this->session->userdata('log')); 
@@ -868,7 +868,7 @@ class Product extends MX_Controller
 
 //        Property Details
         $data['company'] = $this->properti['name'];
-        $data['reports'] = $this->Product_model->report($this->input->post('ccategory'), $this->input->post('cmanufacture'))->result();
+        $data['reports'] = $this->model->report($this->input->post('ccategory'), $this->input->post('cmanufacture'))->result();
         
         if ($this->input->post('ctype') == 0){ $this->load->view('product_report', $data); }
         else { $this->load->view('product_pivot', $data); }
@@ -941,7 +941,7 @@ class Product extends MX_Controller
                              'publish' => 0,
                              'created' => date('Y-m-d H:i:s'));
             
-                $this->Product_model->add($account);
+                $this->model->add($account);
               }
            }              
         }
@@ -976,7 +976,7 @@ class Product extends MX_Controller
         $data['website'] = $this->properti['sitename'];
         $data['email']   = $this->properti['email'];
 
-        $product = $this->Product_model->get_by_id($pid)->row();
+        $product = $this->model->get_by_id($pid)->row();
 
         $data['code'] = $product->sku;
         $data['brand'] = $this->manufacture->get_name($product->manufacture);
@@ -1010,7 +1010,7 @@ class Product extends MX_Controller
         $data['website'] = $this->properti['sitename'];
         $data['email']   = $this->properti['email'];
 
-        $product = $this->Product_model->get_by_id($pid)->row();
+        $product = $this->model->get_by_id($pid)->row();
 
         $data['code'] = $product->sku;
         $data['brand'] = $this->manufacture->get_name($product->manufacture);
@@ -1035,7 +1035,7 @@ class Product extends MX_Controller
         
         $data['branch'] = $this->branch->combo_all();
         if ($pid == null){ $pid = $this->input->post('cproduct'); }
-        if ($pid){ $product = $this->Product_model->get_by_id($pid)->row(); $pname = ': '.$product->name;}
+        if ($pid){ $product = $this->model->get_by_id($pid)->row(); $pname = ': '.$product->name;}
         else { $pname = null;}
         
         $period = $this->input->post('reservation');  
@@ -1138,6 +1138,8 @@ class Product extends MX_Controller
       redirect('product/ledger');
     } }
    
+    // ====================================== CLOSING ======================================
+    function reset_process(){ $this->model->closing(); $this->model->closing_trans(); } 
 
 }
 

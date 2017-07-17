@@ -6,7 +6,7 @@ class Language extends MX_Controller
     {
         parent::__construct();
         
-        $this->load->model('Language_model', '', TRUE);
+        $this->load->model('Language_model', 'model', TRUE);
 
         $this->properti = $this->property->get();
         $this->acl->otentikasi();
@@ -26,7 +26,7 @@ class Language extends MX_Controller
     
     public function getdatatable($search=null)
     {
-        if(!$search){ $result = $this->Language_model->get_last($this->modul['limit'])->result(); }
+        if(!$search){ $result = $this->model->get_last($this->modul['limit'])->result(); }
         
         if ($result){
 	foreach($result as $res)
@@ -80,12 +80,12 @@ class Language extends MX_Controller
     
     function primary($uid = null)
     {
-       $val = $this->Language_model->get_primary()->row();
+       $val = $this->model->get_primary()->row();
        $lng = array('primary' => 0);
-       $this->Language_model->update($val->id,$lng);
+       $this->model->update($val->id,$lng);
 
        $lng = array('primary' => 1);
-       $this->Language_model->update($uid,$lng);
+       $this->model->update($uid,$lng);
     }
     
     function delete_all()
@@ -103,7 +103,7 @@ class Language extends MX_Controller
         {
            if ( $this->cek_relation($cek[$i]) == TRUE ) 
            {
-              $this->Language_model->delete($cek[$i]); 
+              $this->model->delete($cek[$i]); 
            }
            else { $x=$x+1; }
            
@@ -123,7 +123,7 @@ class Language extends MX_Controller
     
     private function cek_primary($uid = null)
     {
-      $val = $this->Language_model->get_by_id($uid)->row();
+      $val = $this->model->get_by_id($uid)->row();
       if ($val->primary == 1){ return FALSE; }else { return TRUE; }
     }
 
@@ -131,7 +131,7 @@ class Language extends MX_Controller
     {
         if ($this->acl->otentikasi_admin($this->title,'ajax') == TRUE && $this->cek_primary($uid) == TRUE){
         if ($type == 'soft'){
-           $this->Language_model->delete($uid);
+           $this->model->delete($uid);
            $this->session->set_flashdata('message', "1 $this->title successfully removed..!");
            
            echo "true|1 $this->title successfully soft removed..!";
@@ -140,7 +140,7 @@ class Language extends MX_Controller
        {
         if ( $this->cek_relation($uid) == TRUE )
         {
-           $this->Language_model->delete($uid);
+           $this->model->delete($uid);
            $this->session->set_flashdata('message', "1 $this->title successfully removed..!");
            
            echo "true|1 $this->title successfully removed..!";
@@ -175,7 +175,7 @@ class Language extends MX_Controller
             $category = array('name' => strtolower($this->input->post('tname')), 
                               'created' => date('Y-m-d H:i:s'), 'code' => strtoupper($this->input->post('tcode')));
 
-            $this->Language_model->add($category);
+            $this->model->add($category);
             $this->session->set_flashdata('message', "One $this->title data successfully saved!");
             
             echo 'true|Data successfully saved..!';
@@ -188,7 +188,7 @@ class Language extends MX_Controller
     // Fungsi update untuk menset texfield dengan nilai dari database
     function update($uid=null)
     {        
-        $category = $this->Language_model->get_by_id($uid)->row();
+        $category = $this->model->get_by_id($uid)->row();
 //
 	$this->session->set_userdata('langid', $category->id);
 //        $this->load->view('category_update', $data);
@@ -198,7 +198,7 @@ class Language extends MX_Controller
 
     function valid($code)
     {
-        if ($this->Language_model->valid('code',$code) == FALSE)
+        if ($this->model->valid('code',$code) == FALSE)
         {
             $this->form_validation->set_message('valid_code', "This $this->title is already registered.!");
             return FALSE;
@@ -209,7 +209,7 @@ class Language extends MX_Controller
     function validation($code)
     {
 	$id = $this->session->userdata('langid');
-	if ($this->Language_model->validating('code',$code,$id) == FALSE)
+	if ($this->model->validating('code',$code,$id) == FALSE)
         {
             $this->form_validation->set_message('validation_code', 'This language is already registered!');
             return FALSE;
@@ -236,7 +236,7 @@ class Language extends MX_Controller
         {
             $category = array('name' => strtolower($this->input->post('tname')),'code' => strtoupper($this->input->post('tcode')));
 
-	    $this->Language_model->update($this->session->userdata('langid'), $category);
+	    $this->model->update($this->session->userdata('langid'), $category);
             $this->session->set_flashdata('message', "One $this->title has successfully updated!");
             
             echo 'true|Data successfully saved..!';
@@ -244,6 +244,9 @@ class Language extends MX_Controller
         else{ echo 'error|'.validation_errors(); }
         }else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
     }
+    
+    // ====================================== CLOSING ======================================
+    function reset_process(){ $this->model->closing(); }
 
 }
 

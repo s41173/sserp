@@ -533,6 +533,9 @@ class Report extends MX_Controller
         return $res;
         
     }
+    
+    // ====================================== CLOSING ======================================
+    function reset_process(){ } 
 
 
 }

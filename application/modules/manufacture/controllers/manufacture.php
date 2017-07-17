@@ -6,7 +6,7 @@ class Manufacture extends MX_Controller
     {
         parent::__construct();
         
-        $this->load->model('Manufacture_model', '', TRUE);
+        $this->load->model('Manufacture_model', 'model', TRUE);
 
         $this->properti = $this->property->get();
         $this->acl->otentikasi();
@@ -25,7 +25,7 @@ class Manufacture extends MX_Controller
     
     public function getdatatable($search=null)
     {
-        if(!$search){ $result = $this->Manufacture_model->get_last($this->modul['limit'])->result(); }
+        if(!$search){ $result = $this->model->get_last($this->modul['limit'])->result(); }
         
         if ($result){
 	foreach($result as $res)
@@ -91,11 +91,11 @@ class Manufacture extends MX_Controller
         {
            if ( $this->cek_relation($cek[$i]) == TRUE ) 
            {
-              $img = $this->Manufacture_model->get_manufacture_by_id($cek[$i])->row();
+              $img = $this->model->get_manufacture_by_id($cek[$i])->row();
               $img = $img->image;
               if ($img){ $img = "./images/manufacture/".$img; unlink("$img"); }
 
-              $this->Manufacture_model->delete($cek[$i]); 
+              $this->model->delete($cek[$i]); 
            }
            else { $x=$x+1; }
            
@@ -117,7 +117,7 @@ class Manufacture extends MX_Controller
     {
         if ($this->acl->otentikasi_admin($this->title,'ajax') == TRUE){
         if ($type == 'soft'){
-           $this->Manufacture_model->delete($uid);
+           $this->model->delete($uid);
            $this->session->set_flashdata('message', "1 $this->title successfully removed..!");
            
            echo "true|1 $this->title successfully soft removed..!";
@@ -126,11 +126,11 @@ class Manufacture extends MX_Controller
        {
         if ( $this->cek_relation($uid) == TRUE )
         {
-           $img = $this->Manufacture_model->get_manufacture_by_id($uid)->row();
+           $img = $this->model->get_manufacture_by_id($uid)->row();
            $img = $img->image;
            if ($img){ $img = "./images/manufacture/".$img; unlink("$img"); }
 
-           $this->Manufacture_model->delete($uid);
+           $this->model->delete($uid);
            $this->session->set_flashdata('message', "1 $this->title successfully removed..!");
            
            echo "true|1 $this->title successfully removed..!";
@@ -188,7 +188,7 @@ class Manufacture extends MX_Controller
                                      'image' => $info['file_name'], 'created' => date('Y-m-d H:i:s'));
             }
 
-            $this->Manufacture_model->add($manufacture);
+            $this->model->add($manufacture);
             $this->session->set_flashdata('message', "One $this->title data successfully saved!");
 //            redirect($this->title);
             
@@ -205,7 +205,7 @@ class Manufacture extends MX_Controller
     // Fungsi update untuk menset texfield dengan nilai dari database
     function update($uid=null)
     {        
-        $manufacture = $this->Manufacture_model->get_by_id($uid)->row();
+        $manufacture = $this->model->get_by_id($uid)->row();
 	$this->session->set_userdata('langid', $manufacture->id);
 //        $this->load->view('manufacture_update', $data);
         echo $uid.'|'.$manufacture->name.'|'.$manufacture->orders.'|'.base_url().'images/manufacture/'.$manufacture->image;
@@ -214,7 +214,7 @@ class Manufacture extends MX_Controller
 
     public function valid_manufacture($name)
     {
-        if ($this->Manufacture_model->valid('name',$name) == FALSE)
+        if ($this->model->valid('name',$name) == FALSE)
         {
             $this->form_validation->set_message('valid', "This $this->title is already registered.!");
             return FALSE;
@@ -225,7 +225,7 @@ class Manufacture extends MX_Controller
     function validation_manufacture($name)
     {
 	$id = $this->session->userdata('langid');
-	if ($this->Manufacture_model->validating('name',$name,$id) == FALSE)
+	if ($this->model->validating('name',$name,$id) == FALSE)
         {
             $this->form_validation->set_message('validation', 'This manufacture is already registered!');
             return FALSE;
@@ -274,7 +274,7 @@ class Manufacture extends MX_Controller
                 $img = base_url().'images/manufacture/'.$info['file_name'];
             }
 
-	    $this->Manufacture_model->update($this->session->userdata('langid'), $manufacture);
+	    $this->model->update($this->session->userdata('langid'), $manufacture);
             $this->session->set_flashdata('message', "One $this->title has successfully updated!");
             
             if ($this->upload->display_errors()){ echo "warning|".$this->upload->display_errors(); }
@@ -287,10 +287,13 @@ class Manufacture extends MX_Controller
     
     function remove_image($uid)
     {
-       $img = $this->Manufacture_model->get_manufacture_by_id($uid)->row();
+       $img = $this->model->get_manufacture_by_id($uid)->row();
        $img = $img->image;
        if ($img){ $img = "./images/manufacture/".$img; unlink("$img"); } 
     }
+    
+    // ====================================== CLOSING ======================================
+    function reset_process(){ $this->model->closing(); } 
 
 }
 

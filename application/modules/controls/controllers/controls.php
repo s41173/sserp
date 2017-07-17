@@ -6,7 +6,7 @@ class Controls extends MX_Controller
     {
         parent::__construct();
         
-        $this->load->model('Controls_model', 'Model', TRUE);
+        $this->load->model('Controls_model', 'model', TRUE);
         
         $this->properti = $this->property->get();
         $this->acl->otentikasi();
@@ -20,7 +20,7 @@ class Controls extends MX_Controller
         $this->component = new Components();
     }
 
-    private $properti, $modul, $title, $model, $account, $component;
+    private $properti, $modul, $title, $account, $component;
     private $currency,$classification;
 
     function index()
@@ -30,8 +30,8 @@ class Controls extends MX_Controller
     
     public function getdatatable($search=null,$class='null',$publish='null')
     {
-        if(!$search){ $result = $this->Model->get_last($this->modul['limit'])->result(); }
-        else {$result = $this->Model->search($class,$publish)->result(); }
+        if(!$search){ $result = $this->model->get_last($this->modul['limit'])->result(); }
+        else {$result = $this->model->search($class,$publish)->result(); }
         
         if ($result){
 	foreach($result as $res)
@@ -96,12 +96,12 @@ class Controls extends MX_Controller
 
         if ($this->form_validation->run($this) == TRUE)
         {
-            $account = array('no' => $this->Model->counter(), 'desc' => $this->input->post('tdesc'),
+            $account = array('no' => $this->model->counter(), 'desc' => $this->input->post('tdesc'),
                              'account_id' => $this->account->get_id_code($this->input->post('titem')), 
                              'modul' => $this->input->post('cmodul'), 'status' => 0,
                              'created' => date('Y-m-d H:i:s'));
             
-            $this->Model->add($account);
+            $this->model->add($account);
             echo 'true|'.$this->title.' successfully saved..!';
         }
         else{ echo "error|".validation_errors(); }
@@ -113,7 +113,7 @@ class Controls extends MX_Controller
     {
         $this->acl->otentikasi2($this->title);
         
-        $control = $this->Model->get_by_id($uid)->row();
+        $control = $this->model->get_by_id($uid)->row();
 
 	$this->session->set_userdata('langid', $control->id);
         echo $control->id.'|'.$control->desc.'|'.$this->account->get_code($control->account_id).'|'.$control->modul;
@@ -138,7 +138,7 @@ class Controls extends MX_Controller
             $account = array('account_id' => $this->account->get_id_code($this->input->post('titem')), 
                              'modul' => $this->input->post('cmodul'));
 
-            $this->Model->update($this->session->userdata('langid'), $account);
+            $this->model->update($this->session->userdata('langid'), $account);
             echo 'true|Data successfully saved..!';
         }
         else{ echo 'error|'.validation_errors(); }
@@ -151,7 +151,7 @@ class Controls extends MX_Controller
 
             if ($this->cek_status($uid) == TRUE)
             {
-               $this->Model->force_delete($uid);
+               $this->model->force_delete($uid);
                echo "true|1 $this->title successfully soft removed..!";
             }
             else { echo 'warning|Default control account can not removed..!';  }
@@ -173,7 +173,7 @@ class Controls extends MX_Controller
         {
            if ( $this->cek_status($cek[$i]) == TRUE ) 
            {
-              $this->Model->force_delete($cek[$i]); 
+              $this->model->force_delete($cek[$i]); 
            }
            else { $x=$x+1; }
            
@@ -193,14 +193,14 @@ class Controls extends MX_Controller
     
     private function cek_status($id)
     {
-        $res = $this->Model->get_by_id($id)->row();
+        $res = $this->model->get_by_id($id)->row();
         if ($res->status == 0){ return TRUE; } else { return FALSE; }
     }
 
 
     public function valid_control($name)
     {        
-        if ($this->Model->valid('desc',$name) == FALSE)
+        if ($this->model->valid('desc',$name) == FALSE)
         {
             $this->form_validation->set_message('valid_control', "This $this->title is already registered.!");
             return FALSE;
@@ -211,13 +211,16 @@ class Controls extends MX_Controller
     public function validation_control($acc)
     {   
         $id = $this->session->userdata('langid');
-	if ($this->Model->validating('account_id',$this->account->get_id_code($acc),$id) == FALSE)
+	if ($this->model->validating('account_id',$this->account->get_id_code($acc),$id) == FALSE)
         {
             $this->form_validation->set_message('validation_control', 'This '.$this->title.' is already registered!');
             return FALSE;
         }
         else { return TRUE; }  
     }
+    
+   // ====================================== CLOSING ====================================== 
+   function reset_process(){ $this->model->closing(); }
 
 }
 

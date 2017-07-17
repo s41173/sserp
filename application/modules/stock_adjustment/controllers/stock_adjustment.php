@@ -6,7 +6,7 @@ class Stock_adjustment extends MX_Controller
     {
         parent::__construct();
         
-        $this->load->model('Stock_adjustment_model', '', TRUE);
+        $this->load->model('Stock_adjustment_model', 'model', TRUE);
         $this->load->model('Stock_adjustment_item_model', 'transmodel', TRUE);
 
         $this->properti = $this->property->get();
@@ -40,8 +40,8 @@ class Stock_adjustment extends MX_Controller
     
     public function getdatatable($search=null,$dates='null')
     {
-        if(!$search){ $result = $this->Stock_adjustment_model->get_last($this->modul['limit'])->result(); }
-        else{ $result = $this->Stock_adjustment_model->search($dates)->result(); }
+        if(!$search){ $result = $this->model->get_last($this->modul['limit'])->result(); }
+        else{ $result = $this->model->search($dates)->result(); }
         
         if ($result){
 	foreach($result as $res)
@@ -110,8 +110,8 @@ class Stock_adjustment extends MX_Controller
         $offset = $this->uri->segment($uri_segment);
 
 	// ---------------------------------------- //
-        $stock_adjustments = $this->Stock_adjustment_model->get_last($this->modul['limit'], $offset)->result();
-        $num_rows = $this->Stock_adjustment_model->count_all_num_rows();
+        $stock_adjustments = $this->model->get_last($this->modul['limit'], $offset)->result();
+        $num_rows = $this->model->count_all_num_rows();
 
         if ($num_rows > 0)
         {
@@ -169,7 +169,7 @@ class Stock_adjustment extends MX_Controller
 	$data['form_action'] = site_url($this->title.'/search');
         $data['link'] = array('link_back' => anchor($this->title,'<span>back</span>', array('class' => 'back')));
 
-        $stock_adjustments = $this->Stock_adjustment_model->search($this->input->post('tno'), $this->input->post('tdate'))->result();
+        $stock_adjustments = $this->model->search($this->input->post('tno'), $this->input->post('tdate'))->result();
         
         $tmpl = array('table_open' => '<table cellpadding="2" cellspacing="1" class="tablemaster">');
 
@@ -208,7 +208,7 @@ class Stock_adjustment extends MX_Controller
         $data['main_view'] = 'product_list';
         $data['form_action'] = site_url($this->title.'/get_list');
 
-        $stocks = $this->Stock_adjustment_model->get_list($this->input->post('tno'))->result();
+        $stocks = $this->model->get_list($this->input->post('tno'))->result();
 
         $tmpl = array('table_open' => '<table cellpadding="2" cellspacing="1" class="tablemaster">');
 
@@ -241,7 +241,7 @@ class Stock_adjustment extends MX_Controller
 
     function confirmation($pid)
     {
-        $stock_adjustment = $this->Stock_adjustment_model->get_by_id($pid)->row();
+        $stock_adjustment = $this->model->get_by_id($pid)->row();
 
         if ($stock_adjustment->approved == 1) { echo "warning|$this->title already approved..!"; }
         else
@@ -250,7 +250,7 @@ class Stock_adjustment extends MX_Controller
             $this->db->trans_start();
            
             $data = array('approved' => 1);
-            $this->Stock_adjustment_model->update($pid, $data);
+            $this->model->update($pid, $data);
            
            // create journal
            $balancein = $this->transmodel->total_criteria($stock_adjustment->id,'in');
@@ -300,7 +300,7 @@ class Stock_adjustment extends MX_Controller
 
     private function add_warehouse_transaction($pid)
     {
-        $val  = $this->Stock_adjustment_model->get_by_id($pid)->row();
+        $val  = $this->model->get_by_id($pid)->row();
         $list = $this->transmodel->get_last_item($pid)->result();
 
         foreach ($list as $value)
@@ -322,13 +322,13 @@ class Stock_adjustment extends MX_Controller
 
     private function del_warehouse_transaction($po=0)
     {
-        $val  = $this->Stock_adjustment_model->get_stock_adjustment_by_no($po)->row();
+        $val  = $this->model->get_stock_adjustment_by_no($po)->row();
         $this->wt->remove($val->dates, 'IAJ-00'.$po);        
     }
 
     private function cek_confirmation($po=null,$page=null)
     {
-        $stock_adjustment = $this->Stock_adjustment_model->get_stock_adjustment_by_no($po)->row();
+        $stock_adjustment = $this->model->get_stock_adjustment_by_no($po)->row();
 
         if ( $stock_adjustment->approved == 1 )
         {
@@ -342,7 +342,7 @@ class Stock_adjustment extends MX_Controller
     function delete($uid)
     {
         if ($this->acl->otentikasi_admin($this->title,'ajax') == TRUE){
-        $val = $this->Stock_adjustment_model->get_by_id($uid)->row();
+        $val = $this->model->get_by_id($uid)->row();
 
         if ( $val->approved == 1 ){ $this->rollback($uid,$val->no); }
         else{ $this->remove($uid,$val->no);}
@@ -356,7 +356,7 @@ class Stock_adjustment extends MX_Controller
        $this->journalgl->remove_journal('IJ', '00'.$po); // journal gl  
        $this->del_warehouse_transaction($po); 
        $data = array('approved' => 0);
-       $this->Stock_adjustment_model->update($uid, $data);
+       $this->model->update($uid, $data);
        $this->db->trans_complete();
        
        if ($this->db->trans_status() === FALSE)
@@ -370,7 +370,7 @@ class Stock_adjustment extends MX_Controller
     private function remove($uid)
     {
        $this->db->trans_start(); 
-       $stockadj = $this->Stock_adjustment_model->get_by_id($uid)->row(); 
+       $stockadj = $this->model->get_by_id($uid)->row(); 
        $stockitem = $this->transmodel->get_last_item($uid)->result();
        
        if ($stockitem)
@@ -385,7 +385,7 @@ class Stock_adjustment extends MX_Controller
        }
 
        $this->transmodel->delete_po($uid);
-       $this->Stock_adjustment_model->force_delete($uid); 
+       $this->model->force_delete($uid); 
        $this->db->trans_complete();
        
        if ($this->db->trans_status() === FALSE){ echo "warning|1 $this->title canceled removed..!"; }
@@ -405,7 +405,7 @@ class Stock_adjustment extends MX_Controller
         $data['form_action_item'] = site_url($this->title.'/add_item/');
         
         $data['currency'] = $this->currency->combo();
-        $data['code'] = $this->Stock_adjustment_model->counter();
+        $data['code'] = $this->model->counter();
         $data['pid'] = null;
         $data['user'] = $this->session->userdata("username");
         $data['branch'] = $this->branch->combo();
@@ -439,8 +439,8 @@ class Stock_adjustment extends MX_Controller
                                       'desc' => $this->input->post('tnote'), 'user' => $this->user->get_id($this->session->userdata('username')),
                                       'log' => $this->session->userdata('log'), 'created' => date('Y-m-d H:i:s'));
 
-            $this->Stock_adjustment_model->add($stock_adjustment);
-            echo "true|One $this->title data successfully saved!|".$this->Stock_adjustment_model->max_id();
+            $this->model->add($stock_adjustment);
+            echo "true|One $this->title data successfully saved!|".$this->model->max_id();
         }
         else{ echo "error|".validation_errors(); }
         }else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
@@ -450,9 +450,9 @@ class Stock_adjustment extends MX_Controller
     function add_trans($id)
     {
         $this->acl->otentikasi2($this->title);
-        $this->Stock_adjustment_model->valid_add_trans($id, $this->title);
+        $this->model->valid_add_trans($id, $this->title);
         
-        $cash = $this->Stock_adjustment_model->get_by_id($id)->row();
+        $cash = $this->model->get_by_id($id)->row();
         
         $data['title'] = $this->properti['name'].' | Administrator '.ucwords($this->modul['title']);
         $data['h2title'] = 'Create New '.$this->modul['title'];
@@ -490,7 +490,7 @@ class Stock_adjustment extends MX_Controller
 
         if ($this->form_validation->run($this) == TRUE && $this->valid_confirmation($pid) == TRUE)
         {
-            $stockadj = $this->Stock_adjustment_model->get_by_id($pid)->row();
+            $stockadj = $this->model->get_by_id($pid)->row();
             
             $type = $this->input->post('ctype');
             $qty = $this->input->post('tqty');
@@ -528,7 +528,7 @@ class Stock_adjustment extends MX_Controller
         if ($this->acl->otentikasi2($this->title,'ajax') == TRUE){
         
         $stockitem = $this->transmodel->get_item_by_id($id);
-        $stockadj = $this->Stock_adjustment_model->get_by_id($stockitem->stock_adjustment)->row();
+        $stockadj = $this->model->get_by_id($stockitem->stock_adjustment)->row();
         
         if ( $this->valid_confirmation($stockitem->stock_adjustment) == TRUE ){
           
@@ -569,7 +569,7 @@ class Stock_adjustment extends MX_Controller
                                       'desc' => $this->input->post('tnote'), 'user' => $this->user->get_id($this->session->userdata('username')),
                                       'log' => $this->session->userdata('log'));
 
-            $this->Stock_adjustment_model->update($pid, $stock_adjustment);
+            $this->model->update($pid, $stock_adjustment);
             echo "true|One $this->title data successfully updated!|".$pid;
         }
         elseif ($this->valid_confirmation($pid) != TRUE){ echo "warning|Journal approved, can't deleted..!"; }
@@ -604,7 +604,7 @@ class Stock_adjustment extends MX_Controller
 
     public function valid_no($no)
     {
-        if ($this->Stock_adjustment_model->valid_no($no) == FALSE)
+        if ($this->model->valid_no($no) == FALSE)
         {
             $this->form_validation->set_message('valid_no', "Order No already registered.!");
             return FALSE;
@@ -638,7 +638,7 @@ class Stock_adjustment extends MX_Controller
 
     public function valid_confirmation($pid)
     {
-        $stockin = $this->Stock_adjustment_model->get_by_id($pid)->row();
+        $stockin = $this->model->get_by_id($pid)->row();
 
         if ( $stockin->approved == 1 )
         {
@@ -656,7 +656,7 @@ class Stock_adjustment extends MX_Controller
 
        $data['h2title'] = 'Print Invoice'.$this->modul['title'];
 
-       $stock_adjustment = $this->Stock_adjustment_model->get_by_id($pid)->row();
+       $stock_adjustment = $this->model->get_by_id($pid)->row();
 
        $data['no'] = $stock_adjustment->no;
        $data['podate'] = tglin($stock_adjustment->dates);
@@ -713,8 +713,8 @@ class Stock_adjustment extends MX_Controller
 //        Property Details
         $data['company'] = $this->properti['name'];
 
-        $data['reports'] = $this->Stock_adjustment_model->report($start,$end)->result();
-        $data['reports_category'] = $this->Stock_adjustment_model->report_category($start,$end)->result();
+        $data['reports'] = $this->model->report($start,$end)->result();
+        $data['reports_category'] = $this->model->report_category($start,$end)->result();
         
         if ($this->input->post('ctype') == 0){ $this->load->view('stock_adjustment_report_category', $data);}
         else { $this->load->view('stock_adjustment_report_details', $data); }
@@ -723,12 +723,8 @@ class Stock_adjustment extends MX_Controller
 
 // ====================================== REPORT =========================================
     
-// ====================================== AJAX =========================================    
-   
-   function get_price($product)
-   {
-       
-   }
+       // ====================================== CLOSING ======================================
+    function reset_process(){ $this->model->closing(); $this->transmodel->closing(); } 
 
 }
 

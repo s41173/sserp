@@ -971,6 +971,9 @@ class Purchase extends MX_Controller
        $no = $this->input->post('tno'); 
        if (!$no){ echo '0'; }else { echo $this->ap->get_over_payment($no); }
     }
+    
+   // ====================================== CLOSING ======================================
+   function reset_process(){ $this->model->closing(); $this->transmodel->closing(); }
 
 }
 

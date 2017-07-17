@@ -6,7 +6,7 @@ class Adminmenu extends MX_Controller
     {
         parent::__construct();
         
-        $this->load->model('Adminmenu_model', '', TRUE);
+        $this->load->model('Adminmenu_model', 'model', TRUE);
 
         $this->properti = $this->property->get();
         $this->acl->otentikasi();
@@ -29,7 +29,7 @@ class Adminmenu extends MX_Controller
      
     public function getdatatable($search=null)
     {
-        if(!$search){ $result = $this->Adminmenu_model->get_last($this->modul['limit'])->result(); }
+        if(!$search){ $result = $this->model->get_last($this->modul['limit'])->result(); }
 	
         $output = null;
         if ($result){
@@ -119,7 +119,7 @@ class Adminmenu extends MX_Controller
                               'id_style' => $this->input->post('tid'),'icon' => null, 'target' => $this->input->post('ctarget'),
                               'parent_status' => $this->input->post('cstatus'), 'created' => date('Y-m-d H:i:s'));
 
-                $this->Adminmenu_model->add($menu);
+                $this->model->add($menu);
                 $this->session->set_flashdata('message', "One $this->title data successfully saved!");
                 echo 'true|Data successfully saved..!';
             }
@@ -147,7 +147,7 @@ class Adminmenu extends MX_Controller
           $x = 0;
           for ($i=0; $i<$jumlah; $i++)
           {
-             $this->Adminmenu_model->delete($cek[$i]);
+             $this->model->delete($cek[$i]);
              $x=$x+1;
           }
           $res = intval($jumlah-$x);
@@ -167,8 +167,8 @@ class Adminmenu extends MX_Controller
     function delete($uid)
     {
         if ($this->acl->otentikasi_admin($this->title,'ajax') == TRUE){
-            $this->Adminmenu_model->delete_child($uid); // delete child related parent menu
-            $this->Adminmenu_model->force_delete($uid);
+            $this->model->delete_child($uid); // delete child related parent menu
+            $this->model->force_delete($uid);
             $this->session->set_flashdata('message', "1 $this->title successfully removed..!");
 
             echo "true|1 $this->title successfully removed..!";
@@ -178,7 +178,7 @@ class Adminmenu extends MX_Controller
     
     function update($uid=null)
     {        
-        $admin = $this->Adminmenu_model->get_by_id($uid)->row();
+        $admin = $this->model->get_by_id($uid)->row();
                
 	$this->session->set_userdata('langid', $admin->id);
         
@@ -218,7 +218,7 @@ class Adminmenu extends MX_Controller
                               'id_style' => $this->input->post('tid'),'icon' => null, 'target' => $this->input->post('ctarget'),
                               'parent_status' => $this->input->post('cstatus'));
 
-	    $this->Adminmenu_model->update($this->session->userdata('langid'), $menu);
+	    $this->model->update($this->session->userdata('langid'), $menu);
             $this->session->set_flashdata('message', "One $this->title has successfully updated!");
           //  $this->session->unset_userdata('langid');
             echo "true|One $this->title has successfully updated..!";
@@ -230,7 +230,7 @@ class Adminmenu extends MX_Controller
     
     function valid_name($name)
     {
-        if ($this->Adminmenu_model->valid('name',$name) == FALSE)
+        if ($this->model->valid('name',$name) == FALSE)
         {
             $this->form_validation->set_message('valid_name', $this->title.' name registered');
             return FALSE;
@@ -241,7 +241,7 @@ class Adminmenu extends MX_Controller
     function validating_name($name)
     {
 	$id = $this->session->userdata('langid');
-	if ($this->Adminmenu_model->validating('name',$name,$id) == FALSE)
+	if ($this->model->validating('name',$name,$id) == FALSE)
         {
             $this->form_validation->set_message('validating_name', "This $this->title name is already registered!");
             return FALSE;
@@ -261,10 +261,13 @@ class Adminmenu extends MX_Controller
     
     function remove_img()
     {
-        $img = $this->Adminmenu_model->get_by_id(1)->row();
+        $img = $this->model->get_by_id(1)->row();
         $img = $img->logo;
         if ($img){ $img = "./images/property/".$img; unlink("$img"); }
     }
+    
+        // ====================================== CLOSING ======================================
+    function reset_process(){ $this->model->closing(); } 
 
 }
 

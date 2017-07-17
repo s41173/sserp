@@ -6,7 +6,7 @@ class Frontmenu extends MX_Controller
     {
         parent::__construct();
         
-        $this->load->model('Frontmenu_model', '', TRUE);
+        $this->load->model('Frontmenu_model', 'model', TRUE);
 
         $this->properti = $this->property->get();
         $this->acl->otentikasi();
@@ -29,7 +29,7 @@ class Frontmenu extends MX_Controller
      
     public function getdatatable($search=null)
     {
-        if(!$search){ $result = $this->Frontmenu_model->get_last($this->modul['limit'])->result(); }
+        if(!$search){ $result = $this->model->get_last($this->modul['limit'])->result(); }
 	
         $output = null;
         if ($result){
@@ -54,9 +54,9 @@ class Frontmenu extends MX_Controller
     function publish($uid = null)
     {
        if ($this->acl->otentikasi2($this->title,'ajax') == TRUE){ 
-       $val = $this->Frontmenu_model->get_by_id($uid)->row();
+       $val = $this->model->get_by_id($uid)->row();
        if ($val->publish == 0){ $lng = array('publish' => 1); }else { $lng = array('publish' => 0); }
-       $this->Frontmenu_model->update($uid,$lng);
+       $this->model->update($uid,$lng);
        echo 'true|Status Changed...!';
        }else{ echo "error|Sorry, you do not have the right to change publish status..!"; }
     }
@@ -159,7 +159,7 @@ class Frontmenu extends MX_Controller
                              'id_style' => $this->input->post('tid'),'icon' => null, 'target' => $this->input->post('ctarget'),
                              'created' => date('Y-m-d H:i:s'));
 
-                $this->Frontmenu_model->add($menu);
+                $this->model->add($menu);
                 $this->session->set_flashdata('message', "One $this->title data successfully saved!");
                 echo 'true|Data successfully saved..!';
             }
@@ -187,8 +187,8 @@ class Frontmenu extends MX_Controller
           $x = 0;
           for ($i=0; $i<$jumlah; $i++)
           {
-             $this->Frontmenu_model->delete_child($cek[$i]); // delete child related parent menu  
-             $this->Frontmenu_model->delete($cek[$i]);
+             $this->model->delete_child($cek[$i]); // delete child related parent menu  
+             $this->model->delete($cek[$i]);
              $x=$x+1;
           }
           $res = intval($jumlah-$x);
@@ -208,8 +208,8 @@ class Frontmenu extends MX_Controller
     function delete($uid)
     {
         if ($this->acl->otentikasi_admin($this->title,'ajax') == TRUE){
-            $this->Frontmenu_model->delete_child($uid); // delete child related parent menu
-            $this->Frontmenu_model->force_delete($uid);
+            $this->model->delete_child($uid); // delete child related parent menu
+            $this->model->force_delete($uid);
             $this->session->set_flashdata('message', "1 $this->title successfully removed..!");
 
             echo "true|1 $this->title successfully removed..!";
@@ -219,7 +219,7 @@ class Frontmenu extends MX_Controller
     
     function update($uid=null)
     {        
-        $admin = $this->Frontmenu_model->get_by_id($uid)->row_array();
+        $admin = $this->model->get_by_id($uid)->row_array();
 	$this->session->set_userdata('langid', $admin['id']);
         $res = implode("|", $admin);
         echo $res;
@@ -257,7 +257,7 @@ class Frontmenu extends MX_Controller
                              'menu_order' => $this->input->post('tmenuorder'), 'class_style' => $this->input->post('tclass'),
                              'id_style' => $this->input->post('tid'), 'target' => $this->input->post('ctarget'));
 
-	    $this->Frontmenu_model->update($this->session->userdata('langid'), $menu);
+	    $this->model->update($this->session->userdata('langid'), $menu);
             $this->session->set_flashdata('message', "One $this->title has successfully updated!");
           //  $this->session->unset_userdata('langid');
             echo "true|One $this->title has successfully updated..!";
@@ -269,7 +269,7 @@ class Frontmenu extends MX_Controller
     
     function valid_name($name)
     {
-        if ($this->Frontmenu_model->valid('name',$name) == FALSE)
+        if ($this->model->valid('name',$name) == FALSE)
         {
             $this->form_validation->set_message('valid_name', $this->title.' name registered');
             return FALSE;
@@ -280,7 +280,7 @@ class Frontmenu extends MX_Controller
     function validating_name($name)
     {
 	$id = $this->session->userdata('langid');
-	if ($this->Frontmenu_model->validating('name',$name,$id) == FALSE)
+	if ($this->model->validating('name',$name,$id) == FALSE)
         {
             $this->form_validation->set_message('validating_name', "This $this->title name is already registered!");
             return FALSE;
@@ -290,7 +290,7 @@ class Frontmenu extends MX_Controller
     
     function remove_img()
     {
-        $img = $this->Frontmenu_model->get_by_id(1)->row();
+        $img = $this->model->get_by_id(1)->row();
         $img = $img->logo;
         if ($img){ $img = "./images/property/".$img; unlink("$img"); }
     }
@@ -303,7 +303,7 @@ class Frontmenu extends MX_Controller
 
         if ($type == 'modul')
         {
-           $values = $this->Frontmenu_model->getmodul()->result();
+           $values = $this->model->getmodul()->result();
            echo "<select name=\"cmodul\" id=\"cmodul\" class=\"form-control\" size=\"5\" onchange=\"geturl(this.value)\">";
            foreach ($values as $val)
            {
@@ -313,7 +313,7 @@ class Frontmenu extends MX_Controller
         }
         elseif ($type == "articlelist")
         {
-           $values = $this->Frontmenu_model->getarticle()->result();
+           $values = $this->model->getarticle()->result();
            echo "<select name=\"ccat\" id=\"ccat\" class=\"form-control\" size=\"10\" onchange=\"setnilai(this.value)\">";
            foreach ($values as $val)
            {
@@ -322,6 +322,9 @@ class Frontmenu extends MX_Controller
            echo "</select>";
         }
     }
+    
+    // ====================================== CLOSING ======================================
+    function reset_process(){ $this->model->closing(); }
     
 }
 

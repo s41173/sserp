@@ -537,6 +537,10 @@ class Cashout extends MX_Controller
 
 
 // ====================================== REPORT =========================================
+    
+       // ====================================== CLOSING ======================================
+    
+   function reset_process(){ $this->transmodel->closing_trans();  $this->transmodel->closing(); }  
 
 }
 

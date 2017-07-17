@@ -351,6 +351,9 @@ class Category extends MX_Controller
        $img = $img->image;
        if ($img){ $img = "./images/category/".$img; unlink("$img"); } 
     }
+    
+    // ====================================== CLOSING ======================================
+    function reset_process(){ $this->Category_model->closing(); } 
 
 }
 

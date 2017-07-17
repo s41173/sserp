@@ -6,7 +6,7 @@ class Bank extends MX_Controller
     {
         parent::__construct();
         
-        $this->load->model('Bank_model', '', TRUE);
+        $this->load->model('Bank_model', 'model', TRUE);
 
         $this->properti = $this->property->get();
         $this->acl->otentikasi();
@@ -25,7 +25,7 @@ class Bank extends MX_Controller
     
     public function getdatatable($search=null)
     {
-        if(!$search){ $result = $this->Bank_model->get_last($this->modul['limit'])->result(); }
+        if(!$search){ $result = $this->model->get_last($this->modul['limit'])->result(); }
         
         if ($result){
 	foreach($result as $res)
@@ -92,7 +92,7 @@ class Bank extends MX_Controller
         {
            if ( $this->cek_relation($cek[$i]) == TRUE ) 
            {
-              $this->Bank_model->delete($cek[$i]); 
+              $this->model->delete($cek[$i]); 
            }
            else { $x=$x+1; }
            
@@ -114,7 +114,7 @@ class Bank extends MX_Controller
     {
         if ($this->acl->otentikasi_admin($this->title,'ajax') == TRUE){
         if ($type == 'soft'){
-           $this->Bank_model->delete($uid);
+           $this->model->delete($uid);
            $this->session->set_flashdata('message', "1 $this->title successfully removed..!");
            
            echo "true|1 $this->title successfully soft removed..!";
@@ -123,7 +123,7 @@ class Bank extends MX_Controller
        {
         if ( $this->cek_relation($uid) == TRUE )
         {
-           $this->Bank_model->force_delete($uid);
+           $this->model->force_delete($uid);
            $this->session->set_flashdata('message', "1 $this->title successfully removed..!");
            
            echo "true|1 $this->title successfully removed..!";
@@ -163,7 +163,7 @@ class Bank extends MX_Controller
                           'acc_no' => $this->input->post('tno'), 
                           'acc_bank' => $this->input->post('tbank'), 'created' => date('Y-m-d H:i:s'));
 
-            $this->Bank_model->add($bank);
+            $this->model->add($bank);
             $this->session->set_flashdata('message', "One $this->title data successfully saved!");
             
             echo 'true|Data successfully saved..!';
@@ -176,7 +176,7 @@ class Bank extends MX_Controller
     // Fungsi update untuk menset texfield dengan nilai dari database
     function update($uid=null)
     {        
-        $bank = $this->Bank_model->get_by_id($uid)->row_array();
+        $bank = $this->model->get_by_id($uid)->row_array();
 	$this->session->set_userdata('langid', $bank['id']);
 
         echo implode("|", $bank);
@@ -185,7 +185,7 @@ class Bank extends MX_Controller
 
     public function valid_bank($name)
     {
-        if ($this->Bank_model->valid('acc_no',$name) == FALSE)
+        if ($this->model->valid('acc_no',$name) == FALSE)
         {
             $this->form_validation->set_message('valid_bank', "This $this->title is already registered.!");
             return FALSE;
@@ -196,7 +196,7 @@ class Bank extends MX_Controller
     function validation_bank($name)
     {
 	$id = $this->session->userdata('langid');
-	if ($this->Bank_model->validating('acc_no',$name,$id) == FALSE)
+	if ($this->model->validating('acc_no',$name,$id) == FALSE)
         {
             $this->form_validation->set_message('validation_bank', 'This bank is already registered!');
             return FALSE;
@@ -226,7 +226,7 @@ class Bank extends MX_Controller
                           'acc_no' => $this->input->post('tno'), 
                           'acc_bank' => $this->input->post('tbank'));
 
-	    $this->Bank_model->update($this->session->userdata('langid'), $bank);
+	    $this->model->update($this->session->userdata('langid'), $bank);
             $this->session->set_flashdata('message', "One $this->title has successfully updated!");
             
             echo 'true|Data successfully saved..!';
@@ -234,6 +234,9 @@ class Bank extends MX_Controller
         else{ echo 'error|'.validation_errors(); }
         }else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
     }
+    
+    // ====================================== CLOSING ======================================
+    function reset_process(){ $this->model->closing(); }
 
 }
 

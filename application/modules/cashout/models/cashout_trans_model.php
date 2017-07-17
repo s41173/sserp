@@ -36,6 +36,10 @@ class Cashout_trans_model extends Custom_Model
         $this->db->where('cash_id', $uid);
         $this->db->delete($this->tableName); // perintah untuk delete data dari db
     }
+    
+    function closing_trans(){
+        $this->db->truncate('cashout'); 
+    }
    
 }
 

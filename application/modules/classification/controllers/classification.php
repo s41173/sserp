@@ -6,7 +6,7 @@ class Classification extends MX_Controller
     {
         parent::__construct();
         
-        $this->load->model('Classification_model', '', TRUE);
+        $this->load->model('Classification_model', 'model', TRUE);
 
         $this->properti = $this->property->get();
         $this->acl->otentikasi();
@@ -26,8 +26,8 @@ class Classification extends MX_Controller
     
     public function getdatatable($search=null,$branch='null',$cat='null',$col='null',$size='null',$publish='null')
     {
-        if(!$search){ $result = $this->Classification_model->get_last($this->modul['limit'])->result(); }
-        else {$result = $this->Classification_model->search($branch,$cat,$col,$size,$publish)->result(); }
+        if(!$search){ $result = $this->model->get_last($this->modul['limit'])->result(); }
+        else {$result = $this->model->search($branch,$cat,$col,$size,$publish)->result(); }
 	
         $output = null;
         if ($result){
@@ -49,9 +49,9 @@ class Classification extends MX_Controller
     function publish($uid = null)
     {
        if ($this->acl->otentikasi2($this->title,'ajax') == TRUE){ 
-       $val = $this->Classification_model->get_by_id($uid)->row();
+       $val = $this->model->get_by_id($uid)->row();
        if ($val->status == 0){ $lng = array('status' => 1); }else { $lng = array('status' => 0); }
-       $this->Classification_model->update($uid,$lng);
+       $this->model->update($uid,$lng);
        echo 'true|Status Changed...!';
        }else{ echo "error|Sorry, you do not have the right to change publish status..!"; }
     }
@@ -118,7 +118,7 @@ class Classification extends MX_Controller
         {
            if ( $this->cek_relation($cek[$i]) == TRUE && $this->cek_status($cek[$i]) == TRUE ) 
            {
-              $this->Classification_model->delete($cek[$i]); 
+              $this->model->delete($cek[$i]); 
            }
            else { $x=$x+1; }
            
@@ -141,7 +141,7 @@ class Classification extends MX_Controller
         if ($this->acl->otentikasi_admin($this->title,'ajax') == TRUE){
             if ( $this->cek_relation($uid) == TRUE && $this->cek_status($uid) == TRUE)
             {
-              $this->Classification_model->delete($uid);
+              $this->model->delete($uid);
               echo "true|1 $this->title successfully removed..!";
             }
         }else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
@@ -149,7 +149,7 @@ class Classification extends MX_Controller
     
     private function cek_status($id)
     {
-        $val = $this->Classification_model->get_by_id($id)->row();
+        $val = $this->model->get_by_id($id)->row();
         if ($val->status == 1){ return FALSE; } else { return TRUE; }
     }
 
@@ -178,7 +178,7 @@ class Classification extends MX_Controller
             $value = array('name' => strtoupper($this->input->post('tname')), 'no' => $this->input->post('tcode'),
                                   'type' => $this->input->post('ctype'), 'created' => date('Y-m-d H:i:s'));
             
-            $this->Classification_model->add($value);
+            $this->model->add($value);
             $this->session->set_flashdata('message', "One $this->title data successfully saved!");
 //            redirect($this->title);
             echo 'true|'.$this->title.' successfully saved..!';
@@ -190,14 +190,14 @@ class Classification extends MX_Controller
 
     function update($uid)
     {   
-        $val = $this->Classification_model->get_by_id($uid)->row();
+        $val = $this->model->get_by_id($uid)->row();
 	$this->session->set_userdata('langid', $val->id);
         echo $val->id.'|'.$val->no.'|'.$val->name.'|'.$val->type.'|'.$val->status;
     }
 
     public function valid_classification($val)
     {   
-        if ($this->Classification_model->valid('no',$val) == FALSE)
+        if ($this->model->valid('no',$val) == FALSE)
         {
             $this->form_validation->set_message('valid_classification'," $this->title no registered..!");
             return FALSE;
@@ -207,7 +207,7 @@ class Classification extends MX_Controller
 
     public function valid_name($val)
     {
-        if ($this->Classification_model->valid('name',$val) == FALSE)
+        if ($this->model->valid('name',$val) == FALSE)
         {
             $this->form_validation->set_message('valid_classification'," $this->title name registered..!");
             return FALSE;
@@ -218,7 +218,7 @@ class Classification extends MX_Controller
     function validation_classification($val)
     {   
         $id = $this->session->userdata('langid');
-	if ($this->Classification_model->validating('no',$val,$id) == FALSE)
+	if ($this->model->validating('no',$val,$id) == FALSE)
         {
             $this->form_validation->set_message('validation_classification', "Classification registered!");
             return FALSE;
@@ -229,7 +229,7 @@ class Classification extends MX_Controller
     function validation_name($val)
     {
 	$id = $this->session->userdata('langid');
-	if ($this->Classification_model->validating('name',$val,$id) == FALSE)
+	if ($this->model->validating('name',$val,$id) == FALSE)
         {
             $this->form_validation->set_message('validation_name', "Classification name registered!");
             return FALSE;
@@ -254,12 +254,15 @@ class Classification extends MX_Controller
             $value = array('name' => strtoupper($this->input->post('tname')), 'no' => $this->input->post('tcode'),
                            'type' => $this->input->post('ctype'));
             
-            $this->Classification_model->update($this->session->userdata('langid'), $value);
+            $this->model->update($this->session->userdata('langid'), $value);
             echo 'true|Data successfully saved..!';
         }
         else{ echo 'error|'.validation_errors(); }
         }else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
     }
+    
+    // ====================================== CLOSING ====================================== 
+   function reset_process(){ $this->model->closing(); }
 
 }
 

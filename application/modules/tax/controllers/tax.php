@@ -6,7 +6,7 @@ class Tax extends MX_Controller
     {
         parent::__construct();
         
-        $this->load->model('Tax_model', '', TRUE);
+        $this->load->model('Tax_model', 'model', TRUE);
 
         $this->properti = $this->property->get();
         $this->acl->otentikasi();
@@ -24,7 +24,7 @@ class Tax extends MX_Controller
     
     public function getdatatable($search=null)
     {
-        if(!$search){ $result = $this->Tax_model->get_last($this->modul['limit'])->result(); }
+        if(!$search){ $result = $this->model->get_last($this->modul['limit'])->result(); }
         
         if ($result){
 	foreach($result as $res)
@@ -90,11 +90,11 @@ class Tax extends MX_Controller
         {
            if ( $this->cek_relation($cek[$i]) == TRUE ) 
            {
-              $img = $this->Tax_model->get_by_id($cek[$i])->row();
+              $img = $this->model->get_by_id($cek[$i])->row();
               $img = $img->image;
               if ($img){ $img = "./images/tax/".$img; unlink("$img"); }
 
-              $this->Tax_model->delete($cek[$i]); 
+              $this->model->delete($cek[$i]); 
            }
            else { $x=$x+1; }
            
@@ -116,7 +116,7 @@ class Tax extends MX_Controller
     {
         if ($this->acl->otentikasi_admin($this->title,'ajax') == TRUE){
         if ($type == 'soft'){
-           $this->Tax_model->delete($uid);
+           $this->model->delete($uid);
            $this->session->set_flashdata('message', "1 $this->title successfully removed..!");
            
            echo "true|1 $this->title successfully soft removed..!";
@@ -125,7 +125,7 @@ class Tax extends MX_Controller
        {
         if ( $this->cek_relation($uid) == TRUE )
         { 
-           $this->Tax_model->delete($uid);
+           $this->model->delete($uid);
            $this->session->set_flashdata('message', "1 $this->title successfully removed..!");
            
            echo "true|1 $this->title successfully removed..!";
@@ -162,7 +162,7 @@ class Tax extends MX_Controller
             $tax = array('name' => strtolower($this->input->post('tname')), 'code' => $this->input->post('tcode'),
                          'value' => floatval($this->input->post('tvalue')/100), 'created' => date('Y-m-d H:i:s'));
 
-            $this->Tax_model->add($tax);
+            $this->model->add($tax);
             $this->session->set_flashdata('message', "One $this->title data successfully saved!");
             
             echo 'true|'.$this->title.' successfully saved..!|';
@@ -174,7 +174,7 @@ class Tax extends MX_Controller
     // Fungsi update untuk menset texfield dengan nilai dari database
     function update($uid=null)
     {        
-        $tax = $this->Tax_model->get_by_id($uid)->row();
+        $tax = $this->model->get_by_id($uid)->row();
 	$this->session->set_userdata('langid', $tax->id);
         
         echo $uid.'|'.$tax->code.'|'.$tax->name.'|'.floatval($tax->value*100);
@@ -183,7 +183,7 @@ class Tax extends MX_Controller
 
     public function valid_tax($name)
     {
-        if ($this->Tax_model->valid('code',$name) == FALSE)
+        if ($this->model->valid('code',$name) == FALSE)
         {
             $this->form_validation->set_message('valid_tax', "This $this->title is already registered.!");
             return FALSE;
@@ -194,7 +194,7 @@ class Tax extends MX_Controller
     function validation_tax($name)
     {
 	$id = $this->session->userdata('langid');
-	if ($this->Tax_model->validating('code',$name,$id) == FALSE)
+	if ($this->model->validating('code',$name,$id) == FALSE)
         {
             $this->form_validation->set_message('validation_tax', 'This tax is already registered!');
             return FALSE;
@@ -222,12 +222,15 @@ class Tax extends MX_Controller
         {
             $tax = array('name' => strtolower($this->input->post('tname')), 'code' => $this->input->post('tcode'),
                          'value' => floatval($this->input->post('tvalue')/100));
-	    $this->Tax_model->update($this->session->userdata('langid'), $tax);
+	    $this->model->update($this->session->userdata('langid'), $tax);
             echo 'true|Data successfully saved..';
         }
         else{ echo 'error|'.validation_errors(); }
         }else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
     }
+    
+    // ====================================== CLOSING ======================================
+    function reset_process(){ $this->model->closing(); }
 
 }
 

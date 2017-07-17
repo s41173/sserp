@@ -6,7 +6,7 @@ class Balance extends MX_Controller
     {
         parent::__construct();
         
-        $this->load->model('Balance_model', 'Model', TRUE);
+        $this->load->model('Balance_model', 'model', TRUE);
         $this->load->model('Account_model', 'am', TRUE);
         
         $this->properti = $this->property->get();
@@ -112,7 +112,7 @@ class Balance extends MX_Controller
     function update($uid)
     {
         $this->acl->otentikasi2($this->title);
-        $acc = $this->Model->get_by_id($uid)->row();
+        $acc = $this->model->get_by_id($uid)->row();
         $this->session->set_userdata('langid', $acc->id);
         $this->session->set_userdata('acid', $acc->account_id);
         echo $uid.'|'.$this->account->get_code($acc->account_id).'|'.$this->account->get_name($acc->account_id).'|'.$this->get_balance($acc->account_id);
@@ -205,7 +205,10 @@ class Balance extends MX_Controller
 
 
 // ====================================== REPORT =========================================
-
+    // ====================================== CLOSING ====================================== 
+   function reset_process(){ $this->model->closing(); }
+    
+    
 }
 
 ?>

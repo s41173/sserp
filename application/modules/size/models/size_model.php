@@ -24,7 +24,7 @@ class Size_model extends Custom_Model
         $this->db->where('deleted', $this->deleted);
         $this->db->order_by('name', 'asc'); 
         $this->db->limit($limit, $offset);
-        return $this->db->get(); 
+        return $this->db->get();
     }
 
 }

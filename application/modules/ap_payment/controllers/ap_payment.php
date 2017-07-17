@@ -845,7 +845,9 @@ class Ap_payment extends MX_Controller
         $this->load->view($page, $data);
     }
     
-
+    // ====================================== CLOSING ======================================
+    function reset_process(){ $this->model->closing(); $this->transmodel->closing(); }
+    
 }
 
 ?>

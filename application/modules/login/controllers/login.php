@@ -215,6 +215,9 @@ DO NOT REPLY TO THIS MESSAGE. For further help or to contact support, please ema
         if ( $se->send_process() == TRUE ){ return TRUE; }
         else { return FALSE;}
     }
+    
+        // ====================================== CLOSING ======================================
+    function reset_process(){ }
 
 }
 

@@ -200,6 +200,9 @@ class City extends MX_Controller
             $this->load->view('city_update', $data);
         }
     }
+    
+    // ====================================== CLOSING ======================================
+    function reset_process(){ } 
 
 }
 

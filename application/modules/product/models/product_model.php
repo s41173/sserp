@@ -86,6 +86,14 @@ class Product_model extends Custom_Model
 	$userid = intval($userid);
 	return $userid;
     }
+    
+        
+    function closing_trans(){
+        $this->db->truncate('stock'); 
+        $this->db->truncate('stock_ledger');
+        $this->db->truncate('stock_temp');
+        $this->db->truncate('warehouse_transaction');
+    }
 
 }
 

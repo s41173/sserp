@@ -69,6 +69,16 @@
                     
                     </div>
                   </div>
+    
+                  <div class="form-group">
+                    <label class="control-label col-md-3 col-sm-3 col-xs-12"> Table List </label>
+                    <div class="col-md-9 col-sm-9 col-xs-12">
+                    
+       <?php $js = "class='select2_multiple form-control' id='ctable' multiple='multiple' tabindex='-1' style='width:100%;' "; 
+	         echo form_dropdown('ctable[]', $tables, $arrayx, $js); ?>
+                    
+                    </div>
+                  </div>
                   
                   <div class="col-md-6 col-sm-6 col-xs-12 form-group has-feedback">
                     <input type="tel" name="tlimit" class="form-control" id="tlimit" placeholder="Limit">

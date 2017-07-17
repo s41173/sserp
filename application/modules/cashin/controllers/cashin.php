@@ -575,9 +575,12 @@ class Cashin extends MX_Controller
        return $this->model->where('approved', 1)->get();
     }
 
-
 // ====================================== REPORT =========================================
-
+// 
+   // ====================================== CLOSING ====================================== 
+   function reset_process(){ $this->transmodel->closing_trans();  $this->transmodel->closing(); } 
+    
+    
 }
 
 ?>

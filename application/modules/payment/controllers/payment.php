@@ -6,7 +6,7 @@ class Payment extends MX_Controller
     {
         parent::__construct();
         
-        $this->load->model('Payment_model', '', TRUE);
+        $this->load->model('Payment_model', 'model', TRUE);
 
         $this->properti = $this->property->get();
         $this->acl->otentikasi();
@@ -25,7 +25,7 @@ class Payment extends MX_Controller
     
     public function getdatatable($search=null)
     {
-        if(!$search){ $result = $this->Payment_model->get_last($this->modul['limit'])->result(); }
+        if(!$search){ $result = $this->model->get_last($this->modul['limit'])->result(); }
         
         if ($result){
 	foreach($result as $res)
@@ -91,11 +91,11 @@ class Payment extends MX_Controller
         {
            if ( $this->cek_relation($cek[$i]) == TRUE ) 
            {
-              $img = $this->Payment_model->get_payment_by_id($cek[$i])->row();
+              $img = $this->model->get_payment_by_id($cek[$i])->row();
               $img = $img->image;
               if ($img){ $img = "./images/payment/".$img; unlink("$img"); }
 
-              $this->Payment_model->delete($cek[$i]); 
+              $this->model->delete($cek[$i]); 
            }
            else { $x=$x+1; }
            
@@ -117,7 +117,7 @@ class Payment extends MX_Controller
     {
         if ($this->acl->otentikasi_admin($this->title,'ajax') == TRUE){
         if ($type == 'soft'){
-           $this->Payment_model->delete($uid);
+           $this->model->delete($uid);
            $this->session->set_flashdata('message', "1 $this->title successfully removed..!");
            
            echo "true|1 $this->title successfully soft removed..!";
@@ -126,11 +126,11 @@ class Payment extends MX_Controller
        {
         if ( $this->cek_relation($uid) == TRUE )
         {
-           $img = $this->Payment_model->get_by_id($uid)->row();
+           $img = $this->model->get_by_id($uid)->row();
            $img = $img->image;
            if ($img){ $img = "./images/payment/".$img; unlink("$img"); }
 
-           $this->Payment_model->delete($uid);
+           $this->model->delete($uid);
            $this->session->set_flashdata('message', "1 $this->title successfully removed..!");
            
            echo "true|1 $this->title successfully removed..!";
@@ -196,7 +196,7 @@ class Payment extends MX_Controller
                                  'image' => $info['file_name'], 'created' => date('Y-m-d H:i:s'));
             }
 
-            $this->Payment_model->add($payment);
+            $this->model->add($payment);
             $this->session->set_flashdata('message', "One $this->title data successfully saved!");
 //            redirect($this->title);
             
@@ -213,7 +213,7 @@ class Payment extends MX_Controller
     // Fungsi update untuk menset texfield dengan nilai dari database
     function update($uid=null)
     {        
-        $payment = $this->Payment_model->get_by_id($uid)->row();
+        $payment = $this->model->get_by_id($uid)->row();
 	$this->session->set_userdata('langid', $payment->id);
 //        $this->load->view('payment_update', $data);
         echo $uid.'|'.$payment->name.'|'.$payment->orders.'|'.$payment->acc_no.'|'.$payment->acc_name.'|'.
@@ -223,7 +223,7 @@ class Payment extends MX_Controller
 
     public function valid_payment($name)
     {
-        if ($this->Payment_model->valid('name',$name) == FALSE)
+        if ($this->model->valid('name',$name) == FALSE)
         {
             $this->form_validation->set_message('valid', "This $this->title is already registered.!");
             return FALSE;
@@ -234,7 +234,7 @@ class Payment extends MX_Controller
     function validation_payment($name)
     {
 	$id = $this->session->userdata('langid');
-	if ($this->Payment_model->validating('name',$name,$id) == FALSE)
+	if ($this->model->validating('name',$name,$id) == FALSE)
         {
             $this->form_validation->set_message('validation', 'This payment is already registered!');
             return FALSE;
@@ -295,7 +295,7 @@ class Payment extends MX_Controller
                 $img = base_url().'images/payment/'.$info['file_name'];
             }
 
-	    $this->Payment_model->update($this->session->userdata('langid'), $payment);
+	    $this->model->update($this->session->userdata('langid'), $payment);
             $this->session->set_flashdata('message', "One $this->title has successfully updated!");
             
             if ($this->upload->display_errors()){ echo "warning|".$this->upload->display_errors(); }
@@ -308,10 +308,13 @@ class Payment extends MX_Controller
     
     function remove_image($uid)
     {
-       $img = $this->Payment_model->get_payment_by_id($uid)->row();
+       $img = $this->model->get_payment_by_id($uid)->row();
        $img = $img->image;
        if ($img){ $img = "./images/payment/".$img; unlink("$img"); } 
     }
+    
+    // ====================================== CLOSING ======================================
+    function reset_process(){ $this->model->closing(); }
 
 }
 

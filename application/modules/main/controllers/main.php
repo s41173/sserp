@@ -22,19 +22,6 @@ class Main extends MX_Controller
     function index()
     {       
 	$this->main_panel();
-        
-//        $this->load->library('email');
-//
-//        $this->email->from('info@dswip.com', 'Dswip');
-//        $this->email->to('sanjaya.kiran@gmail.com'); 
-////        $this->email->cc('another@another-example.com'); 
-//
-//        $this->email->subject('Email Test');
-//        $this->email->message('Testing the email class.');	
-//
-//        $this->email->send();
-//
-//        echo $this->email->print_debugger();
     }
     
 
@@ -75,6 +62,9 @@ class Main extends MX_Controller
        $data['main_view'] = 'main/article';
        $this->load->view('template', $data);
     }
+    
+    // ====================================== CLOSING ======================================
+    function reset_process(){ }
     
 }
 

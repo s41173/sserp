@@ -27,11 +27,13 @@ $(document).ready(function (e) {
 				
 			   res = result.split("|");
 			   var val = res[7].split(",");
+			   var valx = res[10].split(",");
 				
 			   $("#tid_update").val(res[0]);
 			   $("#tname_update").val(res[1]);
 			   $("#ttitle_update").val(res[2]);
 			   $("#crole_update").val(val).change();
+			   $("#ctable_update").val(valx).change();
 			   $("#cstatus_update").val(res[4]).change();
 			   $("#tlimit_update").val(res[6]);
 			   $("#torder_update").val(res[9]);
@@ -46,6 +48,35 @@ $(document).ready(function (e) {
 			   else { $("#raktif1").prop( "checked", true ); }
 			}   
 		);
+		
+	});
+
+    // fungsi closing status
+	$(document).on('click','.closing_status',function(e)
+	{	
+		e.preventDefault();
+		var element = $(this);
+		var del_id = element.attr("id");
+		var url = sites_closing +"/"+ del_id;
+
+		$.ajax({
+			type: 'POST',
+			url: url,
+    	    cache: false,
+			headers: { "cache-control": "no-cache" },
+			success: function(result) {
+				
+				res = result.split("|");
+				if (res[0] == "true")
+				{   
+			        error_mess(1,res[1],0);
+					load_data();
+				}
+				else if (res[0] == 'warning'){ error_mess(2,res[1],0); }
+				else{ error_mess(3,res[1],0); }
+			}
+		})
+		return false;
 		
 	});
 	
@@ -71,6 +102,34 @@ $(document).ready(function (e) {
 		})
 		return false;
 		swal('Error Load Data...!', "", "error");
+		
+	});
+
+	// fungsi button reset
+	$(document).on('click','#bresets',function(e)
+	{	
+		e.preventDefault();
+		var element = $(this);
+		var url = sites_reset;
+		
+		$.ajax({
+			type: 'POST',
+			url: url,
+    	    cache: false,
+			headers: { "cache-control": "no-cache" },
+			success: function(result) {
+				
+				res = result.split("|");
+				if (res[0] == "true")
+				{   
+			        error_mess(1,res[1],0);
+					load_data();
+				}
+				else if (res[0] == 'warning'){ error_mess(2,res[1],0); }
+				else{ error_mess(3,res[1],0); }
+			}
+		})
+		return false;
 		
 	});
 	
@@ -100,7 +159,8 @@ $(document).ready(function (e) {
 	
 		$("#chkbox").append('<input type="checkbox" name="newsletter" value="accept1" onclick="cekall('+s.length+')" id="chkselect" class="chkselect">');
 							
-							for(var i = 0; i < s.length; i++) {
+			    for(var i = 0; i < s.length; i++) {
+						  if (s[i][10] == 1){ stts = 'btn btn-success'; }else { stts = 'btn btn-danger'; }
 						  oTable.fnAddData([
 '<input type="checkbox" name="cek[]" value="'+s[i][0]+'" id="cek'+i+'" style="margin:0px"  />',
 										i+1,
@@ -112,6 +172,7 @@ $(document).ready(function (e) {
 										s[i][7],
 '<div class="btn-group" role"group">'+
 '<a href="" class="btn btn-primary btn-xs text-primary" id="' +s[i][0]+ '" title=""> <i class="fa fas-2x fa-edit"> </i> </a>'+
+'<a href="" class="'+stts+' btn-xs closing_status" id="' +s[i][0]+ '" title="Closing Status"> <i class="fa fa-check-circle"> </i> </a> '+
 '<a href="#" class="btn btn-danger btn-xs text-danger" id="'+s[i][0]+'" title="delete"> <i class="fa fas-2x fa-trash"> </i> </a>'+
 '</div>'
 										    ]);										
@@ -150,6 +211,7 @@ $(document).ready(function (e) {
 		$("#chkbox").append('<input type="checkbox" name="newsletter" value="accept1" onclick="cekall('+s.length+')" id="chkselect" class="chkselect">');
 							
 							for(var i = 0; i < s.length; i++) {
+						  if (s[i][10] == 1){ stts = 'btn btn-success'; }else { stts = 'btn btn-danger'; }
 						  oTable.fnAddData([
 '<input type="checkbox" name="cek[]" value="'+s[i][0]+'" id="cek'+i+'" style="margin:0px"  />',
 										i+1,
@@ -161,6 +223,7 @@ $(document).ready(function (e) {
 										s[i][7],
 '<div class="btn-group" role"group">'+
 '<a href="" class="btn btn-primary btn-xs text-primary" id="' +s[i][0]+ '" title=""> <i class="fa fas-2x fa-edit"> </i> </a>'+
+'<a href="" class="'+stts+' btn-xs closing_status" id="' +s[i][0]+ '" title="Closing Status"> <i class="fa fa-check-circle"> </i> </a> '+
 '<a href="#" class="btn btn-danger btn-xs text-danger" id="'+s[i][0]+'" title="delete"> <i class="fa fas-2x fa-trash"> </i> </a>'+
 '</div>'
 										    ]);										

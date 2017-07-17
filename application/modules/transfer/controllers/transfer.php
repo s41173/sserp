@@ -6,7 +6,7 @@ class Transfer extends MX_Controller
     {
         parent::__construct();
         
-        $this->load->model('Transfer_model', '', TRUE);
+        $this->load->model('Transfer_model', 'model', TRUE);
 
         $this->properti = $this->property->get();
         $this->acl->otentikasi();
@@ -31,8 +31,8 @@ class Transfer extends MX_Controller
     
     public function getdatatable($search=null,$date='null')
     {
-        if(!$search){ $result = $this->Transfer_model->get_last_transfer($this->modul['limit'])->result(); }
-        else{ $result = $this->Transfer_model->search($date)->result(); }
+        if(!$search){ $result = $this->model->get_last_transfer($this->modul['limit'])->result(); }
+        else{ $result = $this->model->search($date)->result(); }
         
         if ($result){
 	foreach($result as $res)
@@ -64,7 +64,7 @@ class Transfer extends MX_Controller
         
         $data['currency'] = $this->currency->combo();
         $data['account'] = $this->account->combo_asset();
-        $data['code'] = $this->Transfer_model->counter();
+        $data['code'] = $this->model->counter();
 	// ---------------------------------------- //
  
         $config['first_tag_open'] = $config['last_tag_open']= $config['next_tag_open']= $config['prev_tag_open'] = $config['num_tag_open'] = '<li>';
@@ -97,7 +97,7 @@ class Transfer extends MX_Controller
     function confirmation($pid)
     {
         if ($this->acl->otentikasi3($this->title,'ajax') == TRUE){
-        $transfer = $this->Transfer_model->get_transfer_by_id($pid)->row();
+        $transfer = $this->model->get_transfer_by_id($pid)->row();
 
         if ($transfer->approved == 1){ echo "warning|$this->title already approved..!"; }
         else
@@ -107,7 +107,7 @@ class Transfer extends MX_Controller
             else
             {
                 $data = array('approved' => 1);
-                $this->Transfer_model->update_id($pid, $data);
+                $this->model->update_id($pid, $data);
 
                 //  create journal
                 $cm = new Control_model();
@@ -146,7 +146,7 @@ class Transfer extends MX_Controller
     function delete($uid)
     {
         $this->acl->otentikasi_admin($this->title);
-        $transfer = $this->Transfer_model->get_by_id($uid)->row();
+        $transfer = $this->model->get_by_id($uid)->row();
 
         if ($this->valid_period($transfer->dates) == TRUE ) // cek journal harian sudah di approve atau belum
         {
@@ -155,11 +155,11 @@ class Transfer extends MX_Controller
               $this->ledger->remove($transfer->dates, "TR-00".$transfer->no); // cash ledger    
               $this->journalgl->remove_journal('TR', '0'.$transfer->no);
               $data = array('approved' => 0);
-              $this->Transfer_model->update_id($uid, $data);
+              $this->model->update_id($uid, $data);
             }
             else 
             {  $this->ledger->remove($transfer->dates, "TR-00".$transfer->no); // cash ledger  
-               $this->Transfer_model->force_delete($uid); 
+               $this->model->force_delete($uid); 
             }
             
             echo "warning|1 $this->title successfully removed..!";
@@ -215,7 +215,7 @@ class Transfer extends MX_Controller
 	$data['form_action'] = site_url($this->title.'/add_process');
         
         $data['currency'] = $this->currency->combo();
-        $data['code'] = $this->Transfer_model->counter();
+        $data['code'] = $this->model->counter();
         $data['user'] = $this->session->userdata("username");
         $data['account'] = $this->account->combo_asset();
 
@@ -234,7 +234,7 @@ class Transfer extends MX_Controller
                         'dates' => $this->input->post('tdate'), 'currency' => $this->input->post('ccurrency'), 'notes' => $this->input->post('tnote'),
                         'amount' => $this->input->post('tamount'), 'log' => $this->session->userdata('log'));
             
-            $this->Transfer_model->add($transfer);
+            $this->model->add($transfer);
             echo "true|One $this->title data successfully saved!|";
         }
         else{ echo "error|".validation_errors(); }
@@ -324,7 +324,7 @@ class Transfer extends MX_Controller
 //    ==========================================================================================
     function update($uid=null)
     {        
-        $res = $this->Transfer_model->get_by_id($uid)->row_array();
+        $res = $this->model->get_by_id($uid)->row_array();
 	$this->session->set_userdata('langid', $uid);
         
         echo implode("|", $res);
@@ -356,7 +356,7 @@ class Transfer extends MX_Controller
                               'dates' => $this->input->post('tdate'), 'currency' => $this->input->post('ccurrency'), 'notes' => $this->input->post('tnote'),
                               'amount' => $this->input->post('tamount'), 'log' => $this->session->userdata('log'));
 
-            $this->Transfer_model->update_id($jid, $transfer);
+            $this->model->update_id($jid, $transfer);
 
             echo "true|One $this->title data successfully updated!|";
         }
@@ -367,7 +367,7 @@ class Transfer extends MX_Controller
     
     public function valid_confirmation($id)
     {
-        $val = $this->Transfer_model->get_by_id($id)->row();
+        $val = $this->model->get_by_id($id)->row();
 
         if ($val->approved == 1)
         {
@@ -395,7 +395,7 @@ class Transfer extends MX_Controller
 
     public function valid_no($no)
     {
-        if ($this->Transfer_model->valid_no($no) == FALSE)
+        if ($this->model->valid_no($no) == FALSE)
         {
             $this->form_validation->set_message('valid_no', "Order No already registered.!");
             return FALSE;
@@ -420,7 +420,7 @@ class Transfer extends MX_Controller
    function invoice($id=null)
    {
        $this->acl->otentikasi2($this->title);
-       $ap = $this->Transfer_model->get_by_id($id)->row();
+       $ap = $this->model->get_by_id($id)->row();
 
        $data['h2title'] = 'Print Invoice'.$this->modul['title'];
 
@@ -450,7 +450,7 @@ class Transfer extends MX_Controller
    function invoice_po($no=null)
    {
        $this->acl->otentikasi2($this->title);
-       $ap = $this->Transfer_model->get_transfer_by_no($no)->row();
+       $ap = $this->model->get_transfer_by_no($no)->row();
 
        $data['h2title'] = 'Print Invoice'.$this->modul['title'];
 
@@ -544,7 +544,7 @@ class Transfer extends MX_Controller
 
 //        Property Details
         $data['company'] = $this->properti['name'];
-        $data['reports'] = $this->Transfer_model->report($cur,$start,$end)->result();
+        $data['reports'] = $this->model->report($cur,$start,$end)->result();
         
         $this->load->view('transfer_report', $data); 
         
@@ -552,6 +552,9 @@ class Transfer extends MX_Controller
 
 
 // ====================================== REPORT =========================================
+    
+// ====================================== CLOSING ======================================
+   function reset_process(){ $this->model->closing(); }     
 
 }
 

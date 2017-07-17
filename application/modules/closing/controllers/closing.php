@@ -351,6 +351,9 @@ class Closing extends MX_Controller
           redirect('main');
     }
     
+                // ====================================== CLOSING ======================================
+    function reset_process(){ $this->model->closing(); } 
+    
 }
 
 ?>

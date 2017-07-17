@@ -123,6 +123,10 @@ class Custom_Model extends CI_Model {
     protected $deleted = NULL;
     protected $updated = NULL;
     
+    function closing(){
+        $this->db->truncate($this->tableName); 
+    }
+    
     protected function between($field, $start=null,$end=null)
     {
         if ($start != null && $end != null)

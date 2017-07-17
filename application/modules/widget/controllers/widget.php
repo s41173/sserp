@@ -6,7 +6,7 @@ class Widget extends MX_Controller
     {
         parent::__construct();
         
-        $this->load->model('Widget_model', '', TRUE);
+        $this->load->model('Widget_model', 'model', TRUE);
 
         $this->properti = $this->property->get();
         $this->acl->otentikasi();
@@ -28,7 +28,7 @@ class Widget extends MX_Controller
      
     public function getdatatable($search=null)
     {
-        if(!$search){ $result = $this->Widget_model->get_last($this->modul['limit'])->result(); }
+        if(!$search){ $result = $this->model->get_last($this->modul['limit'])->result(); }
 	
         $output = null;
         if ($result){
@@ -102,7 +102,7 @@ class Widget extends MX_Controller
           $x = 0;
           for ($i=0; $i<$jumlah; $i++)
           {
-             $this->Widget_model->delete($cek[$i]);
+             $this->model->delete($cek[$i]);
              $x=$x+1;
           }
           $res = intval($jumlah-$x);
@@ -122,7 +122,7 @@ class Widget extends MX_Controller
     function delete($uid)
     {
         if ($this->acl->otentikasi_admin($this->title,'ajax') == TRUE){
-            $this->Widget_model->delete($uid);
+            $this->model->delete($uid);
             $this->session->set_flashdata('message', "1 $this->title successfully removed..!");
 
             echo "true|1 $this->title successfully removed..!";
@@ -156,7 +156,7 @@ class Widget extends MX_Controller
                                 'order' => $this->input->post('tmenuorder'), 'created' => date('Y-m-d H:i:s'),
                                 'menu' => $this->split_array($this->input->post('cmenu')));
 
-                $this->Widget_model->add($widget);
+                $this->model->add($widget);
                 $this->session->set_flashdata('message', "One $this->title data successfully saved!");
                 echo 'true|Data successfully saved..!';
             }
@@ -177,7 +177,7 @@ class Widget extends MX_Controller
     // Fungsi update untuk menset texfield dengan nilai dari database
     function update($uid=null)
     {        
-        $widget = $this->Widget_model->get_by_id($uid)->row();
+        $widget = $this->model->get_by_id($uid)->row();
         
 	$this->session->set_userdata('langid', $widget->id);
         echo $uid.'|'.$widget->name.'|'.$widget->title.'|'.$widget->position.'|'.$widget->publish.
@@ -187,7 +187,7 @@ class Widget extends MX_Controller
 
     function valid_widget($val)
     {
-        if ($this->Widget_model->valid('name',$val) == FALSE)
+        if ($this->model->valid('name',$val) == FALSE)
         {
             $this->form_validation->set_message('valid_widget', $this->title.' registered');
             return FALSE;
@@ -198,7 +198,7 @@ class Widget extends MX_Controller
     function validating_widget($val)
     {
 	$id = $this->session->userdata('langid');
-	if ($this->Widget_model->validating('name',$val,$id) == FALSE)
+	if ($this->model->validating('name',$val,$id) == FALSE)
         {
             $this->form_validation->set_message('validating_widget', "This $this->title name is already registered!");
             return FALSE;
@@ -234,7 +234,7 @@ class Widget extends MX_Controller
                             'moremenu' => $this->input->post('cmore'), 'order' => $this->input->post('tmenuorder'),
                             'menu' => $this->split_array($this->input->post('cmenu')));
 
-	    $this->Widget_model->update($this->session->userdata('langid'), $widget);
+	    $this->model->update($this->session->userdata('langid'), $widget);
             $this->session->set_flashdata('message', "One $this->title has successfully updated!");
           //  $this->session->unset_userdata('langid');
             echo "true|One $this->title has successfully updated..!";
@@ -243,6 +243,10 @@ class Widget extends MX_Controller
         else{ echo 'error|'.validation_errors(); }
         }else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
     }
+    
+        
+    // ====================================== CLOSING ======================================
+    function reset_process(){ $this->model->closing(); } 
 
 }
 

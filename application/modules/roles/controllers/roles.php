@@ -6,7 +6,7 @@ class Roles extends MX_Controller
     {
         parent::__construct();
         
-        $this->load->model('Role_model', '', TRUE);
+        $this->load->model('Role_model', 'model', TRUE);
 
         $this->properti = $this->property->get();
         $this->acl->otentikasi();
@@ -19,14 +19,11 @@ class Roles extends MX_Controller
 
     private $properti, $modul, $title, $menu;
 
-    function index()
-    {
-       $this->get_last(); 
-    }
+    function index(){ $this->get_last();  }
      
     public function getdatatable($search=null)
     {
-        if(!$search){ $result = $this->Role_model->get_last_role($this->modul['limit'])->result(); }
+        if(!$search){ $result = $this->model->get_last_role($this->modul['limit'])->result(); }
 	
         $output = null;
         if ($result){
@@ -119,7 +116,7 @@ class Roles extends MX_Controller
               $x = 0;
               for ($i=0; $i<$jumlah; $i++)
               {
-                 $this->Role_model->delete($cek[$i]);
+                 $this->model->delete($cek[$i]);
                  $x=$x+1;
               }
               $res = intval($jumlah-$x);
@@ -141,7 +138,7 @@ class Roles extends MX_Controller
     {
         if ($this->acl->otentikasi_admin($this->title,'ajax') == TRUE){
         
-            $this->Role_model->delete($uid);
+            $this->model->delete($uid);
             $this->session->set_flashdata('message', "1 $this->title successfully removed..!");
            
             echo "true|1 $this->title successfully removed..!";
@@ -170,7 +167,7 @@ class Roles extends MX_Controller
                 $roles = array('name' => $this->input->post('tname'), 'desc' => $this->input->post('tdesc'), 'rules' => $this->input->post('crules'),
                                'created' => date('Y-m-d H:i:s'), 'granted_menu' => $this->split_array($this->input->post('cmenu')));
 
-                $this->Role_model->add($roles);
+                $this->model->add($roles);
                 $this->session->set_flashdata('message', "One $this->title data successfully saved!");
                 echo 'true|Data successfully saved..!';
             }
@@ -188,7 +185,7 @@ class Roles extends MX_Controller
     // Fungsi update untuk menset texfield dengan nilai dari database
     function update($uid=null)
     {        
-        $role = $this->Role_model->get_by_id($uid)->row();
+        $role = $this->model->get_by_id($uid)->row();
                
 	$this->session->set_userdata('langid', $role->id);
         echo $uid.'|'.$role->name.'|'.$role->desc.'|'.$role->rules.'|'.$role->granted_menu;
@@ -197,7 +194,7 @@ class Roles extends MX_Controller
 
     function valid_roles($val)
     {
-        if ($this->Role_model->valid('name',$val) == FALSE)
+        if ($this->model->valid('name',$val) == FALSE)
         {
             $this->form_validation->set_message('valid_roles', $this->title.' registered');
             return FALSE;
@@ -208,7 +205,7 @@ class Roles extends MX_Controller
     function validating_roles($val)
     {
 	$id = $this->session->userdata('langid');
-	if ($this->Role_model->validating('name',$val,$id) == FALSE)
+	if ($this->model->validating('name',$val,$id) == FALSE)
         {
             $this->form_validation->set_message('validating_roles', "This $this->title name is already registered!");
             return FALSE;
@@ -237,7 +234,7 @@ class Roles extends MX_Controller
                 $roles = array('name' => $this->input->post('tname'), 'desc' => $this->input->post('tdesc'), 'rules' => $this->input->post('crules'),
                                'granted_menu' => $this->split_array($this->input->post('cmenu')));
 
-                $this->Role_model->update($this->session->userdata('langid'), $roles);
+                $this->model->update($this->session->userdata('langid'), $roles);
                 $this->session->set_flashdata('message', "One $this->title has successfully updated!");
               //  $this->session->unset_userdata('langid');
                 echo "true|One $this->title has successfully updated..!";
@@ -247,6 +244,9 @@ class Roles extends MX_Controller
         }
         else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
     }
+    
+    // ====================================== CLOSING ======================================
+    function reset_process(){ $this->model->closing(); }
 
 }
 

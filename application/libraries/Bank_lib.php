@@ -26,7 +26,10 @@ class Bank_lib extends Main_model {
         $this->db->where('deleted', NULL);
         $this->db->order_by('acc_name', 'asc');
         $val = $this->db->get($this->tableName)->result();
-        foreach($val as $row){ $data['options'][$row->id] = ucfirst($row->acc_no.' : '.$row->acc_bank); }
+        if ($val){
+          foreach($val as $row){ $data['options'][$row->id] = ucfirst($row->acc_no.' : '.$row->acc_bank); }    
+        }else{ $data['options'][''] = '--'; }
+        
         return $data;
     }
 

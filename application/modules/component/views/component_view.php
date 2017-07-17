@@ -17,6 +17,8 @@
 	var sites_edit = "<?php echo site_url('component/update_process/');?>";
 	var sites_del  = "<?php echo site_url('component/delete/');?>";
 	var sites_get  = "<?php echo site_url('component/update/');?>";
+    var sites_closing  = "<?php echo site_url('component/closing/');?>";
+    var sites_reset  = "<?php echo site_url('component/reset/');?>";
 	var source = "<?php echo $source;?>";
 	
 </script>
@@ -94,14 +96,16 @@
           </form>       
              </div>
 
+            <div class="btn-group">      
                <!-- Trigger the modal with a button --> 
    <button type="button" onClick="resets();" class="btn btn-primary" data-toggle="modal" data-target="#myModal"> <i class="fa fa-plus"></i>&nbsp;Add New </button>
    
-               <!--<button type="button" class="btn btn-primary" data-toggle="modal" data-target="#myModal3"> Report  </button>-->
-               
                <!-- links -->
 	           <?php if (!empty($link)){foreach($link as $links){echo $links . '';}} ?>
                <!-- links -->
+    <button class="btn btn-success" id="bresets"> Reset Component </button>
+                
+            </div>
                              
             </div>
           </div>  

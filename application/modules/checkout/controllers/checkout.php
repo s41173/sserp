@@ -205,6 +205,9 @@ class Checkout extends MX_Controller
         $this->load->view('checkout_report', $data);
 
     }
+    
+                // ====================================== CLOSING ======================================
+    function reset_process(){  } 
    
 }
 

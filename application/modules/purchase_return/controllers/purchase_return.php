@@ -571,9 +571,11 @@ class Purchase_return extends MX_Controller
         
     }
 
-
 // ====================================== REPORT =========================================
 
+   // ====================================== CLOSING ======================================
+    function reset_process(){ $this->model->closing(); $this->transmodel->closing(); } 
+    
 }
 
 ?>

@@ -14,11 +14,11 @@ class Component extends MX_Controller
 //        $this->modul = $this->components->get(strtolower(get_class($this)));
         $this->title = strtolower(get_class($this));
         $this->role = new Role_lib();
-
+        $this->component = new Components();
     }
 
     private $properti, $modul, $title;
-    private $role;
+    private $role, $component;
     var $limit = 1000;
 
     function index()
@@ -37,7 +37,7 @@ class Component extends MX_Controller
          foreach($result as $res)
 	 {
 	   $output[] = array ($res->id, $res->name, $res->title, $res->publish, $res->status, $res->aktif,
-                              $res->limit, $res->role, $res->icon, $res->order,
+                              $res->limit, $res->role, $res->icon, $res->order, $res->closing,
                               $res->created, $res->updated, $res->deleted
                              );
 	 } 
@@ -49,6 +49,42 @@ class Component extends MX_Controller
          ->_display();
          exit;  
         }
+    }
+    
+    function reset()
+    {
+       if ($this->acl->otentikasi_admin($this->title,'ajax') == TRUE){  
+           
+            // start transaction 
+           $this->db->trans_start();
+           
+           $result = $this->Component_model->get_closing_modul()->result();
+           foreach ($result as $res) {
+               $this->truncate($res->table_name);
+           }
+           
+           if ($this->db->trans_status() === FALSE){ echo "error|reset function error..!";  }
+           else { echo "true|reset confirmed..!"; }
+           
+       }else{ echo "error|Sorry, you do not have the right to change publish status..!"; }
+    }
+    
+    private function truncate($val=null)
+    {
+        if ($val && $val != ''){
+            $input = explode(",", $val);
+            for($i=0; $i < count($input); $i++){ $this->db->truncate($input[$i]); } return TRUE;
+        }else{ return FALSE; }
+    }
+    
+    function closing($uid = null)
+    {
+       if ($this->acl->otentikasi_admin($this->title,'ajax') == TRUE){ 
+       $val = $this->Component_model->get_by_id($uid)->row();
+       if ($val->closing == 0){ $lng = array('closing' => 1); }else { $lng = array('closing' => 0); }
+       $this->Component_model->update($uid,$lng);
+       echo 'true|Status Changed...!';
+       }else{ echo "error|Sorry, you do not have the right to change publish status..!"; }
     }
 
     function get_last()
@@ -65,6 +101,9 @@ class Component extends MX_Controller
 
         $data['options'] = $this->role->combo();
         $data['array'] = array('','');
+        
+        $data['tables'] = $this->component->combo_table();
+        $data['arrayx'] = array('','');
 	// ---------------------------------------- //
  
         $config['first_tag_open'] = $config['last_tag_open']= $config['next_tag_open']= $config['prev_tag_open'] = $config['num_tag_open'] = '<li>';
@@ -102,7 +141,7 @@ class Component extends MX_Controller
           $x = 0;
           for ($i=0; $i<$jumlah; $i++)
           {
-             $this->Component_model->delete($cek[$i]);
+             $this->Component_model->force_delete($cek[$i]);
              $x=$x+1;
           }
           $res = intval($jumlah-$x);
@@ -122,7 +161,7 @@ class Component extends MX_Controller
     function delete($uid)
     {
         if ($this->acl->otentikasi_admin($this->title,'ajax') == TRUE){
-            $this->Component_model->delete($uid);
+            $this->Component_model->force_delete($uid);
             
             $this->session->set_flashdata('message', "1 $this->title successfully removed..!");
 
@@ -149,6 +188,7 @@ class Component extends MX_Controller
             $this->form_validation->set_rules('tlimit', 'Limit', 'required');
             $this->form_validation->set_rules('torder', 'Order', 'required|numeric');
             $this->form_validation->set_rules('crole', 'Role', 'required|callback_valid_role');
+            $this->form_validation->set_rules('ttable', 'Table', 'required');
 
             if ($this->form_validation->run($this) == TRUE)
             {  
@@ -170,6 +210,7 @@ class Component extends MX_Controller
                                    'publish' => $this->input->post('rpublish'), 'status' => $this->input->post('cstatus'),
                                    'aktif' => $this->input->post('raktif'), 'limit' => $this->input->post('tlimit'),
                                    'role' => $this->split_array($this->input->post('crole')), 'order' => $this->input->post('torder'),
+                                   'table_name' => $this->split_array($this->input->post('ctable')),
                                    'icon' => 'default.png', 'created' => date('Y-m-d H:i:s'));
             }
             else
@@ -179,7 +220,7 @@ class Component extends MX_Controller
                                    'publish' => $this->input->post('rpublish'), 'status' => $this->input->post('cstatus'),
                                    'aktif' => $this->input->post('raktif'), 'limit' => $this->input->post('tlimit'),
                                    'role' => $this->split_array($this->input->post('crole')), 'order' => $this->input->post('torder'),
-                                   'icon' => $info['file_name'], 'created' => date('Y-m-d H:i:s'));
+                                   'table_name' => $this->split_array($this->input->post('ctable')), 'icon' => $info['file_name'], 'created' => date('Y-m-d H:i:s'));
             }
 
                 $this->Component_model->add($component);
@@ -215,7 +256,7 @@ class Component extends MX_Controller
 	$this->session->set_userdata('langid', $admin->id);
         
         echo $uid.'|'.$admin->name.'|'.$admin->title.'|'.$admin->publish.'|'.$admin->status.
-             '|'.$admin->aktif.'|'.$admin->limit.'|'.$admin->role.'|'.$admin->icon.'|'.$admin->order;
+             '|'.$admin->aktif.'|'.$admin->limit.'|'.$admin->role.'|'.$admin->icon.'|'.$admin->order.'|'.$admin->table_name;
     }
 
     function valid_role($val)
@@ -223,6 +264,16 @@ class Component extends MX_Controller
         if(!$val)
         {
           $this->form_validation->set_message('valid_role', "role type required.");
+          return FALSE;
+        }
+        else{ return TRUE; }
+    }
+    
+    function valid_table($val)
+    {
+        if(!$val)
+        {
+          $this->form_validation->set_message('valid_table', "table type required.");
           return FALSE;
         }
         else{ return TRUE; }
@@ -269,6 +320,7 @@ class Component extends MX_Controller
         $this->form_validation->set_rules('tlimit', 'Limit', 'required');
         $this->form_validation->set_rules('torder', 'Order', 'required|numeric');
         $this->form_validation->set_rules('crole', 'Active', 'required|callback_valid_role');
+        $this->form_validation->set_rules('ctable', 'Table', 'required|callback_valid_table');
 
         if ($this->form_validation->run($this) == TRUE)
         {
@@ -289,6 +341,7 @@ class Component extends MX_Controller
                 $component = array('name' => $this->input->post('tname'), 'title' => $this->input->post('ttitle'),
                                    'publish' => $this->input->post('rpublish'), 'status' => $this->input->post('cstatus'),
                                    'aktif' => $this->input->post('raktif'), 'limit' => $this->input->post('tlimit'),
+                                   'table_name' => $this->split_array($this->input->post('ctable')),
                                    'role' => $this->split_array($this->input->post('crole')), 'order' => $this->input->post('torder'));
             }
             else
@@ -297,6 +350,7 @@ class Component extends MX_Controller
                 $component = array('name' => $this->input->post('tname'), 'title' => $this->input->post('ttitle'),
                                    'publish' => $this->input->post('rpublish'), 'status' => $this->input->post('cstatus'),
                                    'aktif' => $this->input->post('raktif'), 'limit' => $this->input->post('tlimit'),
+                                   'table_name' => $this->split_array($this->input->post('ctable')),
                                    'role' => $this->split_array($this->input->post('crole')), 'order' => $this->input->post('torder'),
                                    'icon' => $info['file_name']);
             }

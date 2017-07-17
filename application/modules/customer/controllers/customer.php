@@ -6,7 +6,7 @@ class Customer extends MX_Controller
     {
         parent::__construct();
         
-        $this->load->model('Customer_model', '', TRUE);
+        $this->load->model('Customer_model', 'model', TRUE);
 
         $this->properti = $this->property->get();
         $this->acl->otentikasi();
@@ -28,8 +28,8 @@ class Customer extends MX_Controller
      
     public function getdatatable($search=null,$cat='null',$publish='null')
     {
-        if(!$search){ $result = $this->Customer_model->get_last($this->modul['limit'])->result(); }
-        else {$result = $this->Customer_model->search($cat,$publish)->result(); }
+        if(!$search){ $result = $this->model->get_last($this->modul['limit'])->result(); }
+        else {$result = $this->model->search($cat,$publish)->result(); }
 	
         $output = null;
         if ($result){
@@ -95,9 +95,9 @@ class Customer extends MX_Controller
     function publish($uid = null)
     {
        if ($this->acl->otentikasi2($this->title,'ajax') == TRUE){ 
-       $val = $this->Customer_model->get_by_id($uid)->row();
+       $val = $this->model->get_by_id($uid)->row();
        if ($val->status == 0){ $lng = array('status' => 1); }else { $lng = array('status' => 0); }
-       $this->Customer_model->update($uid,$lng);
+       $this->model->update($uid,$lng);
        echo 'true|Status Changed...!';
        }else{ echo "error|Sorry, you do not have the right to change publish status..!"; }
     }
@@ -115,10 +115,10 @@ class Customer extends MX_Controller
           $x = 0;
           for ($i=0; $i<$jumlah; $i++)
           {
-             if ($type == 'soft') { $this->Customer_model->delete($cek[$i]); }
+             if ($type == 'soft') { $this->model->delete($cek[$i]); }
              else { $this->remove_img($cek[$i],'force');
                     $this->attribute_customer->force_delete_by_customer($cek[$i]);
-                    $this->Customer_model->force_delete($cek[$i]);  }
+                    $this->model->force_delete($cek[$i]);  }
              $x=$x+1;
           }
           $res = intval($jumlah-$x);
@@ -138,7 +138,7 @@ class Customer extends MX_Controller
     function delete($uid)
     {
         if ($this->acl->otentikasi_admin($this->title,'ajax') == TRUE){
-            $this->Customer_model->delete($uid);
+            $this->model->delete($uid);
             
             $this->session->set_flashdata('message', "1 $this->title successfully removed..!");
 
@@ -232,7 +232,7 @@ class Customer extends MX_Controller
                                   'image' => $info['file_name'], 'created' => date('Y-m-d H:i:s'));
             }
 
-            $this->Customer_model->add($customer);
+            $this->model->add($customer);
             $this->session->set_flashdata('message', "One $this->title data successfully saved!");
 //            redirect($this->title);
             
@@ -270,7 +270,7 @@ class Customer extends MX_Controller
         $data['district'] = $this->disctrict->combo_district_db(null);
         $data['array'] = array('','');
         
-        $customer = $this->Customer_model->get_by_id($uid)->row();
+        $customer = $this->model->get_by_id($uid)->row();
 	$this->session->set_userdata('langid', $customer->id);
         
         $data['default']['fname'] = $customer->first_name;
@@ -299,7 +299,7 @@ class Customer extends MX_Controller
 	$data['form_action'] = site_url($this->title.'/add_image/'.$pid);
         $data['link'] = array('link_back' => anchor($this->title,'Back', array('class' => 'btn btn-danger')));
 
-        $result = $this->Customer_model->get_by_id($pid)->row();
+        $result = $this->model->get_by_id($pid)->row();
         
         // library HTML table untuk membuat template table class zebra
         $tmpl = array('table_open' => '<table id="" class="table table-striped table-bordered">');
@@ -358,7 +358,7 @@ class Customer extends MX_Controller
 
             if ($this->form_validation->run($this) == TRUE)
             {  
-                $result = $this->Customer_model->get_by_id($pid)->row();
+                $result = $this->model->get_by_id($pid)->row();
                 if ($result->url_upload == 1)               
                 {
                     switch ($this->input->post('cname')) {
@@ -390,7 +390,7 @@ class Customer extends MX_Controller
                          $attr = array('url'.$this->input->post('cname') => $info['file_name'], 'url_upload' => 1); 
                     } 
                 
-                $this->Customer_model->update($pid, $attr);
+                $this->model->update($pid, $attr);
                 $this->session->set_flashdata('message', "One $this->title data successfully saved!");
                 
                 echo 'true|Data successfully saved..!'; 
@@ -471,7 +471,7 @@ class Customer extends MX_Controller
     
     function valid_email($val)
     {
-        if ($this->Customer_model->valid('email',$val) == FALSE)
+        if ($this->model->valid('email',$val) == FALSE)
         {
             $this->form_validation->set_message('valid_email','Email registered..!');
             return FALSE;
@@ -482,7 +482,7 @@ class Customer extends MX_Controller
     function validating_email($val)
     {
 	$id = $this->session->userdata('langid');
-	if ($this->Customer_model->validating('email',$val,$id) == FALSE)
+	if ($this->model->validating('email',$val,$id) == FALSE)
         {
             $this->form_validation->set_message('validating_email', "Email registered!");
             return FALSE;
@@ -558,7 +558,7 @@ class Customer extends MX_Controller
                               'zip' => $this->input->post('tzip'), 'image' => $info['file_name']);
             }
 
-            $this->Customer_model->update($this->session->userdata('langid'), $customer);
+            $this->model->update($this->session->userdata('langid'), $customer);
             $this->session->set_flashdata('message', "One $this->title has successfully updated!");
             redirect($this->title.'/update/'.$this->session->userdata('langid'));
 
@@ -580,6 +580,9 @@ class Customer extends MX_Controller
             echo form_dropdown('cdistrict', $district, isset($default['district']) ? $default['district'] : '', $js);
         }
     }
+    
+    // ====================================== CLOSING ======================================
+    function reset_process(){ $this->model->closing(); } 
    
 
 }

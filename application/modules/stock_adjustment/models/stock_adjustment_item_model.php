@@ -92,6 +92,10 @@ class Stock_adjustment_item_model extends CI_Model
 	$userid = $userid+1;
 	return $userid;
     }
+    
+    function closing(){
+        $this->db->truncate($this->table); 
+    }
 
 }
 

@@ -44,6 +44,13 @@ class Components {
         return $data;
     }
     
+    function combo_table()
+    {
+        $tables = $this->ci->db->list_tables();
+        foreach($tables as $row){$data['options'][$row] = ucfirst($row);}
+        return $data;
+    }
+    
     function combo_id()
     {
         $this->ci->db->select('id,name');

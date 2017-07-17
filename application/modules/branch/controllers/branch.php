@@ -6,7 +6,7 @@ class Branch extends MX_Controller
     {
         parent::__construct();
         
-        $this->load->model('Branch_model', '', TRUE);
+        $this->load->model('Branch_model', 'model', TRUE);
 
         $this->properti = $this->property->get();
         $this->acl->otentikasi();
@@ -29,7 +29,7 @@ class Branch extends MX_Controller
     
     public function getdatatable($search=null)
     {
-        if(!$search){ $result = $this->Branch_model->get_last($this->modul['limit'])->result(); }
+        if(!$search){ $result = $this->model->get_last($this->modul['limit'])->result(); }
         
         if ($result){
 	foreach($result as $res)
@@ -49,9 +49,9 @@ class Branch extends MX_Controller
     function publish($uid = null)
     {
        if ($this->acl->otentikasi2($this->title,'ajax') == TRUE){ 
-       $val = $this->Branch_model->get_by_id($uid)->row();
+       $val = $this->model->get_by_id($uid)->row();
        if ($val->publish == 0){ $lng = array('publish' => 1); }else { $lng = array('publish' => 0); }
-       $this->Branch_model->update($uid,$lng);
+       $this->model->update($uid,$lng);
        echo 'true|Status Changed...!';
        }else{ echo "error|Sorry, you do not have the right to change publish status..!"; }
     }
@@ -60,12 +60,12 @@ class Branch extends MX_Controller
     {        
        if ($this->acl->otentikasi2($this->title,'ajax') == TRUE){ 
            
-        $val = $this->Branch_model->get_default()->row();
+        $val = $this->model->get_default()->row();
         $lng = array('defaults' => 0);
-        $this->Branch_model->update($val->id,$lng);
+        $this->model->update($val->id,$lng);
 
         $lng = array('defaults' => 1);
-        $this->Branch_model->update($uid,$lng);  
+        $this->model->update($uid,$lng);  
         echo 'true|Defaults Changed..!';
            
        }else{ echo "error|Sorry, you do not have the right to change publish status..!"; }
@@ -122,11 +122,11 @@ class Branch extends MX_Controller
         {
            if ( $this->cek_relation($cek[$i]) == TRUE ) 
            {
-              $img = $this->Branch_model->get_by_id($cek[$i])->row();
+              $img = $this->model->get_by_id($cek[$i])->row();
               $img = $img->image;
               if ($img){ $img = "./images/branch/".$img; unlink("$img"); }
 
-              $this->Branch_model->delete($cek[$i]); 
+              $this->model->delete($cek[$i]); 
            }
            else { $x=$x+1; }
            
@@ -148,7 +148,7 @@ class Branch extends MX_Controller
     {
         if ($this->acl->otentikasi_admin($this->title,'ajax') == TRUE){
         if ($type == 'soft'){
-           $this->Branch_model->delete($uid);
+           $this->model->delete($uid);
            $this->session->set_flashdata('message', "1 $this->title successfully removed..!");
            
            echo "true|1 $this->title successfully soft removed..!";
@@ -157,11 +157,11 @@ class Branch extends MX_Controller
        {
         if ( $this->cek_relation($uid) == TRUE )
         {
-           $img = $this->Branch_model->get_by_id($uid)->row();
+           $img = $this->model->get_by_id($uid)->row();
            $img = $img->image;
            if ($img){ $img = "./images/branch/".$img; unlink("$img"); }
 
-           $this->Branch_model->delete($uid);
+           $this->model->delete($uid);
            $this->session->set_flashdata('message', "1 $this->title successfully removed..!");
            
            echo "true|1 $this->title successfully removed..!";
@@ -240,7 +240,7 @@ class Branch extends MX_Controller
                                 'image' => $info['file_name'], 'created' => date('Y-m-d H:i:s'));
             }
 
-            $this->Branch_model->add($branch);
+            $this->model->add($branch);
             $this->session->set_flashdata('message', "One $this->title data successfully saved!");
 //            redirect($this->title);
             
@@ -257,7 +257,7 @@ class Branch extends MX_Controller
     // Fungsi update untuk menset texfield dengan nilai dari database
     function update($uid=null)
     {        
-        $branch = $this->Branch_model->get_by_id($uid)->row();
+        $branch = $this->model->get_by_id($uid)->row();
 	$this->session->set_userdata('langid', $branch->id);
         
         echo $uid.'|'.$branch->code.'|'.$branch->name.'|'.$branch->address.'|'.
@@ -269,7 +269,7 @@ class Branch extends MX_Controller
 
     public function valid_branch($name)
     {
-        if ($this->Branch_model->valid('code',$name) == FALSE)
+        if ($this->model->valid('code',$name) == FALSE)
         {
             $this->form_validation->set_message('valid_branch', "This $this->title is already registered.!");
             return FALSE;
@@ -280,7 +280,7 @@ class Branch extends MX_Controller
     function validation_branch($name)
     {
 	$id = $this->session->userdata('langid');
-	if ($this->Branch_model->validating('code',$name,$id) == FALSE)
+	if ($this->model->validating('code',$name,$id) == FALSE)
         {
             $this->form_validation->set_message('validation_branch', 'This branch is already registered!');
             return FALSE;
@@ -352,7 +352,7 @@ class Branch extends MX_Controller
                 $img = base_url().'images/branch/'.$info['file_name'];
             }
 
-	    $this->Branch_model->update($this->session->userdata('langid'), $branch);
+	    $this->model->update($this->session->userdata('langid'), $branch);
             $this->session->set_flashdata('message', "One $this->title has successfully updated!");
             
             if ($this->upload->display_errors()){ echo "warning|".$this->upload->display_errors(); }
@@ -365,10 +365,13 @@ class Branch extends MX_Controller
     
     function remove_image($uid)
     {
-       $img = $this->Branch_model->get_by_id($uid)->row();
+       $img = $this->model->get_by_id($uid)->row();
        $img = $img->image;
        if ($img){ $img = "./images/branch/".$img; unlink("$img"); } 
     }
+    
+    // ====================================== CLOSING ======================================
+    function reset_process(){ $this->model->closing_defaults(); }
 
 }
 

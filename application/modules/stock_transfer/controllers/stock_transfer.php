@@ -378,6 +378,7 @@ class Stock_transfer extends MX_Controller
         
         $data['total'] = 0;
         $data['items'] = null;
+        $data['default']['from'] = null;
         
         $this->load->view('template', $data);
     }
@@ -707,12 +708,8 @@ class Stock_transfer extends MX_Controller
 
 // ====================================== REPORT =========================================
     
-// ====================================== AJAX =========================================    
-   
-   function get_price($product)
-   {
-       
-   }
+// ====================================== CLOSING ======================================
+    function reset_process(){ $this->model->closing(); $this->transmodel->closing(); } 
 
 }
 

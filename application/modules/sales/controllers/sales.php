@@ -25,10 +25,13 @@ class Sales extends MX_Controller
         $this->shipping = new Shipping_lib();
         $this->bank = new Bank_lib();
         $this->category = new Categoryproduct_lib();
+        $this->stock = new Stock_lib();
+        $this->journal = new Journalgl_lib();
+        $this->branch = new Branch_lib();
     }
 
-    private $properti, $modul, $title, $sales, $wt ,$shipping, $bank;
-    private $role, $currency, $customer, $payment, $city, $product ,$category;
+    private $properti, $modul, $title, $sales, $wt ,$shipping, $bank, $stock, $journal;
+    private $role, $currency, $customer, $payment, $city, $product ,$category, $branch;
     
     function index()
     {
@@ -138,6 +141,7 @@ class Sales extends MX_Controller
         $data['form_action_confirmation'] = site_url($this->title.'/payment_confirmation');
         $data['link'] = array('link_back' => anchor('main/','Back', array('class' => 'btn btn-danger')));
 
+        $data['branch_combo'] = $this->branch->combo();
         $data['customer'] = $this->customer->combo();
         $data['bank'] = $this->bank->combo();
         $data['array'] = array('','');
@@ -252,6 +256,7 @@ class Sales extends MX_Controller
         $data['form_action_trans'] = site_url($this->title.'/add_item/0'); 
         $data['form_action_shipping'] = site_url($this->title.'/shipping/0'); 
 
+        $data['branch'] = $this->branch->get_branch_default();
         $data['customer'] = $this->customer->combo();
         $data['payment'] = $this->payment->combo();
         $data['source'] = site_url($this->title.'/getdatatable');

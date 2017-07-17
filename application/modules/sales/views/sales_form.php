@@ -108,7 +108,7 @@
        <div class="col-md-3 col-sm-12 col-xs-12">
            <div class="col-md-12 col-sm-12 col-xs-12">
               <label class="control-label labelx"> Shipping Address </label>
-      <textarea id="tshipadd" style="width:100%;" readonly rows="4"><?php echo isset($default['ship_address']) ? $default['ship_address'] : '' ?></textarea>
+      <textarea id="tshipadd" style="width:100%;" rows="4"><?php echo isset($default['ship_address']) ? $default['ship_address'] : '' ?></textarea>
            </div>
        </div>
 <!-- div alamat penagihan -->
@@ -154,9 +154,13 @@
       
       <div class="ln_solid"></div>
       <div class="form-group">
-        <div class="col-md-2 col-sm-3 col-xs-12 col-md-offset-10">
+        <div class="col-md-4 col-sm-4 col-xs-12 col-md-offset-9">
+          <div class="btn-group">    
           <button type="submit" class="btn btn-success" id="button"> Save </button>
           <button type="reset" class="btn btn-danger" id=""> Cancel </button>
+          <a class="btn btn-primary" href="<?php echo site_url('sales/add/'); ?>"> New Transaction </a>
+                
+          </div>
         </div>
       </div>
       
@@ -165,6 +169,23 @@
     <!-- end div layer 1 -->
       
 <!-- form transaction table  -->
+ 
+                    
+<?php
+                        
+$atts2 = array(
+	  'class'      => 'btn btn-primary button_inline',
+	  'title'      => 'Product',
+	  'width'      => '800',
+	  'height'     => '600',
+	  'scrollbars' => 'yes',
+	  'status'     => 'yes',
+	  'resizable'  => 'yes',
+	  'screenx'    =>  '\'+((parseInt(screen.width) - 800)/2)+\'',
+	  'screeny'    =>  '\'+((parseInt(screen.height) - 600)/2)+\'',
+);
+
+?>      
       
 <div class="row">
     <div class="col-md-12 col-sm-12 col-xs-12">
@@ -174,14 +195,17 @@
    <form id="ajaxtransform" class="form-inline" method="post" action="<?php echo $form_action_trans; ?>">
       <div class="form-group">
         <label class="control-label labelx"> Product </label> <br>
-        <?php $js = "class='select2_single form-control' id='cproduct' tabindex='-1' style='min-width:150px;' "; 
-            echo form_dropdown('cproduct', $product, isset($default['product']) ? $default['product'] : '', $js); ?>
-          &nbsp;
+        <input id="titems" class="form-control col-md-3 col-xs-12" type="text" readonly name="tproduct" required>
+        <div class="btn-group">  
+        <?php echo anchor_popup(site_url("product/get_list/titems/".$branch), '[ ... ]', $atts2); ?>
+        <button type="button" class="btn btn-success button_inline"> GET </button>
+        </div>
+        &nbsp;
       </div>
 
       <div class="form-group">
         <label class="control-label labelx"> Qty </label> <br>
-        <input type="number" name="tqty" class="form-control" style="width:70px;" maxlength="3" required> &nbsp;
+        <input type="number" name="tqty" class="form-control" style="width:70px;" maxlength="3" required value="1"> &nbsp;
       </div>
       
       <div class="form-group">
@@ -195,12 +219,14 @@
             <option value="0"> . </option>
             <option value="0.1"> VAT </option>
         </select>
-        
+        &nbsp;
       </div>
 
       <div class="form-group"> <br>
+       <div class="btn-group">      
        <button type="submit" class="btn btn-primary button_inline"> Post </button>
        <button type="button" onClick="load_data();" class="btn btn-danger button_inline"> Reset </button>
+       </div>
       </div>
   </form> <br>
 
@@ -268,55 +294,9 @@
     </div>
     </div>
 <!-- table -->
-
-<!-- kolom shipping -->
-    <div class="col-md-5 col-sm-12 col-xs-12" style="margin-bottom:20px;">
-        <form id="ajaxtransform1" class="" method="post" action="<?php echo $form_action_shipping; ?>">
-        <fieldset>
-        <legend> Shipping </legend>
-                        
-        <div class="col-md-12 col-sm-12 col-xs-12">
-          <label class="control-label labelx"> Destination </label>
-          <?php $js = "class='select2_single form-control' id='ccity_ongkir' tabindex='-1' style='min-width:150px;' "; 
-	      echo form_dropdown('ccity', $city, isset($default['dest']) ? $default['dest'] : '', $js); ?>
-          
-          <input type="checkbox" id="ckship"> <small style="font-weight:bold;"> * Use as ship address </small>
-<textarea rows="3" name="tshipaddkurir" required id="tshipaddkurir" style="width:100%; margin-top:5px; margin-bottom:5px;" placeholder="Destination Description"><?php echo isset($default['dest_desc']) ? $default['dest_desc'] : '' ?></textarea>
-        </div> 
-            
-        <div class="col-md-4 col-sm-12 col-xs-12">
-          <label class="control-label labelx"> Courier </label>
-          <select class="form-control" name="ccourier" id="ccourier"> 
-<option value="pos"<?php echo set_select('ccourier', 'pos', isset($default['courier']) && $default['courier'] == 'pos' ? TRUE : FALSE); ?>> POS </option>
-<option value="jne"<?php echo set_select('ccourier', 'jne', isset($default['courier']) && $default['courier'] == 'jne' ? TRUE : FALSE); ?>> JNE </option>
-<option value="tiki"<?php echo set_select('ccourier', 'tiki', isset($default['courier']) && $default['courier'] == 'tiki' ? TRUE : FALSE); ?>> TIKI </option>
-          </select>
-        </div>    
-        
-        <div class="col-md-4 col-sm-12 col-xs-12">
-          <label class="control-label labelx"> Package </label>
-    <input type="text" class="form-control" name="cpackage" id="tpackage" readonly value="<?php echo isset($default['package']) ? $default['package'] : ''; ?>">    
-    <div id="package_box"></div>
-    <input type="hidden" name="rate" id="rate" value="<?php echo isset($default['rate']) ? $default['rate'] : ''; ?>">
-        </div>        
-        
-        <div class="col-md-2 col-sm-12 col-xs-12">
-          <label class="control-label labelx"> Weight </label>
-    <input type="number" name="tweight" id="tweight" style="width:55px;" readonly class="form-control" value="<?php echo isset($weight) ? $weight:'1'; ?>" >
-        </div> 
-            
-        <div class="col-md-1 col-sm-12 col-xs-12">
-          <label class="control-label labelx">.</label>    
-          <button type="submit" class="btn btn-primary btn-md" title="Shipping Process"> <i class="fa fa-truck"> </i> </button>
-        </div>     
-             
-       </fieldset>
-    </form>    
-    </div>    
-<!-- kolom shipping -->
     
 <!-- kolom total -->
-    <div class="col-md-3 col-sm-12 col-xs-12 col-md-offset-4">
+    <div class="col-md-3 col-sm-12 col-xs-12 col-md-offset-9">
         
         <table id="table_summary" style="width:100%;">
             <tr> <td> Sub Total </td> <td class="amt"> <?php echo isset($total) ? idr_format($total) : '0'; ?>,- </td> </tr>

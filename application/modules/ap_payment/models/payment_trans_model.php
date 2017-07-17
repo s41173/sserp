@@ -7,12 +7,12 @@ class Payment_trans_model extends CI_Model
         parent::__construct();
     }
     
-    var $table = 'payment_trans';
+    var $tableName = 'payment_trans';
     
     function get_last_item($po)
     {
         $this->db->select('id, ap_payment, code, no, discount, amount');
-        $this->db->from($this->table);
+        $this->db->from($this->tableName);
         $this->db->where('ap_payment', $po);
         $this->db->order_by('id', 'asc'); 
         return $this->db->get(); 
@@ -21,7 +21,7 @@ class Payment_trans_model extends CI_Model
     function get_by_id($id)
     {
        $this->db->select('id, ap_payment, code, no, discount, nominal, amount');
-       $this->db->from($this->table);
+       $this->db->from($this->tableName);
        $this->db->where('id', $id);
        return $this->db->get();  
     }
@@ -29,7 +29,7 @@ class Payment_trans_model extends CI_Model
     function get_last_trans($po,$code)
     {
         $this->db->select('id, ap_payment, code, no, discount, nominal, amount');
-        $this->db->from($this->table);
+        $this->db->from($this->tableName);
         $this->db->where('ap_payment', $po);
         $this->db->where('code', $code);
         $this->db->order_by('id', 'asc');
@@ -51,7 +51,7 @@ class Payment_trans_model extends CI_Model
     function get_item_based_po($no,$code)
     {
         $this->db->select('id, ap_payment, code, no, discount, amount');
-        $this->db->from($this->table);
+        $this->db->from($this->tableName);
         $this->db->where('no', $no);
         $this->db->where('code', $code);
 //        $this->db->where('ap_payment', $ap);
@@ -66,37 +66,40 @@ class Payment_trans_model extends CI_Model
         
         $this->db->where('code', $code);
         $this->db->where('ap_payment', $po);
-        return $this->db->get($this->table)->row_array();
+        return $this->db->get($this->tableName)->row_array();
     }
 
     function total_pr($po)
     {
         $this->db->select_sum('amount');
-        
         $this->db->where('code', 'PR');
         $this->db->where('ap_payment', $po);
-        return $this->db->get($this->table)->row_array();
+        return $this->db->get($this->tableName)->row_array();
     }
 
     
     function delete($uid)
     {
         $this->db->where('id', $uid);
-        $this->db->delete($this->table); // perintah untuk delete data dari db
+        $this->db->delete($this->tableName); // perintah untuk delete data dari db
     }
 
     function delete_payment($uid)
     {
         $this->db->where('ap_payment', $uid);
-        $this->db->delete($this->table); // perintah untuk delete data dari db
+        $this->db->delete($this->tableName); // perintah untuk delete data dari db
     }
     
     function add($users)
     {
-        $this->db->insert($this->table, $users);
+       $this->db->insert($this->tableName, $users);
     }
     
-
+    function closing(){
+        $this->db->truncate($this->tableName); 
+        $this->db->truncate('trans_ledger'); 
+    }
+    
 }
 
 ?>
