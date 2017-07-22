@@ -26,12 +26,18 @@ class Sales extends MX_Controller
         $this->bank = new Bank_lib();
         $this->category = new Categoryproduct_lib();
         $this->stock = new Stock_lib();
-        $this->journal = new Journalgl_lib();
+        $this->journalgl = new Journalgl_lib();
         $this->branch = new Branch_lib();
+        $this->period = new Period_lib();
+        $this->period = $this->period->get();
+        $this->stockledger = new Stock_ledger_lib();
+        $this->tax = new Tax_lib();
+        $this->account = new Account_lib();
+        $this->wt = new Warehouse_transaction_lib();
     }
 
-    private $properti, $modul, $title, $sales, $wt ,$shipping, $bank, $stock, $journal;
-    private $role, $currency, $customer, $payment, $city, $product ,$category, $branch;
+    private $properti, $modul, $title, $sales, $wt ,$shipping, $bank, $stock, $journalgl, $stockledger;
+    private $role, $currency, $customer, $payment, $city, $product ,$category, $branch, $period, $tax, $account;
     
     function index()
     {
@@ -40,39 +46,7 @@ class Sales extends MX_Controller
        $this->session->unset_userdata('end');
        $this->get_last(); 
     }
-    
-    // function untuk memeriksa input user dari form sebagai admin
-    function json_process()
-    {
-        $datax = (array)json_decode(file_get_contents('php://input')); 
-
-        $username = $datax['user'];
-        $password = $datax['pass'];
-
-            if ($username == 'admin' && $password == 'admin')
-            {
-                $this->mail_invoice(7);
-                $response = array(
-                  'Success' => true,
-		  'User' => $datax['user'],
-                  'Info' => 'Login Success Lah'); 
-            }
-            else
-            {
-                $response = array(
-                'Success' => false,
-                'Info' => 'Invalid Login..!!');
-            }
-            
-        $this->output
-        ->set_status_header(201)
-        ->set_content_type('application/json', 'utf-8')
-        ->set_output(json_encode($response))
-        ->_display();
-        exit;
-
-    }
-    
+        
 //     ============== ajax ===========================
     
     function ongkir($ori,$dest,$courier,$jenis=null)
@@ -94,26 +68,32 @@ class Sales extends MX_Controller
         $res = $this->product->get_detail_based_id($pid);
         echo intval($res->price-$res->discount);
     }
+    
+    function get_product_based_sku($sku)
+    {
+        $res = $this->product->get_detail_based_sku($sku);
+        echo intval($res->price-$res->discount);
+    }
 
 
 //     ============== ajax ===========================
      
-    public function getdatatable($search=null,$cust='null',$payment='null',$confirm='null')
+    public function getdatatable($search=null,$branch='null',$payment='null',$confirm='null')
     {
         if(!$search){ $result = $this->Sales_model->get_last($this->modul['limit'])->result(); }
-        else {$result = $this->Sales_model->search($cust,$payment,$confirm)->result(); }
+        else {$result = $this->Sales_model->search($branch,$payment,$confirm)->result(); }
 	
         $output = null;
         if ($result){
                 
          foreach($result as $res)
 	 {
-           $total = intval($res->amount+$res->tax+$res->cost);  
+           $total = intval($res->amount);  
            if ($res->paid_date){ $status = 'S'; }else{ $status = 'C'; } 
            if ($this->shipping->cek_shiping_based_sales($res->id) == true){ $ship = 'Shipped'; }else{ $ship = '-'; } // shipping status
            
 	   $output[] = array ($res->id, 'SO-0'.$res->id, tglin($res->dates), $this->customer->get_name($res->cust_id), idr_format($total),
-                              idr_format($res->shipping), $status, $ship, $res->confirmation
+                              idr_format($res->shipping), $status, $ship, $res->confirmation, $this->branch->get_name($res->branch_id)
                              );
 	 } 
          
@@ -141,9 +121,10 @@ class Sales extends MX_Controller
         $data['form_action_confirmation'] = site_url($this->title.'/payment_confirmation');
         $data['link'] = array('link_back' => anchor('main/','Back', array('class' => 'btn btn-danger')));
 
+        $data['branch'] = $this->branch->get_branch_default();
         $data['branch_combo'] = $this->branch->combo();
         $data['customer'] = $this->customer->combo();
-        $data['bank'] = $this->bank->combo();
+        $data['bank'] = $this->account->combo_asset();
         $data['array'] = array('','');
         $data['month'] = combo_month();
         $data['year'] = date('Y');
@@ -164,7 +145,7 @@ class Sales extends MX_Controller
         $this->table->set_empty("&nbsp;");
 
         //Set heading untuk table
-        $this->table->set_heading('#','No', 'Code', 'Date', 'Customer', 'Balance', 'Ship-Cost', 'Status', 'Ship-Status', 'Action');
+        $this->table->set_heading('#','No', 'Code', 'Branch', 'Date', 'Customer', 'Balance', '#', 'Action');
 
         $data['table'] = $this->table->generate();
         $data['source'] = site_url($this->title.'/getdatatable/');
@@ -198,7 +179,7 @@ class Sales extends MX_Controller
        }else{ echo "error|Sorry, you do not have the right to change publish status..!"; }
     }
     
-    function delete_all($type='soft')
+    function delete_all($type='hard')
     {
       if ($this->acl->otentikasi_admin($this->title,'ajax') == TRUE){
       
@@ -234,18 +215,36 @@ class Sales extends MX_Controller
     function delete($uid)
     {
         if ($this->acl->otentikasi_admin($this->title,'ajax') == TRUE){
-            $this->Sales_model->delete($uid);
-            
-            $this->session->set_flashdata('message', "1 $this->title successfully removed..!");
-
-            echo "true|1 $this->title successfully removed..!";
+           
+            $sales = $this->Sales_model->get_by_id($uid)->row();
+            if ($sales->confirmation == 1){
+                
+             $param = array('confirmation' => 0, 'paid_date' => null, 'updated' => date('Y-m-d H:i:s'));
+             $this->Sales_model->update($uid, $param);   
+             
+             $this->journalgl->remove_journal('SO', $uid);
+             $this->journalgl->remove_journal('CS', $uid);
+             $this->journalgl->remove_journal('CR', '0000'.$uid);
+             echo "true|1 $this->title successfully rollback..!";
+            }else{
+              $this->journalgl->remove_journal('SO', $uid);
+              $this->journalgl->remove_journal('CS', $uid);
+              $this->journalgl->remove_journal('CR', '0000'.$uid);
+              
+              $this->stock->rollback('SO', $uid); // rollback stock
+              $this->wt->remove($sales->dates, 'SO-'.$uid); // delete wt
+              $this->sitem->delete_sales($uid);
+              $this->Sales_model->force_delete($uid);
+              echo "true|1 $this->title successfully removed..!";    
+            }
         }else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
         
     }
     
     function add($param=0)
     {
-
+        $this->acl->otentikasi2($this->title);
+         
         $data['title'] = $this->properti['name'].' | Administrator  '.ucwords($this->modul['title']);
         $data['h2title'] = 'Create New '.$this->modul['title'];
         $data['main_view'] = 'sales_form';
@@ -258,12 +257,14 @@ class Sales extends MX_Controller
 
         $data['branch'] = $this->branch->get_branch_default();
         $data['customer'] = $this->customer->combo();
+        $data['tax'] = $this->tax->combo();
         $data['payment'] = $this->payment->combo();
         $data['source'] = site_url($this->title.'/getdatatable');
         $data['graph'] = site_url()."/sales/chart/";
         $data['city'] = $this->city->combo_city_combine();
         $data['default']['dates'] = date("Y/m/d");
         $data['product'] = $this->product->combo();
+        
         
         $data['items'] = $this->sitem->get_last_item(0)->result();
 
@@ -285,11 +286,14 @@ class Sales extends MX_Controller
         $this->form_validation->set_rules('tdates', 'Transaction Date', 'required');
         $this->form_validation->set_rules('tduedates', 'Transaction Due Date', 'required');
         $this->form_validation->set_rules('cpayment', 'Payment Type', 'required');
+        $this->form_validation->set_rules('tcosts', 'Landed Cost', 'numeric');
 
         if ($this->form_validation->run($this) == TRUE)
         {
-            $sales = array('cust_id' => $this->input->post('ccustomer'), 'dates' => date("Y-m-d H:i:s"),
+            $sales = array('cust_id' => $this->input->post('ccustomer'), 'dates' => date("Y-m-d H:i:s"), 
+                           'branch_id' => $this->branch->get_branch_default(), 'cost' => $this->input->post('tcosts'),
                            'due_date' => $this->input->post('tduedates'), 'payment_id' => $this->input->post('cpayment'), 
+                           'cash' => $this->input->post('ccash'), 
                            'created' => date('Y-m-d H:i:s'));
 
             $this->Sales_model->add($sales);
@@ -309,22 +313,34 @@ class Sales extends MX_Controller
        else {
        
          // Form validation
-        $this->form_validation->set_rules('cproduct', 'Product', 'required|callback_valid_product['.$sid.']');
-        $this->form_validation->set_rules('tqty', 'Qty', 'required|numeric');
+        $this->form_validation->set_rules('cproduct', 'Product', 'required|callback_valid_product['.$sid.']|callback_valid_request['.$this->input->post('tqty').']');
+        $this->form_validation->set_rules('tqty', 'Qty', 'required|numeric|callback_valid_login');
         $this->form_validation->set_rules('tprice', 'Price', 'required|numeric');
         $this->form_validation->set_rules('ctax', 'Tax Type', 'required');
 
             if ($this->form_validation->run($this) == TRUE && $this->valid_confirm($sid) == TRUE)
             {
-                $amt_price = intval($this->input->post('tqty')*$this->input->post('tprice'));
+                // start transaction 
+                $this->db->trans_start(); 
+                
+                $pid = $this->product->get_id_by_sku($this->input->post('cproduct'));
+                $discount = intval($this->input->post('tqty')*$this->input->post('tdiscount'));
+                $amt_price = intval($this->input->post('tqty')*$this->input->post('tprice')-$discount);
                 $tax = intval($this->input->post('ctax')*$amt_price);
-                $sales = array('product_id' => $this->input->post('cproduct'), 'sales_id' => $sid,
-                               'qty' => $this->input->post('tqty'), 'tax' => $tax, 'weight' => $this->product->get_weight($this->input->post('cproduct')),
-                               'price' => $this->input->post('tprice'), 'amount' => intval($amt_price+$tax));
+                $id = $this->sitem->counter();
+                
+                $hpp = $this->stock->min_stock($pid, $this->input->post('tqty'), $sid, 'SO', $id);
+                
+                $sales = array('id' => $id, 'product_id' => $pid, 'sales_id' => $sid,
+                               'qty' => $this->input->post('tqty'), 'tax' => $tax, 'discount' => $this->input->post('tdiscount'), 'weight' => $this->product->get_weight($pid),
+                               'hpp' => $hpp, 'price' => $this->input->post('tprice'), 'amount' => intval($amt_price+$tax));
 
                 $this->sitem->add($sales);
                 $this->update_trans($sid);
                 echo "true|Sales Transaction data successfully saved!|";
+                
+                $this->db->trans_complete();
+                // end transaction
             }
             else{ echo "error|".validation_errors(); }  
         }
@@ -336,18 +352,27 @@ class Sales extends MX_Controller
         $totals = $this->sitem->total($sid);
         $price = intval($totals['qty']*$totals['price']);
         
+        $sales = $this->Sales_model->get_by_id($sid)->row();
+        $cost = $sales->cost;
+        
         // shipping total        
-        $transaction = array('tax' => $totals['tax'], 'total' => $price, 'amount' => intval($totals['tax']+$price), 'shipping' => $this->shipping->total($sid));
+        $transaction = array('tax' => $totals['tax'], 'total' => $price, 'discount' => $totals['discount'], 
+                             'amount' => intval($totals['tax']+$price+$cost-$totals['discount']-$sales->p1), 'shipping' => $this->shipping->total($sid));
 	$this->Sales_model->update($sid, $transaction);
     }
     
     function delete_item($id,$sid)
     {
         if ($this->acl->otentikasi2($this->title) == TRUE && $this->valid_confirm($sid) == TRUE){ 
-        
-        $this->sitem->delete($id); // memanggil model untuk mendelete data
-        $this->update_trans($sid);
-        $this->session->set_flashdata('message', "1 item successfully removed..!"); // set flash data message dengan session
+            
+         // start transaction 
+        $this->db->trans_start();    
+            $this->stock->rollback('SO', $sid, $id);
+            $this->sitem->delete($id); // memanggil model untuk mendelete data
+            $this->update_trans($sid);
+            $this->session->set_flashdata('message', "1 item successfully removed..!"); 
+            $this->db->trans_complete();
+//       end transaction
         }else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
         redirect($this->title.'/update/'.$sid);
     }
@@ -392,6 +417,8 @@ class Sales extends MX_Controller
     // Fungsi update untuk menset texfield dengan nilai dari database
     function update($param=0)
     {
+        $this->acl->otentikasi2($this->title);
+        
         $data['title'] = $this->properti['name'].' | Administrator  '.ucwords($this->modul['title']);
         $data['h2title'] = 'Update '.$this->modul['title'];
         $data['main_view'] = 'sales_form';
@@ -402,12 +429,14 @@ class Sales extends MX_Controller
 	
         $data['link'] = array('link_back' => anchor($this->title,'Back', array('class' => 'btn btn-danger')));
 
+        $data['branch'] = $this->branch->get_branch_default();
         $data['customer'] = $this->customer->combo();
         $data['payment'] = $this->payment->combo();
         $data['source'] = site_url($this->title.'/getdatatable');
         $data['graph'] = site_url()."/sales/chart/";
         $data['city'] = $this->city->combo_city_combine();
         $data['product'] = $this->product->combo();
+        $data['tax'] = $this->tax->combo();
         
         $sales = $this->Sales_model->get_by_id($param)->row();
         $customer = $this->customer->get_details($sales->cust_id)->row();
@@ -417,6 +446,10 @@ class Sales extends MX_Controller
         $data['default']['dates'] = $sales->dates;
         $data['default']['due_date'] = $sales->due_date;
         $data['default']['payment'] = $sales->payment_id;
+        $data['default']['costs'] = $sales->cost;
+        $data['default']['discount'] = $sales->discount;
+        $data['default']['cash'] = $sales->cash;
+        $data['default']['p1'] = $sales->p1;
         $data['total'] = $sales->total;
         $data['shipping'] = $sales->shipping;
         $data['tot_amt'] = intval($sales->amount+$sales->shipping);
@@ -424,90 +457,72 @@ class Sales extends MX_Controller
         // weight total
         $total = $this->sitem->total($param);
         $data['weight'] = round($total['weight']);
-        $data['tax']    = $sales->tax;
-        
-        // shipping details
-        $shipping = $this->shipping->get_detail_based_sales($param);
-        if ($shipping){
-           
-           $dst = array($shipping->dest_id,$shipping->dest); 
-           $pck = array($shipping->package, $shipping->rate);
-           
-           $data['default']['dest'] = implode('|', $dst);
-           $data['default']['dest_desc'] = $shipping->dest_desc; 
-           $data['package'] = implode('|', $pck);
-           $data['default']['courier'] = $shipping->courier;
-           $data['default']['package'] = $shipping->package;
-           $data['default']['rate'] = $shipping->rate;
-        }
+        $data['tax_total']    = $sales->tax;
+        $data['discount']    = $sales->discount;
+        $data['p1']    = $sales->p1;
         
         // transaction table
         $data['items'] = $this->sitem->get_last_item($param)->result();
         $this->load->view('template', $data);
     }
     
-        // Fungsi update untuk menset texfield dengan nilai dari database
-    function invoice($param=0,$type='invoice')
-    {
-        $data['title'] = $this->properti['name'].' | Invoice '.ucwords($this->modul['title']).' | SO-0'.$param;
-        $sales = $this->Sales_model->get_by_id($param)->row();
-        
-        if ($sales){
-                
-            // property
-            $data['p_name'] = $this->properti['sitename'];
-            $data['p_address'] = $this->properti['address'];
-            $data['p_city'] = $this->properti['city'];
-            $data['p_zip']  = $this->properti['zip'];
-            $data['p_phone']  = $this->properti['phone1'];
-            $data['p_email']  = $this->properti['email'];
-            $data['p_logo']  = $this->properti['logo'];
+   function invoice($sid=null,$type=null)
+   {
+       $this->acl->otentikasi2($this->title);
 
-            // customer details
-            $customer = $this->customer->get_details($sales->cust_id)->row();
-            $data['c_name'] = strtoupper($customer->first_name.' '.$customer->last_name);
-            $data['c_email'] = $customer->email;
-            $data['c_address'] = $customer->shipping_address;
-            $data['c_phone'] = $customer->phone1.' / '.$customer->phone2;
-            $data['c_city'] = $this->city->get_name($customer->city);
-            $data['c_zip'] = $customer->zip;
+       $data['h2title'] = 'Print Tax Invoice'.$this->modul['title'];
 
-            // sales
-            $data['so'] = 'SO-0'.$param;
-            $data['dates'] = tglin($sales->dates);
-            $data['due_date'] = tglin($sales->due_date);
-            $data['payment'] = $this->payment->get_name($sales->payment_id);
+       $sales = $this->Sales_model->get_by_id($sid)->row();
+       
+       // customer
+       $customer = $this->customer->get_details($sales->cust_id)->row();
+       $data['customer'] = $customer->first_name.' '.$customer->last_name;
+       $data['address'] = $customer->address;
+       $data['city'] = $customer->city;
+       $data['phone'] = $customer->phone1;
+       $data['phone2'] = $customer->phone2;
 
-            if ($sales->paid_date){ $data['paid'] = 'Paid'; }else { $data['paid'] = 'Unpaid'; }
-            $data['total'] = $sales->total;
-            $data['shipping'] = idr_format($sales->shipping);
-            $data['tot_amt'] = idr_format(intval($sales->amount+$sales->shipping));
-            $data['amount'] = idr_format($sales->amount);
+       //sales
+       $data['pono'] = 'SO-'.$sid;
+       $data['podate'] = tglincomplete($sales->dates);
+       $data['desc'] = '';
+       $data['notes'] = '';
+       $data['user'] = $this->session->userdata('username');
+       $data['currency'] = 'IDR';
+       $data['log'] = $this->session->userdata('log');
+       $data['cost'] = $sales->cost;
+       $data['p1'] = $sales->p1;
+       $data['p2'] = 0;
 
-            // weight total
-            $total = $this->sitem->total($param);
-            $data['weight'] = round($total['weight']);
-            $data['tax']    = $sales->tax;
+       // sales item
+       $data['items'] = $this->sitem->get_last_item($sid)->result();
 
-            // shipping details
-            $shipping = $this->shipping->get_detail_based_sales($param);
-            $data['ship_date'] = tglin($shipping->shipdate);
-            $data['courier'] = strtoupper($shipping->courier);
-            $data['package'] = $shipping->package;
-            $data['awb'] = strtoupper($shipping->awb);
-            $data['rate'] = $shipping->rate;
-            $data['dest_desc'] = $shipping->dest_desc;
-            $data['dest'] = $shipping->dest;
+       // property display
+       $data['logo'] = $this->properti['logo'];
+       $data['paddress'] = $this->properti['address'];
+       $data['p_phone1'] = $this->properti['phone1'];
+       $data['p_phone2'] = $this->properti['phone2'];
+       $data['p_city'] = ucfirst($this->properti['city']);
+       $data['p_zip'] = $this->properti['zip'];
+       $data['p_npwp'] = '';
+       $data['p_sitename'] = $this->properti['sitename'];
+       $data['p_email'] = $this->properti['email'];
 
-            if (!$sales->paid_date){ $data['ship_status'] = 'Not Shipped'; }else { $data['ship_status'] = 'Shipped'; } 
+       if ("IDR"){ $data['symbol'] = 'Rp.'; $matauang = 'rupiah'; }
+       else { $data['symbol'] = ''; $matauang = ''; }
 
-            // transaction table
-            $data['items'] = $this->sitem->get_last_item($param)->result();
-            if ($type == 'invoice'){ $this->load->view('sales_invoice', $data); }else{
-                $this->load->view('shipping_invoice', $data);
-            }
-        }
-    }
+
+       $data['status'] = $sales->paid_date;
+       $app = null;
+       if ($sales->approved == 1){ $app = 'A'; } else{ $app = 'NA'; }
+       $data['approve'] = $app;
+       
+       $terbilang = $this->load->library('terbilang');
+       $data['terbilang'] = ucwords($terbilang->baca($sales->amount).' '.$matauang);
+
+       $this->load->view('sales_invoice', $data);
+       
+   }
     
     function update_process($param)
     {
@@ -524,19 +539,29 @@ class Sales extends MX_Controller
         $this->form_validation->set_rules('tdates', 'Transaction Date', 'required');
         $this->form_validation->set_rules('tduedates', 'Transaction Due Date', 'required');
         $this->form_validation->set_rules('cpayment', 'Payment Type', 'required');
+        $this->form_validation->set_rules('tcosts', 'Landed Cost', 'numeric');
 
         if ($this->form_validation->run($this) == TRUE && $this->valid_confirm($param) == TRUE && $this->valid_items($param) == TRUE)
-        {
-            $sales = array('cust_id' => $this->input->post('ccustomer'),
-                           'due_date' => $this->input->post('tduedates'), 'payment_id' => $this->input->post('cpayment'), 
+        {   
+            if ($this->input->post('ccash') == 1){ $p1 = 0; $confirm = 1; $paid = $this->input->post('tdates'); }
+            else{ $p1 = $this->input->post('tp1'); $confirm = 0; $paid=null;}
+            
+            $sales = array('cust_id' => $this->input->post('ccustomer'), 'dates' => $this->input->post('tdates'), 'branch_id' => $this->branch->get_branch_default(),
+                           'due_date' => $this->input->post('tduedates'), 'payment_id' => $this->input->post('cpayment'), 'cost' => $this->input->post('tcosts'),
+                           'p1' => $p1, 'paid_date' => $paid, 'confirmation' => $confirm,
+                           'cash' => $this->input->post('ccash'), 
                            'updated' => date('Y-m-d H:i:s'));
 
             $this->Sales_model->update($param, $sales);
-            $this->mail_invoice($param); // send email confirmation
+            $this->update_trans($param);
+            $this->create_journal($param);
+            $this->add_wt($param); // add warehouse transaction
+//            $this->mail_invoice($param); // send email confirmation
             $this->session->set_flashdata('message', "One $this->title data successfully saved!");
             echo "true|One $this->title data successfully saved!|".$param;
         }
-        else{ echo "error|". validation_errors(); $this->session->set_flashdata('message', validation_errors()); }
+        elseif ($this->valid_confirm($param) != TRUE){ echo "error|Sales Already Confirmed..!"; }
+        else{ echo "error|".validation_errors(); $this->session->set_flashdata('message', validation_errors()); }
         }else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
         //redirect($this->title.'/update/'.$param);
     }
@@ -550,6 +575,91 @@ class Sales extends MX_Controller
              tglin($sales->paid_date).'|'.date("H:i:s", $sales->paid_date);
     }
     
+    private function add_wt($sid)
+    {
+        $sales = $this->Sales_model->get_by_id($sid)->row();
+        $item = $this->sitem->get_last_item($sid)->result();
+        
+        $this->wt->remove($sales->dates, 'SO-'.$sid);
+        
+        foreach ($item as $value) {    
+           $hpp = intval($value->hpp/$value->qty); 
+           $this->wt->add( $sales->dates, 'SO-'.$sales->id, $sales->branch_id, 'idr', $value->product_id, 0, $value->qty,
+                           $hpp, $value->hpp, $this->session->userdata('log')); 
+        }
+    }
+    
+    private function create_journal($sid)
+    {
+        $this->journalgl->remove_journal('SO', $sid);
+        $this->journalgl->remove_journal('CS', $sid);
+        $this->journalgl->remove_journal('CR', '0000'.$sid);
+        
+        $sales = $this->Sales_model->get_by_id($sid)->row();
+        $totals = $this->sitem->total($sid);
+        
+        $cm = new Control_model();
+        
+        $landed   = $cm->get_id(2);
+        $discount = $cm->get_id(4);
+        $tax      = $cm->get_id(18);
+        $stock    = $this->branch->get_acc($sales->branch_id, 'stock');
+        $ar       = $this->branch->get_acc($sales->branch_id, 'ar');
+        $bank     = $this->branch->get_acc($sales->branch_id, 'bank');
+        $kas      = $this->branch->get_acc($sales->branch_id, 'cash');
+        $salesacc = $this->branch->get_acc($sales->branch_id, 'sales');
+        $cost     = $this->branch->get_acc($sales->branch_id, 'unit');
+        $hpp      = intval($totals['hpp']);
+        
+        if ($sales->cash == 1){
+           if ($this->payment->get_name($sales->payment_id) == 'Cash'){ $account = $kas; } // kas
+           else { $account = $bank; }    
+        }else{ $account = $ar; }
+        
+        
+        if ($sales->p1 > 0)
+        {  
+           // create journal- GL
+           $this->journalgl->new_journal($sales->id,$sales->dates,'SO','IDR','Sales Order',$sales->amount, $this->session->userdata('log'));
+           $this->journalgl->new_journal('0000'.$sales->id,$sales->dates,'CR','IDR','Customer DP Payment : SO'.$sales->id,$sales->p1, $this->session->userdata('log'));
+           
+           $jid = $this->journalgl->get_journal_id('SO',$sales->id);
+           $dpid = $this->journalgl->get_journal_id('CR','0000'.$sales->id);
+           
+           $this->journalgl->add_trans($jid,$cost, $hpp, 0); // tambah biaya 1 (hpp)
+           $this->journalgl->add_trans($jid,$stock,0,$hpp); // kurang persediaan
+           $this->journalgl->add_trans($jid,$ar,$sales->p1+$sales->amount,0); // piutang usaha bertambah
+           $this->journalgl->add_trans($jid,$salesacc,0,$sales->total); // tambah penjualan
+           
+           if ($sales->tax > 0){ $this->journalgl->add_trans($jid,$tax,0,$sales->tax); } // pajak penjualan
+           if ($sales->cost > 0){ $this->journalgl->add_trans($jid,$landed,0,$sales->cost); } // landed costs
+           if ($sales->discount > 0){ $this->journalgl->add_trans($jid,$discount,$sales->discount,0); } // discount
+           
+           //DP proses
+           if ($this->payment->get_name($sales->payment_id) == 'Cash'){ $dp_acc = $kas; } // kas
+           else { $dp_acc = $bank; }    
+           
+           $this->journalgl->add_trans($dpid,$dp_acc,$sales->p1,0); //bank penjualan
+           $this->journalgl->add_trans($dpid,$ar,0,$sales->p1); // piutang usaha kurang dp
+           
+        }
+        else
+        {   
+            $this->journalgl->new_journal($sales->id,$sales->dates,'SO','IDR','Sales Order',$sales->amount, $this->session->userdata('log'));
+            $jid = $this->journalgl->get_journal_id('SO',$sales->id);
+            
+            $this->journalgl->add_trans($jid,$cost, $hpp, 0); // tambah biaya 1 (hpp)
+            $this->journalgl->add_trans($jid,$stock, 0, $hpp); // kurang persediaan
+            $this->journalgl->add_trans($jid,$account,$sales->p1+$sales->amount,0); // piutang usaha bertambah
+            $this->journalgl->add_trans($jid,$salesacc,0,$sales->total); // tambah penjualan
+           
+            if ($sales->tax > 0){ $this->journalgl->add_trans($jid,$tax,0,$sales->tax); } // pajak penjualan
+            if ($sales->cost > 0){ $this->journalgl->add_trans($jid,$landed,0,$sales->cost); } // landed costs
+            if ($sales->discount > 0){ $this->journalgl->add_trans($jid,$discount,$sales->discount,0); } // discount
+        }
+    }
+
+    
     function payment_confirmation()
     {
        if ($this->acl->otentikasi2($this->title,'ajax') == TRUE){
@@ -560,102 +670,83 @@ class Sales extends MX_Controller
 	$data['link'] = array('link_back' => anchor('category/','<span>back</span>', array('class' => 'back')));
 
 	// Form validation
-        $this->form_validation->set_rules('tcdates', 'Confirmation Date', 'required');
-        $this->form_validation->set_rules('taccname', 'Account Name', 'required');
-        $this->form_validation->set_rules('taccno', 'Account No', 'required');
-        $this->form_validation->set_rules('taccbank', 'Account Bank', 'required');
-        $this->form_validation->set_rules('tamount', 'Amount', 'required|numeric');
-        $this->form_validation->set_rules('cbank', 'Merchant Bank', 'required');
+        $this->form_validation->set_rules('tcdates', 'Confirmation Date', 'callback_valid_required');
+        $this->form_validation->set_rules('taccname', 'Account Name', 'callback_valid_required');
+        $this->form_validation->set_rules('taccno', 'Account No', 'callback_valid_required');
+        $this->form_validation->set_rules('taccbank', 'Account Bank', 'callback_valid_required');
+        $this->form_validation->set_rules('tamount', 'Amount', 'numeric|callback_valid_required');
+        $this->form_validation->set_rules('cbank', 'Merchant Bank', 'callback_valid_required');
 
-        if ($this->form_validation->run($this) == TRUE)
+        if ($this->form_validation->run($this) == TRUE && $this->valid_confirm($this->session->userdata('langid')) == TRUE)
         {
             if ($this->input->post('cstts') == '1'){
-                $sales = array('confirmation' => 1, 'updated' => date('Y-m-d H:i:s'));
+                $sales = array('confirmation' => 1, 'updated' => date('Y-m-d H:i:s'),
+                               'paid_date' => $this->input->post('tcdates'),
+                               'sender_name' => $this->input->post('taccname'), 'sender_acc' => $this->input->post('taccno'),
+                               'sender_bank' => $this->input->post('taccbank'), 'sender_amount' => $this->input->post('tamount'),
+                               'bank_id' => $this->input->post('cbank')
+                    );
                 $stts = 'confirmed!';
-                // lakukan action pengurangan stock
-                $this->change_product($this->session->userdata('langid'));
-                
                 $this->Sales_model->update($this->session->userdata('langid'), $sales);
-                // lakukan action email ke customer
-                $status = $this->mail_invoice($this->session->userdata('langid'));
+                $this->confirmation_journal($this->session->userdata('langid'));
             }
             else { $sales = array('confirmation' => 0, 'updated' => date('Y-m-d H:i:s')); 
                    $stts = 'unconfirmed!'; 
-                   // lakukan action pengurangan stock
-                   $this->change_product($this->session->userdata('langid'),0);
+                   $this->Sales_model->update($this->session->userdata('langid'), $sales);
+                   $this->journalgl->remove_journal('CS', $this->session->userdata('langid'));
                 $status = true;
-                $this->Sales_model->update($this->session->userdata('langid'), $sales);
             }
-            
+            $status = true;
             if ($status == true){
                echo "true|One $this->title data payment successfully ".$stts;  
             }else { echo "error|Error Sending Mail...!! ";   }
         }
+        elseif ($this->valid_confirm($this->session->userdata('langid')) != TRUE){ echo "error|Sales Order Already Confirmed..!"; }
         else{ echo "error|". validation_errors(); $this->session->set_flashdata('message', validation_errors()); }
         }else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; } 
     }
     
-    private function mail_invoice($pid)
-    {   
-        // property display
-       $data['p_logo'] = $this->properti['logo'];
-       $data['p_name'] = $this->properti['name'];
-       $data['p_site_name'] = $this->properti['sitename'];
-       $data['p_address'] = $this->properti['address'];
-       $data['p_zip'] = $this->properti['zip'];
-       $data['p_city'] = $this->properti['city'];
-       $data['sites_url'] = constant("BASE_URL");
-       
-       $sales = $this->Sales_model->get_by_id($pid)->row();
-       $cust = $this->customer->get_details($sales->cust_id)->row();
-       $shipping = $this->shipping->get_detail_based_sales($pid);
-      
-       $data['so_no']   = 'DISO-0'.$pid;
-       $data['so_date'] = tglin($sales->dates).' '. timein($sales->dates);
-       $data['c_name'] = ucfirst($cust->first_name.' '.$cust->last_name);
-       $data['c_phone'] = $cust->phone1.' / '.$cust->phone2;
-       $data['payment'] = $this->payment->get_name($sales->payment_id);
-       $data['courier'] = strtoupper($shipping->courier);
-       $data['package'] = strtoupper($shipping->package);
-       $data['ship_address'] = $shipping->dest_desc;
-       $data['sub_total'] = num_format($sales->amount);
-       $data['shipping_amt'] = num_format($sales->shipping);
-       $data['total'] = num_format(floatval($sales->amount+$sales->shipping));
-       
-       $data['item'] = $this->sitem->get_last_item($pid)->result();
-       
-       if($sales->confirmation == 0){ 
-          $data['status'] = 'Pending'; 
-          $html = $this->load->view('sales_order_credit',$data,true);
-          $subject = 'Konfirmasi Pesanan - '.$data['so_no'].' - '.$data['p_name'];
-       }else{ $data['status'] = 'Lunas'; 
-         $html = $this->load->view('sales_order_lunas',$data,true); 
-         $subject = 'Pembayaran Sukses - '.$data['so_no'].' - '.$data['p_name'];
-       }
-         
-        // email send
-        $this->load->library('email');
-        $config['charset']  = 'utf-8';
-        $config['wordwrap'] = TRUE;
-        $config['mailtype'] = 'html';
-
-        $this->email->initialize($config);
-        $this->email->from($this->properti['billing_email'], $this->properti['name']);
-        $this->email->to($cust->email);
-        $this->email->cc($this->properti['cc_email']); 
-
-        $this->email->subject($subject);
-        $this->email->message($html);
-//        $pdfFilePath = FCPATH."/downloads/".$no.".pdf";
-
-        if (!$this->email->send()){ return false; }else{ return true;  }
+    private function confirmation_journal($sid)
+    {
+        $sales = $this->Sales_model->get_by_id($sid)->row();
+        $ar   = $this->branch->get_acc($sales->branch_id, 'ar');
+        $bank = $sales->bank_id;
+        
+        $this->journalgl->new_journal($sales->id,$sales->paid_date,'CS','IDR','Payment Confirmation',$sales->amount, $this->session->userdata('log'));
+        $jid = $this->journalgl->get_journal_id('CS',$sales->id);
+        
+        $this->journalgl->add_trans($jid,$bank, $sales->amount, 0); // tambah bank
+        $this->journalgl->add_trans($jid,$ar, 0, $sales->amount); // kurang piutang
     }
     
-    private function change_product($sid,$type=1)
+    function valid_required($val)
     {
-        $item = $this->sitem->get_last_item($sid)->result();
-        if ($type==1){ foreach ($item as $res) { $this->product->min_qty($res->product_id,$res->qty); } }
-        else{ foreach ($item as $res) { $this->product->add_qty($res->product_id,$res->qty); } }
+        $stts = $this->input->post('cstts');
+        if ($stts == 1){
+            if (!$val){
+              $this->form_validation->set_message('valid_required', "Field Required..!"); return FALSE;
+            }else{ return TRUE; }
+        }else{ return TRUE;  }
+    }
+    
+    function valid_login()
+    {
+        if (!$this->session->userdata('username')){
+            $this->form_validation->set_message('valid_login', "Transaction rollback relogin to continue..!");
+            return FALSE;
+        }else{ return TRUE; }
+    }
+    
+    function valid_request($product,$request)
+    {
+        $branch = $this->branch->get_branch_default();
+        $pid = $this->product->get_id_by_sku($product);
+        $qty = $this->stockledger->get_qty($pid, $branch, $this->period->month, $this->period->year);
+        
+        if ($request > $qty){
+            $this->form_validation->set_message('valid_request', "Qty Not Enough..!");
+            return FALSE;
+        }else{ return TRUE; }
     }
     
     function valid_product($id,$sid)
@@ -709,8 +800,9 @@ class Sales extends MX_Controller
         $start = picker_between_split($period, 0);
         $end = picker_between_split($period, 1);
         $paid = $this->input->post('cpaid');
-        $shipped = $this->input->post('cshipped');
         $confirm = $this->input->post('cconfirm');
+        $cust = $this->input->post('ccustomer');
+        $product = $this->input->post('cproduct');
 
         $data['start'] = tglin($start);
         $data['end'] = tglin($end);
@@ -719,10 +811,14 @@ class Sales extends MX_Controller
         
 //        Property Details
         $data['company'] = $this->properti['name'];
-        $data['reports'] = $this->Sales_model->report($start,$end,$paid,$shipped,$confirm)->result();
+        $data['reports'] = $this->Sales_model->report($cust,$start,$end,$paid,$confirm)->result();
+        $data['reports_item'] = $this->Sales_model->report_category($product,$start,$end,$paid,$confirm)->result();
 //        
-        if ($this->input->post('ctype') == 0){ $this->load->view('sales_report', $data); }
-        else { $this->load->view('sales_pivot', $data); }
+        $type = $this->input->post('ctype');
+        if ($type == 0){ $this->load->view('sales_report', $data); }
+        elseif($type == 1) { $this->load->view('sales_pivot', $data); }
+        elseif($type == 2) { $this->load->view('sales_report_item', $data); }
+        elseif($type == 3) { $this->load->view('sales_pivot_item', $data); }
     }   
 
 }

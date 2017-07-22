@@ -47,6 +47,10 @@ $(document).ready(function (e) {
 				$("#ccity_update").val(res[7]).change();
 				$("#titem_update").val(res[10]);
 				$("#titem2_update").val(res[11]);
+				$("#titem3_update").val(res[12]);
+				$("#titem4_update").val(res[13]);
+				$("#titem5_update").val(res[14]);
+				$("#titem6_update").val(res[15]);
 			}
 		})
 		return false;	

@@ -105,6 +105,38 @@ $atts1 = array(
 <?php echo anchor_popup(site_url("account/get_list/titem2_update/"), '[ ... ]', $atts1); ?> 
                     </div>
                   </div>
+     
+                  <div class="form-group">
+                    <label class="control-label col-md-3 col-sm-3 col-xs-12"> Unit Cost - Acc </label>
+                    <div class="col-md-9 col-sm-9 col-xs-12">
+<input type="text" name="tunitacc" id="titem3_update" class="form-control" required readonly style="max-width:120px; float:left;"> 
+<?php echo anchor_popup(site_url("account/get_list/titem3_update/"), '[ ... ]', $atts1); ?> 
+                    </div>
+                  </div>
+    
+                  <div class="form-group">
+                    <label class="control-label col-md-3 col-sm-3 col-xs-12"> AR - Acc </label>
+                    <div class="col-md-9 col-sm-9 col-xs-12">
+<input type="text" name="taracc" id="titem4_update" class="form-control" required readonly style="max-width:120px; float:left;"> 
+<?php echo anchor_popup(site_url("account/get_list/titem4_update/"), '[ ... ]', $atts1); ?> 
+                    </div>
+                  </div>
+     
+                  <div class="form-group">
+                    <label class="control-label col-md-3 col-sm-3 col-xs-12"> Bank - Acc </label>
+                    <div class="col-md-9 col-sm-9 col-xs-12">
+<input type="text" name="tbankacc" id="titem5_update" class="form-control" required readonly style="max-width:120px; float:left;"> 
+<?php echo anchor_popup(site_url("account/get_list/titem5_update/"), '[ ... ]', $atts1); ?> 
+                    </div>
+                  </div>
+    
+                  <div class="form-group">
+                    <label class="control-label col-md-3 col-sm-3 col-xs-12"> Cash - Acc </label>
+                    <div class="col-md-9 col-sm-9 col-xs-12">
+<input type="text" name="tcashacc" id="titem6_update" class="form-control" required readonly style="max-width:120px; float:left;"> 
+<?php echo anchor_popup(site_url("account/get_list/titem6_update/"), '[ ... ]', $atts1); ?> 
+                    </div>
+                  </div>
     
                   <div class="form-group">
                     <label class="control-label col-md-3 col-sm-3 col-xs-12"> Image </label>

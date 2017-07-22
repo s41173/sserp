@@ -72,7 +72,7 @@ class Shipping_lib extends Custom_Model {
     {
       $this->db->where('sales_id', $sid);
       $query = $this->db->get($this->tableName)->row();
-      return $query->amount;
+      if ($query){ return $query->amount; }else{ return 0; } 
     }
 
 }

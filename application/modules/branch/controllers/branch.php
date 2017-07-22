@@ -200,6 +200,10 @@ class Branch extends MX_Controller
         $this->form_validation->set_rules('taddress', 'Address', '');
         $this->form_validation->set_rules('tsalesacc', 'Sales Account', 'required');
         $this->form_validation->set_rules('tstockacc', 'Stock Account', 'required');
+        $this->form_validation->set_rules('tunitacc', 'Unit Cost Account', 'required');
+        $this->form_validation->set_rules('taracc', 'AR-Account', 'required');
+        $this->form_validation->set_rules('tbankacc', 'Bank-Account', 'required');
+        $this->form_validation->set_rules('tcashacc', 'Cash-Account', 'required');
 
         if ($this->form_validation->run($this) == TRUE)
         {
@@ -225,6 +229,10 @@ class Branch extends MX_Controller
                                 'zip' => $this->input->post('tzip'),
                                 'sales_account' => $this->account->get_id_code($this->input->post('tsalesacc')),
                                 'stock_account' => $this->account->get_id_code($this->input->post('tstockacc')),
+                                'unit_cost_account' => $this->account->get_id_code($this->input->post('tunitacc')),
+                                'ar_account' => $this->account->get_id_code($this->input->post('taracc')),
+                                'bank_account' => $this->account->get_id_code($this->input->post('tbankacc')),
+                                'cash_account' => $this->account->get_id_code($this->input->post('tcashacc')),
                                 'image' => null, 'created' => date('Y-m-d H:i:s'));
             }
             else
@@ -237,6 +245,10 @@ class Branch extends MX_Controller
                                 'zip' => $this->input->post('tzip'),
                                 'sales_account' => $this->account->get_id_code($this->input->post('tsalesacc')),
                                 'stock_account' => $this->account->get_id_code($this->input->post('tstockacc')),
+                                'unit_cost_account' => $this->account->get_id_code($this->input->post('tunitacc')),
+                                'ar_account' => $this->account->get_id_code($this->input->post('taracc')),
+                                'bank_account' => $this->account->get_id_code($this->input->post('tbankacc')),
+                                'cash_account' => $this->account->get_id_code($this->input->post('tcashacc')),
                                 'image' => $info['file_name'], 'created' => date('Y-m-d H:i:s'));
             }
 
@@ -263,7 +275,9 @@ class Branch extends MX_Controller
         echo $uid.'|'.$branch->code.'|'.$branch->name.'|'.$branch->address.'|'.
              $branch->phone.'|'.$branch->mobile.'|'.$branch->email.'|'.$branch->city.'|',
              $branch->zip.'|'.base_url().'images/branch/'.$branch->image.'|'. $this->account->get_code($branch->sales_account).'|'.
-             $this->account->get_code($branch->stock_account);
+             $this->account->get_code($branch->stock_account).'|'.$this->account->get_code($branch->unit_cost_account).'|'.
+             $this->account->get_code($branch->ar_account).'|'.$this->account->get_code($branch->bank_account).'|'.
+             $this->account->get_code($branch->cash_account);
     }
 
 
@@ -310,6 +324,10 @@ class Branch extends MX_Controller
         $this->form_validation->set_rules('taddress', 'Address', '');
         $this->form_validation->set_rules('tsalesacc', 'Sales Account', 'required');
         $this->form_validation->set_rules('tstockacc', 'Stock Account', 'required');
+        $this->form_validation->set_rules('tunitacc', 'Unit Cost Account', 'required');
+        $this->form_validation->set_rules('taracc', 'AR-Account', 'required');
+        $this->form_validation->set_rules('tbankacc', 'Bank-Account', 'required');
+        $this->form_validation->set_rules('tcashacc', 'Cash-Account', 'required');
 
         if ($this->form_validation->run($this) == TRUE)
         {
@@ -333,6 +351,10 @@ class Branch extends MX_Controller
                                 'email' => $this->input->post('tmail'), 'city' => $this->input->post('ccity'),
                                 'sales_account' => $this->account->get_id_code($this->input->post('tsalesacc')),
                                 'stock_account' => $this->account->get_id_code($this->input->post('tstockacc')),
+                                'unit_cost_account' => $this->account->get_id_code($this->input->post('tunitacc')),
+                                'ar_account' => $this->account->get_id_code($this->input->post('taracc')),
+                                'bank_account' => $this->account->get_id_code($this->input->post('tbankacc')),
+                                'cash_account' => $this->account->get_id_code($this->input->post('tcashacc')),
                                 'zip' => $this->input->post('tzip'));
                 
                 $img = null;
@@ -347,6 +369,10 @@ class Branch extends MX_Controller
                                 'zip' => $this->input->post('tzip'),
                                 'sales_account' => $this->account->get_id_code($this->input->post('tsalesacc')),
                                 'stock_account' => $this->account->get_id_code($this->input->post('tstockacc')),
+                                'unit_cost_account' => $this->account->get_id_code($this->input->post('tunitacc')),
+                                'ar_account' => $this->account->get_id_code($this->input->post('taracc')),
+                                'bank_account' => $this->account->get_id_code($this->input->post('tbankacc')),
+                                'cash_account' => $this->account->get_id_code($this->input->post('tcashacc')),
                                 'image' => $info['file_name']);
                 
                 $img = base_url().'images/branch/'.$info['file_name'];

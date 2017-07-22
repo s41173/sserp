@@ -145,12 +145,12 @@
            
            <form id="searchform" class="form-inline">
              
-             <div class="form-group">
-                <label class="control-label labelx"> Customer : </label> <br>  
-                <?php $js = "class='select2_single form-control' id='ccustomer_search' tabindex='-1' style='min-width:200px;' "; 
-			        echo form_dropdown('ccustomer', $customer, isset($default['customer']) ? $default['customer'] : '', $js); ?>
+            <div class="form-group">
+                <label class="control-label labelx"> Branch : </label> <br>  
+                <?php $js = "class='select2_single form-control' id='cbranch' tabindex='-1' style='min-width:200px;' "; 
+			     echo form_dropdown('cbranch', $branch_combo, isset($default['branch']) ? $default['branch'] : '', $js); ?>
                    &nbsp;
-              </div>
+            </div>   
               
               <div class="form-group">
                 <label class="control-label labelx"> Paid Status : </label> <br>    
@@ -176,10 +176,12 @@
               </div>-->
               
           <div class="form-group">
-           <br>      
+           <br>   
+           <div class="btn-group">      
            <button type="submit" class="btn btn-primary button_inline"> Filter </button>
            <button type="reset" onClick="" class="btn btn-success button_inline"> Clear </button>
            <button type="button" onClick="load_data();" class="btn btn-danger button_inline"> Reset </button>
+           </div>
           </div>
           </form> <br>
 
@@ -203,15 +205,14 @@
 </form>       
              </div>
 
-               <!-- Trigger the modal with a button  -->
-            <!-- <button type="button" onClick="resets();" class="btn btn-primary" data-toggle="modal" data-target="#myModal"> <i class="fa fa-plus"></i>&nbsp;Add New </button> -->
+            <div class="btn-group">
             <a class="btn btn-primary" href="<?php echo site_url('sales/add'); ?>"> <i class="fa fa-plus"></i>&nbsp;Add New </a>
             <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#myModal3"> Report  </button>
-            <a class="btn btn-success" href="<?php echo site_url('shipping'); ?>"> Shipping </a>
-               
+
                <!-- links -->
-	           <?php if (!empty($link)){foreach($link as $links){echo $links . '';}} ?>
-               <!-- links -->             
+               <?php if (!empty($link)){foreach($link as $links){echo $links . '';}} ?>
+               <!-- links -->      
+            </div>
             </div>
           </div>  
     

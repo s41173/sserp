@@ -9,7 +9,7 @@ class Sales_item_model extends Custom_Model
         $this->tableName = 'sales_item';
     }
     
-    protected $field = array('id', 'sales_id', 'product_id', 'weight', 'qty', 'tax', 'amount', 'price');
+    protected $field = array('id', 'sales_id', 'product_id', 'weight', 'qty', 'discount', 'tax', 'amount', 'price', 'hpp');
     
     function get_last_item($pid)
     {
@@ -22,6 +22,8 @@ class Sales_item_model extends Custom_Model
 
     function total($pid)
     {
+        $this->db->select_sum('hpp');
+        $this->db->select_sum('discount');
         $this->db->select_sum('tax');
         $this->db->select_sum('amount');
         $this->db->select_sum('price');
@@ -61,6 +63,15 @@ class Sales_item_model extends Custom_Model
        $this->db->where('sales_id', $sid); 
        $query = $this->db->get($this->tableName)->num_rows();
        if ($query > 0){ return TRUE; }else{ return FALSE; }
+    }
+    
+    function counter()
+    {
+        $this->db->select_max('id');
+        $test = $this->db->get($this->tableName)->row_array();
+        $userid=$test['id'];
+	$userid = $userid+1;
+	return $userid;
     }
     
 

@@ -8,12 +8,13 @@ $(document).ready(function (e) {
 	$('#d1,#d2,#d3,#d4,#d5').daterangepicker({
 		 locale: {format: 'YYYY/MM/DD'}
     }); 
-	
-	$('#ds1,#ds2').daterangepicker({
-        locale: {format: 'YYYY/MM/DD'},
+
+
+	$('#ds1,#ds2,#ds3').daterangepicker({
+        locale: {format: 'YYYY-MM-DD'},
 		singleDatePicker: true,
         showDropdowns: true
-	});
+     });
 
 
 	load_data();  
@@ -47,8 +48,8 @@ $(document).ready(function (e) {
 				$('#tamount').val(res[4]);
 			    $('#cbank').val(res[5]);
 			    $('#cstts').val(res[6]);
-			    $('#tcdates').val(res[7]);
-			    $('#ttime').val(res[8]);	
+			    $('#ds3').val(res[7]);
+			    // $('#ttime').val(res[8]);	
 			}
 		})
 		return false;	
@@ -73,7 +74,7 @@ $(document).ready(function (e) {
 		var url = sites_print_invoice +"/"+ del_id +"/invoice";
 		
 		// window.location.href = url;
-		window.open(url, "Invoice SO-0"+del_id, "toolbar=yes,scrollbars=yes,resizable=yes,top=200,left=600,width=800,height=600");
+		window.open(url, "_blank", "scrollbars=1,resizable=0,height=600,width=800");
 		
 	});
 
@@ -85,6 +86,29 @@ $(document).ready(function (e) {
 		
 		// window.location.href = url;
 		window.open(url, "Invoice SO-0"+del_id, "toolbar=yes,scrollbars=yes,resizable=yes,top=200,left=600,width=800,height=600");
+		
+	});
+
+	// get product price
+	$(document).on('click','#bget',function(e)
+	{	
+		e.preventDefault();
+		var value = $("#titems").val();
+		var url = sites+"/get_product_based_sku/"+value;
+
+		if (value){
+		  // batas
+			$.ajax({
+				type: 'POST',
+				url: url,
+				cache: false,
+				headers: { "cache-control": "no-cache" },
+				success: function(result) {
+					$("#tprice").val(result);
+				}
+			})
+			return false;
+		}
 		
 	});
 	
@@ -208,6 +232,17 @@ $(document).ready(function (e) {
 
 	});
 
+		// fungsi ajax get customer
+	$(document).on('change','#ccash',function(e)
+	{	
+		e.preventDefault();
+		var value = $("#ccash").val();
+		if (value == 1){
+			$("#tp1").val("0");
+			$("#tp1").attr('readonly','readonly');
+		}else{ $("#tp1").removeAttr('readonly'); }
+	});
+
 		// fungsi ajax city ongkir
 	$(document).on('change','#ccity_ongkir,#ccourier',function(e)
 	{	
@@ -295,7 +330,7 @@ $(document).ready(function (e) {
 
 	$('#searchform').submit(function() {
 		
-		var cust = $("#ccustomer_search").val();
+		var cust = $("#cbranch").val();
 		var paid = $("#cpaid").val();
 		var confirm = $("#cconfirm").val();
 		var param = ['searching',cust,paid,confirm];
@@ -355,16 +390,14 @@ $(document).ready(function (e) {
 '<input type="checkbox" name="cek[]" value="'+s[i][0]+'" id="cek'+i+'" style="margin:0px"  />',
 										i+1,
 										s[i][1],
+										s[i][9],
 										s[i][2],
 										s[i][3],
 										s[i][4],
-										s[i][5],
 										s[i][6],
-										s[i][7],
 '<div class="btn-group" role"group">'+
 '<a href="" class="'+stts+' btn-xs primary_status" id="' +s[i][0]+ '" title="Confirmation Status"> <i class="fa fa-power-off"> </i> </a> '+
 '<a href="" class="btn btn-success btn-xs text-print" id="' +s[i][0]+ '" title="Invoice Status"> <i class="fa fa-print"> </i> </a> '+
-'<a href="" class="btn btn-warning btn-xs text-shipping" id="' +s[i][0]+ '" title="Shipping Status"> <i class="fa fa-truck"> </i> </a> '+
 '<a href="" class="btn btn-default btn-xs text-confirmation" id="' +s[i][0]+ '" title="Payment Confirmation"> <i class="fa fa-credit-card-alt"> </i> </a> '+
 '<a href="" class="btn btn-primary btn-xs text-primary" id="' +s[i][0]+ '" title=""> <i class="fa fas-2x fa-edit"> </i> </a> '+
 '<a href="#" class="btn btn-danger btn-xs text-danger" id="'+s[i][0]+'" title="delete"> <i class="fa fas-2x fa-trash"> </i> </a>'+
@@ -412,16 +445,14 @@ $(document).ready(function (e) {
 '<input type="checkbox" name="cek[]" value="'+s[i][0]+'" id="cek'+i+'" style="margin:0px"  />',
 										i+1,
 										s[i][1],
+										s[i][9],
 										s[i][2],
 										s[i][3],
 										s[i][4],
-										s[i][5],
 										s[i][6],
-										s[i][7],
 '<div class="btn-group" role"group">'+
 '<a href="" class="'+stts+' btn-xs primary_status" id="' +s[i][0]+ '" title="Confirmation Status"> <i class="fa fa-power-off"> </i> </a> '+
 '<a href="" class="btn btn-success btn-xs text-print" id="' +s[i][0]+ '" title="Invoice Status"> <i class="fa fa-print"> </i> </a> '+
-'<a href="" class="btn btn-warning btn-xs text-shipping" id="' +s[i][0]+ '" title="Shipping Status"> <i class="fa fa-truck"> </i> </a> '+
 '<a href="" class="btn btn-default btn-xs text-confirmation" id="' +s[i][0]+ '" title="Payment Confirmation"> <i class="fa fa-credit-card-alt"> </i> </a> '+
 '<a href="" class="btn btn-primary btn-xs text-primary" id="' +s[i][0]+ '" title=""> <i class="fa fas-2x fa-edit"> </i> </a> '+
 '<a href="#" class="btn btn-danger btn-xs text-danger" id="'+s[i][0]+'" title="delete"> <i class="fa fas-2x fa-trash"> </i> </a>'+

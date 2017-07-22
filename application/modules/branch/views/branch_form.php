@@ -107,6 +107,38 @@ $atts1 = array(
                   </div>
     
                   <div class="form-group">
+                    <label class="control-label col-md-3 col-sm-3 col-xs-12"> Unit Cost - Acc </label>
+                    <div class="col-md-9 col-sm-9 col-xs-12">
+<input type="text" name="tunitacc" id="titem3" class="form-control" required readonly style="max-width:120px; float:left;"> 
+<?php echo anchor_popup(site_url("account/get_list/titem3/"), '[ ... ]', $atts1); ?> 
+                    </div>
+                  </div>
+    
+                  <div class="form-group">
+                    <label class="control-label col-md-3 col-sm-3 col-xs-12"> AR - Acc </label>
+                    <div class="col-md-9 col-sm-9 col-xs-12">
+<input type="text" name="taracc" id="titem4" class="form-control" required readonly style="max-width:120px; float:left;"> 
+<?php echo anchor_popup(site_url("account/get_list/titem4/"), '[ ... ]', $atts1); ?> 
+                    </div>
+                  </div>
+    
+                  <div class="form-group">
+                    <label class="control-label col-md-3 col-sm-3 col-xs-12"> Bank - Acc </label>
+                    <div class="col-md-9 col-sm-9 col-xs-12">
+<input type="text" name="tbankacc" id="titem5" class="form-control" required readonly style="max-width:120px; float:left;"> 
+<?php echo anchor_popup(site_url("account/get_list/titem5/"), '[ ... ]', $atts1); ?> 
+                    </div>
+                  </div>
+    
+                  <div class="form-group">
+                    <label class="control-label col-md-3 col-sm-3 col-xs-12"> Cash - Acc </label>
+                    <div class="col-md-9 col-sm-9 col-xs-12">
+<input type="text" name="tcashacc" id="titem6" class="form-control" required readonly style="max-width:120px; float:left;"> 
+<?php echo anchor_popup(site_url("account/get_list/titem6/"), '[ ... ]', $atts1); ?> 
+                    </div>
+                  </div>
+    
+                  <div class="form-group">
                     <label class="control-label col-md-3 col-sm-3 col-xs-12"> Image </label>
                     <div class="col-md-9 col-sm-9 col-xs-12">
 	      <input type="file" id="uploadImage" accept="image/*" class="input-medium" title="Upload" name="userfile" /> <br>

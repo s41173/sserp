@@ -119,6 +119,17 @@ class Product_lib extends Custom_Model {
         }
     }
     
+    function get_detail_based_sku($sku=null)
+    {
+        if ($sku)
+        {
+           $this->db->select($this->field);
+           $this->db->where('sku', $sku);
+           $res = $this->db->get('product')->row();
+           return $res;
+        }
+    }
+    
     function get_weight($id=null)
     {
         if ($id)

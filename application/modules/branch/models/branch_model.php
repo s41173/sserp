@@ -13,7 +13,7 @@ class Branch_model extends Custom_Model
         $this->tableName = 'branch';
     }
     
-    protected $field = array('id', 'code', 'name', 'address', 'phone', 'mobile', 'email', 'city', 'zip', 'image', 'publish', 'defaults', 'sales_account', 'stock_account', 'created', 'updated', 'deleted');
+    protected $field = array('id', 'code', 'name', 'address', 'phone', 'mobile', 'email', 'city', 'zip', 'image', 'publish', 'defaults', 'sales_account', 'stock_account', 'unit_cost_account', 'ar_account', 'bank_account', 'cash_account', 'created', 'updated', 'deleted');
     protected $com;
     
     function get_last($limit, $offset=null)

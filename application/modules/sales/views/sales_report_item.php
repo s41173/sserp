@@ -68,20 +68,13 @@
                         { name: "No", type: "string" },
 						{ name: "Code", type: "string" },
 						{ name: "Date", type: "string" },
-						{ name: "Due Date", type: "string" },
-						{ name: "Customer", type: "string" },
-						{ name: "Total", type: "number" },
-                        { name: "Discount", type: "number" },
-                        { name: "Tax", type: "number" },
-                        { name: "Landed Cost", type: "number" },
-                        { name: "Down Payment", type: "number" },
+						{ name: "Manufacture", type: "string" },
+						{ name: "Category", type: "string" },
+						{ name: "SKU", type: "string" },
+                        { name: "Product", type: "string" },
+                        { name: "Qty", type: "number" },
                         { name: "Amount", type: "number" },
-                        { name: "Unit Cost", type: "number" },
-                        { name: "Profit", type: "number" },
-                        { name: "Payment Type", type: "string" },
-                        { name: "Paid Date", type: "string" },
-                        { name: "Confirmation", type: "string" },
-                        { name: "Log", type: "string" }
+                        { name: "Confirmation", type: "string" }
                     ]
                 };
 			
@@ -107,20 +100,13 @@
                   { text: 'No', dataField: 'No', width: 50 },
 				  { text: 'Code', dataField: 'Code', width : 100 },
 				  { text: 'Date', dataField: 'Date', width : 150 },
-  				  { text: 'Due Date', dataField: 'Due Date', width : 150 },
-				  { text: 'Customer', dataField: 'Customer', width : 250 },
-{ text: 'Total', dataField: 'Total', width : 150, cellsalign: 'right', cellsformat: 'number', aggregates: ['sum'] },
-{ text: 'Discount', dataField: 'Discount', width : 150, cellsalign: 'right', cellsformat: 'number', aggregates: ['sum'] },         
-{ text: 'Tax', datafield: 'Tax', width: 150, cellsalign: 'right', cellsformat: 'number', aggregates: ['sum'] },
-{ text: 'Landed Cost', dataField: 'Landed Cost', width : 150, cellsalign: 'right', cellsformat: 'number', aggregates: ['sum'] },
-{ text: 'Down Payment', dataField: 'Down Payment', width : 150, cellsalign: 'right', cellsformat: 'number', aggregates: ['sum'] },
+  				  { text: 'Manufacture', dataField: 'Manufacture', width : 150 },
+				  { text: 'Category', dataField: 'Category', width : 250 },
+                  { text: 'SKU', dataField: 'SKU', width : 250 },
+                  { text: 'Product', dataField: 'Product', width : 250 },
+{ text: 'Qty', dataField: 'Qty', width : 100, cellsalign: 'right', cellsformat: 'number', aggregates: ['sum'] },
 { text: 'Amount', dataField: 'Amount', width : 150, cellsalign: 'right', cellsformat: 'number', aggregates: ['sum'] },
-{ text: 'Unit Cost', dataField: 'Unit Cost', width : 150, cellsalign: 'right', cellsformat: 'number', aggregates: ['sum'] },
-{ text: 'Profit', dataField: 'Profit', width : 150, cellsalign: 'right', cellsformat: 'number', aggregates: ['sum'] },
-                  { text: 'Payment Type', dataField: 'Payment Type', width : 150 },
-                  { text: 'Paid Date', dataField: 'Paid Date', width : 150 },
-                  { text: 'Confirmation', dataField: 'Confirmation', width : 100 },
-                  { text: 'Log', dataField: 'Log', width : 100 }
+                  { text: 'Confirmation', dataField: 'Confirmation', width : 100 }
                 ]
             });
 			
@@ -204,21 +190,12 @@
 		<table id="table" border="0" width="100%">
 		   <thead>
            <tr>
-<th> No </th> <th> Code </th> <th> Date </th> <th> Due Date </th> <th> Customer </th> <th> Total </th> <th> Discount </th>
-<th> Tax </th> <th> Landed Cost </th> <th> Down Payment </th>
-<th> Amount </th> <th> Unit Cost </th>  <th> Profit </th> <th> Payment Type </th> <th> Paid Date </th> <th> Confirmation </th> 
-<th> Log </th>
+<th> No </th> <th> Code </th> <th> Date </th> <th> Manufacture </th> <th> Category </th> <th> SKU </th> <th> Product </th> <th> Qty </th> <th> Amount </th> <th> Confirmation </th> 
            </tr>
            </thead>
 		  
           <tbody> 
 		  <?php 
-              
-              function customer($val)
-              {
-                  $res = new Customer_lib(); 
-                  return strtoupper($res->get_name($val));
-              }
               
               function payment($val)
               {
@@ -228,37 +205,24 @@
               
               function pstatus($val){ if ($val == 0){ return 'N'; }else{ return 'Y'; } }
               
-              function unit_cost($sid)
-              {
-                 $CI =& get_instance();
-				 $poder = $CI->sitem->total($sid);  
-                 return floatval($poder['hpp']);
-              }
 			  		  
 		      $i=1; 
-			  if ($reports)
+			  if ($reports_item)
 			  {
-				foreach ($reports as $res)
+				foreach ($reports_item as $res)
 				{	
 				   echo " 
 				   <tr> 
 				       <td class=\"strongs\">".$i."</td> 
                        <td class=\"strongs\"> SO-0".$res->id."</td> 
                        <td class=\"strongs\">".tglin($res->dates)."</td> 
-					   <td class=\"strongs\">".tglin($res->due_date)."</td>
-                       <td class=\"strongs\">".customer($res->cust_id)."</td>
-                       <td class=\"strongs\">".$res->total."</td>
-                       <td class=\"strongs\">".$res->discount."</td>
-                       <td class=\"strongs\">".$res->tax."</td>
-                       <td class=\"strongs\">".$res->cost."</td>
-                       <td class=\"strongs\">".$res->p1."</td>
-                       <td class=\"strongs\">".floatval($res->amount+$res->p1)."</td>
-                       <td class=\"strongs\">".unit_cost($res->id)."</td>
-                       <td class=\"strongs\">".floatval($res->amount+$res->p1-unit_cost($res->id))."</td>
-                       <td class=\"strongs\">".payment($res->payment_id)."</td>
-                       <td class=\"strongs\">".tglin($res->paid_date)."</td>
+                       <td class=\"strongs\">".strtoupper($res->manufacture)."</td>
+                       <td class=\"strongs\">".strtoupper($res->category)."</td>
+                       <td class=\"strongs\">".$res->sku."</td>
+                       <td class=\"strongs\">".strtoupper($res->name)."</td>
+                       <td class=\"strongs\">".$res->qty."</td>
+                       <td class=\"strongs\">".$res->price."</td>
                        <td class=\"strongs\">".pstatus($res->confirmation)."</td>
-                       <td class=\"strongs\">".$res->log."</td>
 				   </tr>";
 				   $i++;
 				}

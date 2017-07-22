@@ -52,7 +52,7 @@
     </div>
     
     
-    </div>
+</div>
     
     <div class="x_content">
     
@@ -151,14 +151,6 @@
             </div>
         
             <div class="ixcon">
-                <a href="<?php echo base_url().'index.php/widget/';?>">
-                <img alt="modul" src="<?php echo base_url().'images/widget.png';?>">
-                <p>Widget</p>
-              </a>
-        
-            </div>
-        
-            <div class="ixcon">
                 <a href="<?php echo base_url().'index.php/configuration/';?>">
                 <img alt="configuration" src="<?php echo base_url().'images/config.png';?>">
                 <p>Configuration</p>
@@ -166,7 +158,129 @@
         
             </div>
         
-       <div class="clearfix"></div>
+      
+        
+       <style type="text/css">
+           .tablebox{ height: 300px; overflow-y: scroll; overflow-x: auto; } 
+           .chartbox{ height: 300px; overflow: hidden; } 
+           .margin{ margin-bottom: 30px; }
+       </style>  
+        
+<div class="clear margin"></div>
+
+<!-- cart -->
+<script type="text/javascript" src="<?php echo base_url().'js-old/' ?>canvasjs.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function () {
+	
+	var url = "<?php echo $archart;?>";
+	$.getJSON(url, function (result) {
+
+		var chart = new CanvasJS.Chart("chartContainer", {
+			theme: "theme1",//theme1
+			axisX:{title: "Account Receivable Due", },
+   		    animationEnabled: true, 
+			data: [
+				{
+					type: "column",
+					dataPoints: result
+				}
+			]
+		});
+
+		chart.render();
+	});
+	
+	var url2 = "<?php echo $apchart;?>";
+	$.getJSON(url2, function (result) {
+
+		var chart2 = new CanvasJS.Chart("chartContainer2", {
+			theme: "theme1",//theme1
+			axisX:{title: " Payable Due Chart", },
+   		    animationEnabled: true, 
+			data: [
+				{
+					type: "column",
+					dataPoints: result
+				}
+			]
+		});
+
+		chart2.render();
+	});
+	
+});
+</script>       
+        
+       <!-- box ar chart-->
+       <div id="chartContainer" class="col-md-6 col-sm-12 col-xs-12 chartbox margin">  </div> 
+       <div id="" class="col-md-6 col-sm-12 col-xs-12 tablebox margin">
+           
+            <div class="x_panel">
+                  <div class="x_title">
+                    <h2>  Account Receivable Due - List </h2>
+                    <div class="clearfix"></div>
+                  </div>
+                  <div class="x_content">
+                    <div class="table-responsive">    
+                      <?php echo ! empty($salestable) ? $salestable : ''; ?>       
+                    </div>
+                  </div>
+            </div>
+           
+       </div>     
+        
+       <!-- box ap chart-->
+       <div id="chartContainer2" class="col-md-6 col-sm-12 col-xs-12 chartbox margin">  </div> 
+       <div id="" class="col-md-6 col-sm-12 col-xs-12 tablebox margin"> 
+           
+           <div class="x_panel">
+                  <div class="x_title">
+                    <h2>  Payable Due - List </h2>
+                    <div class="clearfix"></div>
+                  </div>
+                  <div class="x_content">
+                    <div class="table-responsive">  
+                    <?php echo ! empty($purchasetable) ? $purchasetable : ''; ?>  
+                    </div>
+
+                  </div>
+            </div>
+       </div>  
+        
+       <!-- post dated check  -->
+       <div id="" class="col-md-6 col-sm-12 col-xs-12 tablebox"> 
+           
+           <div class="x_panel">
+                  <div class="x_title">
+                    <h2> Post-Dated Checks Issuance  - List </h2>
+                    <div class="clearfix"></div>
+                  </div>
+                  <div class="x_content">
+                    <div class="table-responsive">  
+                    <?php echo ! empty($checkouttable) ? $checkouttable : ''; ?>  
+                    </div>
+
+                  </div>
+            </div>
+       </div>   
+        
+       <!-- stock min qty  -->
+       <div id="" class="col-md-6 col-sm-12 col-xs-12 tablebox"> 
+           
+           <div class="x_panel">
+                  <div class="x_title">
+                    <h2> Stock Minimum  - List </h2>
+                    <div class="clearfix"></div>
+                  </div>
+                  <div class="x_content">
+                    <div class="table-responsive">  
+                    <?php echo ! empty($producttable) ? $producttable : ''; ?>  
+                    </div>
+
+                  </div>
+            </div>
+       </div>   
     
     </div> 
 

@@ -114,11 +114,11 @@
 <!-- div alamat penagihan -->
 
 <!-- div tgl transaksi -->
-    <div class="col-md-2 col-sm-12 col-xs-12 col-md-offset-1">
+    <div class="col-md-2 col-sm-12 col-xs-12">
        
        <div class="col-md-12 col-sm-12 col-xs-12">
           <label class="control-label labelx"> Transaction Date </label>
-          <input type="text" title="Date" class="form-control" id="xds1" name="tdates" required readonly
+          <input type="text" title="Date" class="form-control" id="ds1" name="tdates" required
            value="<?php echo isset($default['dates']) ? $default['dates'] : '' ?>" /> 
        </div>
         
@@ -133,11 +133,11 @@
 <!-- div tgl transaksi -->
         
 <!-- div no transaksi -->
-  <div class="col-md-2 col-sm-12 col-xs-12 col-md-offset-1">
+  <div class="col-md-2 col-sm-12 col-xs-12">
        
       <div class="col-md-12 col-sm-12 col-xs-12">
           <label class="control-label labelx"> Trans Code </label>
-          <input type="text" title="Trans Code" class="form-control" readonly name="tdates" value="SO-0<?php echo $counter; ?>" /> 
+          <input type="text" title="Trans Code" class="form-control" readonly name="tcode" value="SO-0<?php echo $counter; ?>" /> 
        </div>  
       
       <div class="col-md-12 col-sm-12 col-xs-12">
@@ -148,6 +148,41 @@
         
   </div>
 <!-- div no transaksi -->
+        
+<!-- div landed cost -->
+  <div class="col-md-2 col-sm-12 col-xs-12">
+       
+      <div class="col-md-12 col-sm-12 col-xs-12">
+          <label class="control-label labelx"> Landed Cost </label>
+          <input type="number" title="Landed Cost" class="form-control" name="tcosts" value="<?php echo isset($default['costs']) ? $default['costs'] : '' ?>" /> 
+      </div>
+      
+      <div class="col-md-12 col-sm-12 col-xs-12">
+          <label class="control-label labelx"> Total Discount </label>
+          <input type="number" title="Landed Cost" class="form-control" name="ttotal_discount" readonly value="<?php echo isset($default['discount']) ? $default['discount'] : '' ?>" /> 
+      </div>  
+        
+  </div>
+<!-- div landed cost -->
+        
+<!-- div down payment -->
+  <div class="col-md-2 col-sm-12 col-xs-12">
+             
+      <div class="col-md-12 col-sm-12 col-xs-12">
+          <label class="control-label labelx"> Down Payment </label>
+          <input type="number" title="Landed Cost" class="form-control" id="tp1" name="tp1" value="<?php echo isset($default['p1']) ? $default['p1'] : '' ?>" /> 
+      </div> 
+      
+      <div class="col-md-12 col-sm-12 col-xs-12">
+      <label class="control-label labelx"> Cash Status </label>
+      <select class="form-control" id="ccash" name="ccash" style="width:60px;">
+<option value="1"<?php echo set_select('ccash', '1', isset($default['cash']) && $default['cash'] == '1' ? TRUE : FALSE); ?>> Y </option>  
+<option value="0"<?php echo set_select('ccash', '0', isset($default['cash']) && $default['cash'] == '0' ? TRUE : FALSE); ?>> N </option>  
+      </select>
+      </div>
+        
+  </div>
+<!-- div down payment -->
 
 </div>
 <!-- form atas   -->
@@ -158,8 +193,7 @@
           <div class="btn-group">    
           <button type="submit" class="btn btn-success" id="button"> Save </button>
           <button type="reset" class="btn btn-danger" id=""> Cancel </button>
-          <a class="btn btn-primary" href="<?php echo site_url('sales/add/'); ?>"> New Transaction </a>
-                
+          <a class="btn btn-primary" href="<?php echo site_url('sales/add/'); ?>"> New Transaction </a> 
           </div>
         </div>
       </div>
@@ -195,10 +229,10 @@ $atts2 = array(
    <form id="ajaxtransform" class="form-inline" method="post" action="<?php echo $form_action_trans; ?>">
       <div class="form-group">
         <label class="control-label labelx"> Product </label> <br>
-        <input id="titems" class="form-control col-md-3 col-xs-12" type="text" readonly name="tproduct" required>
+        <input id="titems" class="form-control col-md-3 col-xs-12" type="text" readonly name="cproduct" required>
         <div class="btn-group">  
         <?php echo anchor_popup(site_url("product/get_list/titems/".$branch), '[ ... ]', $atts2); ?>
-        <button type="button" class="btn btn-success button_inline"> GET </button>
+        <button type="button" id="bget" class="btn btn-success button_inline"> GET </button>
         </div>
         &nbsp;
       </div>
@@ -210,15 +244,18 @@ $atts2 = array(
       
       <div class="form-group">
         <label class="control-label labelx"> Price </label> <br>
-        <input type="number" name="tprice" id="tprice" class="form-control" style="width:120px;" maxlength="8" required> &nbsp;
+        <input type="number" name="tprice" id="tprice" class="form-control" style="width:120px;" maxlength="8" required value="0"> &nbsp;
       </div>
        
       <div class="form-group">
+        <label class="control-label labelx"> Discount </label> <br>
+        <input type="number" name="tdiscount" id="tdiscount" class="form-control" style="width:120px;" maxlength="8" required value="0"> &nbsp;
+      </div>   
+       
+      <div class="form-group">
         <label class="control-label labelx"> Tax </label> <br>
-        <select name="ctax" id="ctax" class="form-control">
-            <option value="0"> . </option>
-            <option value="0.1"> VAT </option>
-        </select>
+         <?php $js = "class='form-control' id='ctax' tabindex='-1' style='width:100px;' "; 
+	     echo form_dropdown('ctax', $tax, isset($default['tax']) ? $default['tax'] : '', $js); ?>
         &nbsp;
       </div>
 
@@ -245,6 +282,7 @@ $atts2 = array(
             <th class="column-title"> Product </th>
             <th class="column-title"> Qty </th>
             <th class="column-title"> Price </th>
+            <th class="column-title"> Discount </th>
             <th class="column-title"> Tax </th>
             <th class="column-title"> Amount </th>
             <th class="column-title no-link last"><span class="nobr">Action</span>
@@ -276,6 +314,7 @@ $atts2 = array(
                         <td> ".product($res->product_id)." </td>
                         <td> ".$res->qty." </td>
                         <td class=\"a-right a-right \"> ".idr_format(intval($res->qty*$res->price))." </td>
+                        <td class=\"a-right a-right \"> ".idr_format($res->discount)." </td>
                         <td class=\"a-right a-right \"> ".idr_format($res->tax)." </td>
                         <td class=\"a-right a-right \"> ".idr_format($res->amount)." </td>
 <td class=\" last\"> 
@@ -300,10 +339,12 @@ $atts2 = array(
         
         <table id="table_summary" style="width:100%;">
             <tr> <td> Sub Total </td> <td class="amt"> <?php echo isset($total) ? idr_format($total) : '0'; ?>,- </td> </tr>
-            <tr> <td> Tax </td> <td class="amt"> <?php echo isset($tax) ? idr_format($tax) : '0' ?>,- </td> </tr>
+<tr> <td> Discount (-) </td> <td class="amt"> <?php echo isset($discount) ? idr_format($discount) : '0'; ?>,- </td> </tr>
+            <tr> <td> Tax </td> <td class="amt"> <?php echo isset($tax_total) ? idr_format($tax_total) : '0' ?>,- </td> </tr>
             <tr> <td> Shipping </td> <td class="amt"> 
                 <span id="shipn"><?php echo isset($shipping) ? idr_format($shipping) : '0' ?></span>,- 
             </td> </tr>
+<tr> <td> Down Payment (-) </td> <td class="amt"> <?php echo isset($p1) ? idr_format($p1) : '0' ?>,- </td> </tr>
 <tr> <td> <h3 style="color:#337AB7; font-weight:bold;"> Total </h3> </td> 
      <td class="amt"> <h3 style="color:#337AB7; font-weight:bold;"> <?php echo isset($tot_amt) ? idr_format($tot_amt) : '0' ?>,- </h3> </td> </tr>
         </table>

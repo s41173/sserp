@@ -13,10 +13,10 @@ class Sales_model extends Custom_Model
         $this->tableName = 'sales';
     }
     
-    protected $field = array('id', 'dates', 'cust_id', 'amount', 'tax', 'cost', 'total', 'shipping',
-                             'payment_id', 'bank_id', 'paid_date', 'paid_contact', 'due_date', 
+    protected $field = array('id', 'dates', 'cust_id', 'amount', 'tax', 'cost', 'total', 'shipping', 'branch_id',
+                             'payment_id', 'bank_id', 'paid_date', 'paid_contact', 'due_date', 'discount', 'p1',
                              'cc_no', 'cc_name', 'cc_bank', 'sender_name', 'sender_acc', 'sender_bank', 'sender_amount', 'confirmation',
-                             'approved', 'log', 'created', 'updated', 'deleted');
+                             'approved', 'cash', 'log', 'created', 'updated', 'deleted');
     protected $com;
     
     function get_last($limit, $offset=null)
@@ -29,12 +29,12 @@ class Sales_model extends Custom_Model
         return $this->db->get(); 
     }
     
-    function search($cust=null,$paid=null,$confirm=null)
+    function search($branch=null,$paid=null,$confirm=null)
     {   
         $this->db->select($this->field);
         $this->db->from($this->tableName); 
         $this->db->where('deleted', $this->deleted);
-        $this->cek_null_string($cust, 'cust_id');
+        $this->cek_null_string($branch, 'branch_id');
         
         if ($paid == '1'){ $this->db->where('paid_date IS NOT NULL'); }
         elseif ($paid == '0'){ $this->db->where('paid_date IS NULL'); }
@@ -44,7 +44,7 @@ class Sales_model extends Custom_Model
         return $this->db->get(); 
     }
     
-    function report($start=null,$end=null,$paid=null,$confirm=null)
+    function report($cust=null, $start=null,$end=null,$paid=null,$confirm=null)
     {   
         $this->db->select($this->field);
         $this->db->from($this->tableName); 
@@ -54,6 +54,7 @@ class Sales_model extends Custom_Model
         if ($paid == '1'){ $this->db->where('paid_date IS NOT NULL'); }
         elseif ($paid == '0'){ $this->db->where('paid_date IS NULL'); }
         $this->cek_null($confirm, 'confirmation');
+        $this->cek_null($cust, 'cust_id');
         $this->db->order_by('dates', 'desc'); 
         return $this->db->get(); 
     }
@@ -90,6 +91,27 @@ class Sales_model extends Custom_Model
         $this->db->where('sales.confirmation', 1);
         $query = $this->db->get()->row_array();
         return intval($query['qtys']);
+    }
+    
+    function report_category($product=null,$start=null,$end=null,$paid=null,$confirm=null)
+    {   
+        $this->db->select('sales.id, sales.dates, product.sku, product.name, sales_item.qty, sales_item.price, sales.confirmation, '
+                . '        category.name as category, manufacture.name as manufacture');
+        $this->db->from('sales, sales_item, product, category, manufacture');
+        $this->db->where('sales.id = sales_item.sales_id');
+        $this->db->where('sales_item.product_id = product.id');
+        $this->db->where('product.category = category.id');
+        $this->db->where('product.manufacture = manufacture.id');
+        
+        $this->cek_null($product, 'product.sku');
+        $this->db->where('sales.deleted', $this->deleted);
+        $this->between('sales.dates', $start, $end);
+        
+        if ($paid == '1'){ $this->db->where('paid_date IS NOT NULL'); }
+        elseif ($paid == '0'){ $this->db->where('paid_date IS NULL'); }
+        $this->cek_null($confirm, 'confirmation');
+        $this->db->order_by('dates', 'desc'); 
+        return $this->db->get(); 
     }
 
 }

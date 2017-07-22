@@ -11,7 +11,8 @@ class Branch_lib extends Main_model {
     private $ci;
     
     protected $field = array('id', 'code', 'name', 'address', 'phone', 'mobile', 'email', 'city', 'zip', 'image', 'publish',
-                             'defaults', 'sales_account', 'stock_account', 'created', 'updated', 'deleted');
+                             'defaults', 'sales_account', 'stock_account', 'unit_cost_account', 'ar_account',
+                             'bank_account', 'cash_account', 'created', 'updated', 'deleted');
        
     
     function get_details($id)
@@ -92,7 +93,12 @@ class Branch_lib extends Main_model {
        $this->db->select($this->field); 
        $this->db->where('id', $val);
        $res = $this->db->get($this->tableName)->row();
-       if ($type == 'stock'){ return $res->stock_account; }else{ return $res->sales_account; }
+       if ($type == 'stock'){ return $res->stock_account; }
+       elseif ($type == 'unit'){ return $res->unit_cost_account; }
+       elseif ($type == 'ar'){ return $res->ar_account; }
+       elseif ($type == 'sales'){ return $res->sales_account; }
+       elseif ($type == 'bank'){ return $res->bank_account; }
+       elseif ($type == 'cash'){ return $res->cash_account; }
     }
 
 }

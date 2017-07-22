@@ -26,39 +26,36 @@
     
     <div class="form-group">
       <label for="middle-name" class="control-label col-md-3 col-sm-3 col-xs-12"> Confirm Date </label>
-      <div class="col-md-3 col-sm-12 col-xs-12">
-  <input id="tcdates" class="form-control col-md-7 col-xs-12" type="text" name="tcdates" required readonly>
+      <div class="col-md-4 col-sm-12 col-xs-12">
+  <input id="ds3" class="form-control col-md-7 col-xs-12" type="text" name="tcdates">
       </div> 
-      <div class="col-md-3 col-sm-12 col-xs-12">
-  <input id="ttime" class="form-control col-md-7 col-xs-12" type="text" name="ttime" required readonly>
-      </div>
     </div>
     
     <div class="form-group">
       <label for="middle-name" class="control-label col-md-3 col-sm-3 col-xs-12"> ACC-Name </label>
       <div class="col-md-6 col-sm-12 col-xs-12">
-  <input id="taccname" class="form-control col-md-7 col-xs-12" type="text" name="taccname" required placeholder="Acc Name">
+  <input id="taccname" class="form-control col-md-7 col-xs-12" type="text" name="taccname" placeholder="Acc Name">
       </div>
     </div>
 
       <div class="form-group">
           <label class="control-label col-md-3 col-sm-3 col-xs-12" for="last-name"> ACC-No <span class="required">*</span></label>
           <div class="col-md-6 col-sm-12 col-xs-12">
-  <input id="taccno" class="form-control col-md-7 col-xs-12" type="text" name="taccno" required placeholder="Acc No">
+  <input id="taccno" class="form-control col-md-7 col-xs-12" type="text" name="taccno" placeholder="Acc No">
           </div>
       </div>
     
       <div class="form-group">
           <label class="control-label col-md-3 col-sm-3 col-xs-12" for="last-name"> ACC-Bank <span class="required">*</span></label>
           <div class="col-md-6 col-sm-6 col-xs-12">
- <input id="taccbank" class="form-control col-md-7 col-xs-12" type="text" name="taccbank" required placeholder="Bank">   
+ <input id="taccbank" class="form-control col-md-7 col-xs-12" type="text" name="taccbank" placeholder="Bank">   
           </div>
       </div>
     
       <div class="form-group">
           <label class="control-label col-md-3 col-sm-3 col-xs-12" for="last-name"> Amount <span class="required">*</span></label>
           <div class="col-md-3 col-sm-6 col-xs-12">
- <input type="number" id="tamount" class="form-control col-md-3 col-xs-12" type="text" name="tamount" required placeholder="Amount">   
+ <input type="number" id="tamount" class="form-control col-md-3 col-xs-12" type="text" name="tamount" placeholder="Amount">   
           </div>
       </div>
 
