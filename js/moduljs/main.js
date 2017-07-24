@@ -153,6 +153,34 @@ $(document).ready(function (e) {
 	   });
 	
 	});
+
+	// blogout
+
+	$(document).on('click','#blogout',function(e){
+	
+	e.preventDefault();
+	
+	var element = $(this);
+	
+	 swal({
+		title: "Are you sure?",
+		text: "",
+		type: "warning",
+		showCancelButton: true,
+		confirmButtonColor: '#DD6B55',
+		confirmButtonText: 'Yes, I am sure!',
+		cancelButtonText: "No, cancel it!",
+		closeOnConfirm: true,
+		closeOnCancel: true
+	   },
+	   function(isConfirm)
+	   {
+			if (isConfirm){  
+			  window.location.href = logout;
+			}
+	   });
+	
+	});
 	
 	// form untuk upload data
 	$("#upload_form").on('submit',(function(e) {
@@ -301,6 +329,30 @@ $(document).ready(function (e) {
           else if (type == 2){ $("#warning").html(mess).fadeIn(); setTimeout(function() { $("#warning").fadeOut(); }, 3000); }
 	      else if (type == 3){ $("#error").html(mess).fadeIn(); setTimeout(function() { $("#error").fadeOut(); }, 3000); }
 		}
+	   
+	   // document ready end	
+      });
+	}
+
+	// function cek login
+	function valid_login()
+	{
+	  $(document).ready(function (e) {
+		  
+		// batas
+		$.ajax({
+			type: 'POST',
+			url: cek_login,
+    	    cache: false,
+			headers: { "cache-control": "no-cache" },
+			success: function(result) {
+				
+				if (result == 'false'){ 
+					window.close();
+				}
+			}
+		})
+		return false;	
 	   
 	   // document ready end	
       });

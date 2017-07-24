@@ -20,6 +20,7 @@
 <script type="text/javascript">
 var uri = "<?php echo site_url('ajax')."/"; ?>";
 var baseuri = "<?php echo base_url(); ?>";
+var cek_login = "<?php echo site_url('login/cek_login'); ?>";
     
 $(document).ready(function() 
     { 
@@ -37,7 +38,7 @@ window.close();
     
 </head>
 
-<body onload="closeWindow()">
+<body onload="closeWindow();">
     
 <div class="container-fluid">
     

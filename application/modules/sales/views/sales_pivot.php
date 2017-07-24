@@ -66,7 +66,8 @@
 		<table id="input" border="0" width="100%">
 		   <thead>
            <tr>
-<th> No </th> <th> Code </th> <th> Date </th> <th> Due Date </th> <th> Customer </th> <th> Total </th> <th> Discount </th>
+<th> No </th> <th> Branch </th> <th> Code </th> <th> Date </th> <th> Due Date </th> <th> Customer </th> <th> Total </th> 
+<th> Discount </th>
 <th> Tax </th> <th> Landed Cost </th> <th> Down Payment </th>
 <th> Amount </th> <th> Unit Cost </th>  <th> Profit </th> <th> Payment Type </th> <th> Paid Date </th> <th> Confirmation </th> 
 <th> Log </th>
@@ -96,6 +97,11 @@
 				 $poder = $CI->sitem->total($sid);  
                  return floatval($poder['hpp']);
               }
+              
+              function branch($val){
+                  $br = new Branch_lib();
+                  return $br->get_name($val);
+              }
 			  		  
 		      $i=1; 
 			  if ($reports)
@@ -105,6 +111,7 @@
 				   echo " 
 				   <tr> 
 				       <td class=\"strongs\">".$i."</td> 
+                       <td class=\"strongs\">".branch($res->branch_id)."</td> 
                        <td class=\"strongs\"> SO-0".$res->id."</td> 
                        <td class=\"strongs\">".tglin($res->dates)."</td> 
 					   <td class=\"strongs\">".tglin($res->due_date)."</td>

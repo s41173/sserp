@@ -26,7 +26,9 @@
   <script src="<?php echo base_url(); ?>js/moduljs/main.js"></script>
   <script type="text/javascript">
         var site = "<?php echo base_url();?>js/datatables/swf/copy_csv_xls_pdf.swf";
-		  var base_url = "<?php echo base_url(); ?>";
+        var base_url = "<?php echo base_url(); ?>";
+        var logout = "<?php echo site_url('login/process_logout'); ?>";
+        var cek_login = "<?php echo site_url('login/cek_login'); ?>";
   </script>
 
   <!--[if lt IE 9]>
@@ -200,6 +202,19 @@
     });
   </script>
 
-
+ <!--Start of Tawk.to Script-->
+<script type="text/javascript">
+var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();
+(function(){
+var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];
+s1.async=true;
+s1.src='https://embed.tawk.to/5732a16a957a3642794d5b1c/default';
+s1.charset='UTF-8';
+s1.setAttribute('crossorigin','*');
+s0.parentNode.insertBefore(s1,s0);
+})();
+</script>
+<!--End of Tawk.to Script-->     
+    
 </body>
 </html>

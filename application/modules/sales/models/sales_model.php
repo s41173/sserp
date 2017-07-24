@@ -44,7 +44,7 @@ class Sales_model extends Custom_Model
         return $this->db->get(); 
     }
     
-    function report($cust=null, $start=null,$end=null,$paid=null,$confirm=null)
+    function report($branch=null, $cust=null, $start=null,$end=null,$paid=null,$confirm=null)
     {   
         $this->db->select($this->field);
         $this->db->from($this->tableName); 
@@ -55,6 +55,7 @@ class Sales_model extends Custom_Model
         elseif ($paid == '0'){ $this->db->where('paid_date IS NULL'); }
         $this->cek_null($confirm, 'confirmation');
         $this->cek_null($cust, 'cust_id');
+        $this->cek_null($branch, 'branch_id');
         $this->db->order_by('dates', 'desc'); 
         return $this->db->get(); 
     }
@@ -93,9 +94,9 @@ class Sales_model extends Custom_Model
         return intval($query['qtys']);
     }
     
-    function report_category($product=null,$start=null,$end=null,$paid=null,$confirm=null)
+    function report_category($branch=null,$product=null,$start=null,$end=null,$paid=null,$confirm=null)
     {   
-        $this->db->select('sales.id, sales.dates, product.sku, product.name, sales_item.qty, sales_item.price, sales.confirmation, '
+        $this->db->select('sales.id, sales.branch_id, sales.dates, product.sku, product.name, sales_item.qty, sales_item.price, sales.confirmation, '
                 . '        category.name as category, manufacture.name as manufacture');
         $this->db->from('sales, sales_item, product, category, manufacture');
         $this->db->where('sales.id = sales_item.sales_id');
@@ -104,6 +105,7 @@ class Sales_model extends Custom_Model
         $this->db->where('product.manufacture = manufacture.id');
         
         $this->cek_null($product, 'product.sku');
+        $this->cek_null($branch, 'branch_id');
         $this->db->where('sales.deleted', $this->deleted);
         $this->between('sales.dates', $start, $end);
         

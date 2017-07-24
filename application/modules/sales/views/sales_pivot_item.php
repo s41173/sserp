@@ -42,6 +42,7 @@
 	<div style="border:0px solid red; float:left;">
 		<table border="0">
 			<tr> <td> Period </td> <td> : </td> <td> <?php echo $start.' - '.$end; ?> </td> </tr>
+            <tr> <td> Branch </td> <td> : </td> <td> <?php echo $branch; ?> </td> </tr>
             <tr> <td> Paid Status </td> <td> : </td> <td> <?php echo $paid; ?> </td> </tr>
             <tr> <td> Confirmation Status </td> <td> : </td> <td> <?php echo $confirm; ?> </td> </tr>
 			<tr> <td> Run Date </td> <td> : </td> <td> <?php echo $rundate; ?> </td> </tr>
@@ -66,7 +67,7 @@
 		<table id="input" border="0" width="100%">
 		   <thead>
            <tr>
-<th> No </th> <th> Code </th> <th> Date </th> <th> Manufacture </th> <th> Category </th> <th> SKU </th> <th> Product </th> <th> Qty </th> <th> Amount </th> <th> Confirmation </th> 
+<th> No </th> <th> Branch </th> <th> Code </th> <th> Date </th> <th> Manufacture </th> <th> Category </th> <th> SKU </th> <th> Product </th> <th> Qty </th> <th> Amount </th> <th> Confirmation </th> 
            </tr>
            </thead>
 		  
@@ -81,6 +82,11 @@
               
               function pstatus($val){ if ($val == 0){ return 'N'; }else{ return 'Y'; } }
               
+              function branch($val){
+                  $br = new Branch_lib();
+                  return $br->get_name($val);
+              }
+              
 			  		  
 		      $i=1; 
 			  if ($reports_item)
@@ -90,6 +96,7 @@
 				   echo " 
 				   <tr> 
 				       <td class=\"strongs\">".$i."</td> 
+                       <td class=\"strongs\">".branch($res->branch_id)."</td> 
                        <td class=\"strongs\"> SO-0".$res->id."</td> 
                        <td class=\"strongs\">".tglin($res->dates)."</td> 
                        <td class=\"strongs\">".strtoupper($res->manufacture)."</td>
@@ -106,6 +113,7 @@
 		  ?>
 		</tbody>      
 		</table>
+        
 	</div>
 	
      <a style="float:left; margin:10px;" title="Back" href="<?php echo site_url('sales'); ?>"> 

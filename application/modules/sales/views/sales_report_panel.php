@@ -45,6 +45,14 @@ action="<?php echo $form_action_report; ?>" enctype="multipart/form-data">
     </div>
     
     <div class="form-group">
+        <label class="control-label col-md-3 col-sm-3 col-xs-12"> Branch </label>
+        <div class="col-md-8 col-sm-12 col-xs-12">     
+         <?php $js = "class='select2_single form-control' id='cbranch' tabindex='-1' style='width:250px;' "; 
+	     echo form_dropdown('cbranch', $branch_combo, isset($default['branch']) ? $default['branch'] : '', $js); ?>
+        </div>
+    </div>
+    
+    <div class="form-group">
         <label class="control-label col-md-3 col-sm-3 col-xs-12"> Product </label>
         <div class="col-md-5 col-sm-4 col-xs-12">     
         <table>
@@ -99,7 +107,7 @@ action="<?php echo $form_action_report; ?>" enctype="multipart/form-data">
 
       <div class="ln_solid"></div>
       <div class="form-group">
-          <div class="col-md-6 col-sm-6 col-xs-12 col-md-offset-3">
+          <div class="col-md-6 col-sm-6 col-xs-12 col-md-offset-3 btn-group">      
           <button type="submit" class="btn btn-primary">Post</button>
           <button type="reset" class="btn btn-success"> Reset </button>
           <button type="button" class="btn btn-danger" data-dismiss="modal">Close</button>

@@ -85,40 +85,60 @@
         </style>
         
             <div class="ixcon">
-                <a href="<?php echo base_url().'index.php/article/';?>">
-                <img alt="Article Manager" src="<?php echo base_url().'images/article.png';?>">
-                <p> Article </p>
+                <a href="<?php echo site_url('purchase');?>">
+                <img alt="Article Manager" src="<?php echo base_url().'images/purchase.png';?>">
+                <p> Purchase </p>
                 </a>
-        
             </div>
         
+            <div class="ixcon">
+                <a href="<?php echo site_url('product');?>">
+                <img alt="user" src="<?php echo base_url().'images/inventory.png';?>">
+                <p> Inventory </p>
+              </a>
+            </div>
         
             <div class="ixcon">
-                <a href="<?php echo base_url().'index.php/setting/';?>">
-                <img alt="setting" src="<?php echo base_url().'images/setting.png';?>">
-                <p> Setting </p>
+                <a href="<?php echo site_url('stock_transfer');?>">
+                <img alt="user" src="<?php echo base_url().'images/backup.png';?>">
+                <p> Stock Transfer </p>
+              </a>
+            </div>
+        
+            <div class="ixcon">
+                <a href="<?php echo site_url('sales');?>">
+                <img alt="setting" src="<?php echo base_url().'images/sales.png';?>">
+                <p> Sales </p>
               </a>
         
             </div>
         
             <div class="ixcon">
-                <a href="<?php echo base_url().'index.php/adminmenu/';?>">
-                <img alt="Admin Menu" src="<?php echo base_url().'images/menu.png';?>">
-                <p>Admin Menu</p>
+                <a href="<?php echo site_url('transfer');?>">
+                <img alt="setting" src="<?php echo base_url().'images/receipt.png';?>">
+                <p> Transaction </p>
+              </a>
+        
+            </div>
+            
+            <div class="ixcon">
+                <a href="<?php echo site_url('report_reference');?>">
+                <img alt="setting" src="<?php echo base_url().'images/settlement.png';?>">
+                <p> General Ledger </p>
               </a>
         
             </div>
         
             <div class="ixcon">
-                <a href="<?php echo base_url().'index.php/frontmenu/';?>">
-                <img alt="Front Menu" src="<?php echo base_url().'images/frontmenu.png';?>">
-                <p>Front Menu</p>
+                <a href="<?php echo site_url('payroll');?>">
+                <img alt="setting" src="<?php echo base_url().'images/role.png';?>">
+                <p> Payroll </p>
               </a>
         
             </div>
         
             <div class="ixcon">
-                <a href="<?php echo base_url().'index.php/admin/';?>">
+                <a href="<?php echo site_url('admin');?>">
                 <img alt="user" src="<?php echo base_url().'images/user_icon.png';?>">
                 <p>User</p>
               </a>
@@ -126,39 +146,11 @@
             </div>
         
             <div class="ixcon">
-                <a href="<?php echo base_url().'index.php/product/';?>">
-                <img alt="user" src="<?php echo base_url().'images/product.png';?>">
-                <p>Product</p>
-              </a>
-        
-            </div>
-        
-            <div class="ixcon">
-                <a href="<?php echo base_url().'index.php/log/';?>">
-                <img alt="log" src="<?php echo base_url().'images/log.png';?>">
-                <p>History</p>
-              </a>
-        
-            </div>
-        
-            <div class="ixcon">
-                <a href="<?php echo base_url().'index.php/component/';?>">
-                <img alt="modul" src="<?php echo base_url().'images/modul.png';?>">
-                <p>Component</p>
-              </a>
-              
-        
-            </div>
-        
-            <div class="ixcon">
-                <a href="<?php echo base_url().'index.php/configuration/';?>">
+                <a href="<?php echo site_url('configuration');?>">
                 <img alt="configuration" src="<?php echo base_url().'images/config.png';?>">
                 <p>Configuration</p>
               </a>
-        
             </div>
-        
-      
         
        <style type="text/css">
            .tablebox{ height: 300px; overflow-y: scroll; overflow-x: auto; } 

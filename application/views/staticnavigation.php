@@ -16,4 +16,4 @@
     </ul>
 </li>
 
-<li><a href="<?php echo site_url('login/process_logout'); ?>"><i class="fa fa-power-off"></i> log Out</a>
+<li><a id="blogout"><i class="fa fa-power-off"></i> log Out</a>

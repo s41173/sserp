@@ -66,7 +66,8 @@
                     datafields:
                     [
                         { name: "No", type: "string" },
-						{ name: "Code", type: "string" },
+						{ name: "Branch", type: "string" },
+                        { name: "Code", type: "string" },
 						{ name: "Date", type: "string" },
 						{ name: "Due Date", type: "string" },
 						{ name: "Customer", type: "string" },
@@ -105,7 +106,8 @@
 				autoshowfiltericon: false,
                 columns: [
                   { text: 'No', dataField: 'No', width: 50 },
-				  { text: 'Code', dataField: 'Code', width : 100 },
+				  { text: 'Branch', dataField: 'Branch', width : 100 },
+                  { text: 'Code', dataField: 'Code', width : 100 },
 				  { text: 'Date', dataField: 'Date', width : 150 },
   				  { text: 'Due Date', dataField: 'Due Date', width : 150 },
 				  { text: 'Customer', dataField: 'Customer', width : 250 },
@@ -168,6 +170,7 @@
 	<div style="border:0px solid red; float:left;">
 		<table border="0">
 			<tr> <td> Period </td> <td> : </td> <td> <?php echo $start.' - '.$end; ?> </td> </tr>
+            <tr> <td> Branch </td> <td> : </td> <td> <?php echo $branch; ?> </td> </tr>
             <tr> <td> Paid Status </td> <td> : </td> <td> <?php echo $paid; ?> </td> </tr>
             <tr> <td> Confirmation Status </td> <td> : </td> <td> <?php echo $confirm; ?> </td> </tr>
 			<tr> <td> Run Date </td> <td> : </td> <td> <?php echo $rundate; ?> </td> </tr>
@@ -204,7 +207,8 @@
 		<table id="table" border="0" width="100%">
 		   <thead>
            <tr>
-<th> No </th> <th> Code </th> <th> Date </th> <th> Due Date </th> <th> Customer </th> <th> Total </th> <th> Discount </th>
+<th> No </th> <th> Branch </th> <th> Code </th> <th> Date </th> <th> Due Date </th> <th> Customer </th> <th> Total </th> 
+<th> Discount </th>
 <th> Tax </th> <th> Landed Cost </th> <th> Down Payment </th>
 <th> Amount </th> <th> Unit Cost </th>  <th> Profit </th> <th> Payment Type </th> <th> Paid Date </th> <th> Confirmation </th> 
 <th> Log </th>
@@ -234,6 +238,11 @@
 				 $poder = $CI->sitem->total($sid);  
                  return floatval($poder['hpp']);
               }
+              
+              function branch($val){
+                  $br = new Branch_lib();
+                  return $br->get_name($val);
+              }
 			  		  
 		      $i=1; 
 			  if ($reports)
@@ -243,6 +252,7 @@
 				   echo " 
 				   <tr> 
 				       <td class=\"strongs\">".$i."</td> 
+                       <td class=\"strongs\">".branch($res->branch_id)."</td> 
                        <td class=\"strongs\"> SO-0".$res->id."</td> 
                        <td class=\"strongs\">".tglin($res->dates)."</td> 
 					   <td class=\"strongs\">".tglin($res->due_date)."</td>

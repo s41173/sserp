@@ -194,6 +194,9 @@ class Login extends MX_Controller {
         exit;
     }
     
+    // ajax function
+    function cek_login(){ if ($this->session->userdata('username')){ echo 'true'; }else{ echo 'false'; } }
+    
     function send_email($username)
     {
         $email = $this->Login_model->get_email($username);

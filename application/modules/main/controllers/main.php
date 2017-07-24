@@ -72,8 +72,11 @@ class Main extends MX_Controller
     private function get_min_product()
     {
         $val = $this->Main_model->get_min_product()->result();
-
-        $tmpl = array('table_open' => '<table class="table table-hover">');
+        
+        $tmpl = array ('table_open'          => '<table class="table table-striped jambo_table bulk_action">',
+                       'heading_row_start'   => '<tr class="headings">'
+              );
+        
         $this->table->set_template($tmpl);
         $this->table->set_empty("&nbsp;");
         $this->table->set_heading('No', 'Code', 'Name', 'Qty', 'Cur');
@@ -88,7 +91,9 @@ class Main extends MX_Controller
     {
         $val = $this->Main_model->checkout('ap_payment')->result();
 
-        $tmpl = array('table_open' => '<table class="table table-hover">');
+        $tmpl = array ('table_open'          => '<table class="table table-striped jambo_table bulk_action">',
+                       'heading_row_start'   => '<tr class="headings">'
+              );
         $this->table->set_template($tmpl);
         $this->table->set_empty("&nbsp;");
         $this->table->set_heading('No', 'Code', 'Check-No', 'Cur', 'Date', 'Due', 'Balance');
@@ -104,7 +109,10 @@ class Main extends MX_Controller
     {
         $val = $this->Main_model->checkin()->result();
 
-        $tmpl = array('table_open' => '<table class="table table-hover">');
+         $tmpl = array ('table_open'          => '<table class="table table-striped jambo_table bulk_action">',
+                       'heading_row_start'   => '<tr class="headings">'
+              );
+        
         $this->table->set_template($tmpl);
         $this->table->set_empty("&nbsp;");
         $this->table->set_heading('No', 'Code', 'Check-No', 'Cur', 'Date', 'Due', 'Balance');
@@ -120,7 +128,10 @@ class Main extends MX_Controller
     {
         $val = $this->Main_model->get_ar_list()->result();
 
-        $tmpl = array('table_open' => '<table class="table table-hover">');
+        $tmpl = array ('table_open'          => '<table class="table table-striped jambo_table bulk_action">',
+                       'heading_row_start'   => '<tr class="headings">'
+              );
+        
         $this->table->set_template($tmpl);
         $this->table->set_empty("&nbsp;");
         $this->table->set_heading('No', 'Code', 'Date', 'Customer', 'Balance');
@@ -138,7 +149,10 @@ class Main extends MX_Controller
     {
         $val = $this->Main_model->get_ap_list()->result();
 
-        $tmpl = array('table_open' => '<table class="table table-hover">');
+        $tmpl = array ('table_open'          => '<table class="table table-striped jambo_table bulk_action">',
+                       'heading_row_start'   => '<tr class="headings">'
+              );
+        
         $this->table->set_template($tmpl);
         $this->table->set_empty("&nbsp;");
         $this->table->set_heading('No', 'Code', 'Date', 'Vendor', 'Balance');

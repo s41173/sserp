@@ -17,6 +17,31 @@
 </head>
 
 <script type="text/javascript">
+    
+// function cek login
+	function valid_login()
+	{
+	  $(document).ready(function (e) {
+		  
+        var cek_login = "<?php echo site_url('login/cek_login'); ?>";  
+		// batas
+		$.ajax({
+			type: 'POST',
+			url: cek_login,
+    	    cache: false,
+			headers: { "cache-control": "no-cache" },
+			success: function(result) {
+				
+				if (result == 'false'){ 
+					window.close();
+				}
+			}
+		})
+		return false;	
+	   
+	   // document ready end	
+      });
+	}
 
 $(document).ready(function (e) {
 	
@@ -63,7 +88,7 @@ $(document).ready(function (e) {
 
 </script>
 
-<body>
+<body onload="valid_login();">
 
 <form action="<?php echo $form_action; ?>" name="login_form" id="loginform" method="post">
 <div class="containerx">

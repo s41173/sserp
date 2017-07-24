@@ -803,7 +803,9 @@ class Sales extends MX_Controller
         $confirm = $this->input->post('cconfirm');
         $cust = $this->input->post('ccustomer');
         $product = $this->input->post('cproduct');
+        $branch = $this->input->post('cbranch');
 
+        $data['branch'] = $this->branch->get_name($branch);
         $data['start'] = tglin($start);
         $data['end'] = tglin($end);
         if (!$paid){ $data['paid'] = ''; }elseif ($paid == 1){ $data['paid'] = 'Paid'; }else { $data['paid'] = 'Unpaid'; }
@@ -811,8 +813,8 @@ class Sales extends MX_Controller
         
 //        Property Details
         $data['company'] = $this->properti['name'];
-        $data['reports'] = $this->Sales_model->report($cust,$start,$end,$paid,$confirm)->result();
-        $data['reports_item'] = $this->Sales_model->report_category($product,$start,$end,$paid,$confirm)->result();
+        $data['reports'] = $this->Sales_model->report($branch,$cust,$start,$end,$paid,$confirm)->result();
+        $data['reports_item'] = $this->Sales_model->report_category($branch,$product,$start,$end,$paid,$confirm)->result();
 //        
         $type = $this->input->post('ctype');
         if ($type == 0){ $this->load->view('sales_report', $data); }

@@ -936,12 +936,13 @@ class Product extends MX_Controller
                              'manufacture' => $this->manufacture->get_id($res['MANUFACTURE']),
                              'name' => $res['NAME'],
                              'model' => $res['MODEL'],
-                             'qty' => $res['QTY'],
+                             'qty' => 0,
                              'price' => $res['PRICE'],
                              'publish' => 0,
                              'created' => date('Y-m-d H:i:s'));
             
                 $this->model->add($account);
+                $this->stockledger->create($this->model->max_id(), $this->branch->get_branch(), $this->period->month, $this->period->year);
               }
            }              
         }
