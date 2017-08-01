@@ -188,7 +188,7 @@ class Component extends MX_Controller
             $this->form_validation->set_rules('tlimit', 'Limit', 'required');
             $this->form_validation->set_rules('torder', 'Order', 'required|numeric');
             $this->form_validation->set_rules('crole', 'Role', 'required|callback_valid_role');
-            $this->form_validation->set_rules('ttable', 'Table', 'required');
+            $this->form_validation->set_rules('ctable', 'Table', 'required');
 
             if ($this->form_validation->run($this) == TRUE)
             {  

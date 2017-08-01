@@ -246,7 +246,6 @@ class Product extends MX_Controller
     
     function add()
     {
-
         $data['title'] = $this->properti['name'].' | Administrator  '.ucwords($this->modul['title']);
         $data['h2title'] = 'Create New '.$this->modul['title'];
         $data['main_view'] = 'article_form';

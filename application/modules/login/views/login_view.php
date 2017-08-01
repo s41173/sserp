@@ -1,20 +1,34 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
+<html lang="en"><head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
 	<meta charset="UTF-8">
     <link rel="shortcut icon" href="<?php echo base_url().'images/fav_icon.png';?>" />
 	<title> Login </title>
 	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.6.3/css/font-awesome.min.css">
 	<link href='https://fonts.googleapis.com/css?family=Open+Sans:400,700,300' rel='stylesheet' type='text/css'>
         
-    <style type="text/css">@import url("<?php echo base_url() . 'css/login.css'; ?>");</style>
-    <script type="text/javascript" src="<?php echo base_url().'js/jquery.min.js'; ?>"></script>
+<!--    <link rel="stylesheet" href="css/bootstrap.css">-->
+<!--    <link rel="stylesheet" href="css/bootstrap.min.css">-->
+<!--
+    <script type='text/javascript'  href="js/bootstrap.js"></script>
+    <script type='text/javascript'  href="js/bootstrap.min.js"></script>
+-->
+    
+    <style type="text/css">@import url("<?php echo base_url() . 'login_file/css/bootstrap.css'; ?>");</style>
+    <style type="text/css">@import url("<?php echo base_url() . 'login_file/css/bootstrap.min.css'; ?>");</style>
+    
+    <script type="text/javascript" src="<?php echo base_url().'login_file/js/bootstrap.js'; ?>"></script>
+    <script type="text/javascript" src="<?php echo base_url().'login_file/js/bootstrap.min.js'; ?>"></script>
+    <script type="text/javascript" src="<?php echo base_url().'login_file/js/jquery.js'; ?>"></script>
+    <style type="text/css">@import url("<?php echo base_url() . 'login_file/css/login.css'; ?>");</style>
+    
+<!--    <script type="text/javascript" src="Login_files/jquery.js"></script>-->
+<!--    <link rel="stylesheet" href="css/login.css">-->
+    <script src="https://use.fontawesome.com/4ef7994b81.js"></script>
     
     <!-- sweet alert js -->
-    <script type="text/javascript" src="<?php echo base_url().'js/sweetalert/sweetalert.min.js'; ?>"></script>
-    <style type="text/css">@import url("<?php echo base_url() . 'js/sweetalert/sweetalert.css'; ?>");</style>
-    
-</head>
+    <script type="text/javascript" src="<?php echo base_url().'login_file/js/sweetalert.js'; ?>"></script>
+    <style type="text/css">@import url("<?php echo base_url() . 'login_file/css/sweetalert.css'; ?>");</style>
 
 <script type="text/javascript">
     
@@ -88,38 +102,42 @@ $(document).ready(function (e) {
 
 </script>
 
-<body onload="valid_login();">
+</head>
+
+
+
+<body>
 
 <form action="<?php echo $form_action; ?>" name="login_form" id="loginform" method="post">
-<div class="containerx">
-<img src="<?php echo $logo; ?>" alt="<?php echo $pname; ?>" class="logo">
+   <div class="container">
+    <div class="containerx">
+        <img src="<?php echo $logo; ?>" alt="<?php echo $pname; ?>" class="logo">
 
+        <div class="txt_field">
+            <i class="fa fa-user"></i>
+            <input name="username" id="user" required="" placeholder="username" type="text">
+            <div class="clr"> </div>
+        </div>
 
-<div class="txt_field">
-	<i class="fa fa-user"></i>
-	<input type="text" name="username" id="user" class="txt" required placeholder="username">
-	<div class="clr"> </div>
-</div>
+        <div class="txt_field">
+            <i class="fa fa-lock"></i>
+            <input name="password" id="pass" required="" placeholder="password" type="password">
+            <input id="agent" name="agent" value="web" type="hidden">
+            <div class="clr"> </div>
+        </div>
 
-<div class="txt_field">
-	<i class="fa fa-lock"></i>
-	<input type="password" name="password" id="pass" class="txt" required placeholder="password">
-    <input type="hidden" id="agent" name="agent" value="web">
-	<div class="clr"> </div>
-</div>
+        <div class="tombol">
+            <button type="button" id="loginbutton">Login&nbsp;&nbsp;<i class="fa fa-arrow-circle-o-right"></i></button>
+            <button type="reset" class="fr" style="margin-bottom:15px; ">Cancel&nbsp;&nbsp;<i class="fa fa-undo"></i></button>
+            <p style="margin:5px 0 0 0; float:left;"> <a id="forgot" href="<?php echo site_url('login/forgot'); ?>"> [ Forgot Password ] </a> </p>
+            <p>&copy; Copyrights <a id="brand" href="http://dswip.com" target="_blank"> <?php echo $pname.'&nbsp;'.date('Y'); ?> </a> <br> All rights reserved.</p>
+        </div>
 
-<div class="btn">
-	<button type="button" id="loginbutton">Login&nbsp;&nbsp;<i class="fa fa-arrow-circle-o-right"></i></button>
-	<button type="reset" class="fr" style="margin-bottom:15px; ">Cancel&nbsp;&nbsp;<i class="fa fa-undo"></i></button>
-    <p style="margin:5px 0 0 0; float:left;"> <a id="forgot" href="<?php echo site_url('login/forgot'); ?>"> [ Forgot Password ] </a> </p>
-    <p>&copy; Copyrights <a id="brand" href="http://dswip.com" target="_blank"> <?php echo $pname.'&nbsp;'.date('Y'); ?> </a>. 
-    <br>All rights reserved.</p>
-</div>
-	
-</div>
+    </div>
+    </div>
 </form>
 
-</body>
+
 
 <style type="text/css">
 
@@ -129,4 +147,4 @@ $(document).ready(function (e) {
 
 </style>
 
-</html>
+</body></html>
