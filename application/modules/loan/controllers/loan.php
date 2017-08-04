@@ -52,6 +52,15 @@ class Loan extends MX_Controller
         }
     }
     
+    public function chart()
+    {   
+        $data = array(
+                    array("label" => "Loan Total", "legendText" => "Loan", "y" => floatval($this->lm->total_chart()))
+                );
+
+       echo json_encode($data, JSON_NUMERIC_CHECK);
+    }
+    
     function get_last()
     {
         $this->acl->otentikasi1($this->title);
@@ -63,7 +72,8 @@ class Loan extends MX_Controller
         $data['form_action_update'] = site_url($this->title.'/update_process');
         $data['form_action_del'] = site_url($this->title.'/delete_all');
         $data['form_action_report'] = site_url($this->title.'/report_process');
-        $data['link'] = array('link_back' => anchor('main/','Back', array('class' => 'btn btn-danger')));
+        $data['link'] = array('link_back' => anchor('main/','Back', array('class' => 'btn btn-danger')),
+                              'loantrans' => anchor('loan_trans','Loan Transaction', array('class' => 'btn btn-success')));
 
         $data['division'] = $this->division->combo();
 	// ---------------------------------------- //
@@ -79,7 +89,7 @@ class Loan extends MX_Controller
 
         $data['table'] = $this->table->generate();
         $data['source'] = site_url($this->title.'/getdatatable');
-        $data['graph'] = site_url('employee/chart/');
+        $data['graph'] = site_url($this->title.'/chart/');
             
         // Load absen view dengan melewatkan var $data sbgai parameter
 	$this->load->view('template', $data);

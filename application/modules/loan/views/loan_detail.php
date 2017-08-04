@@ -80,7 +80,7 @@
 				   echo " 
 				   <tr> 
 				       <td class=\"strongs\">".$i."</td> 
-					   <td class=\"strongs\">".tglin($res->date)."</td>
+					   <td class=\"strongs\">".tglin($res->dates)."</td>
 					   <td class=\"strongs\">".$res->type."</td>
 					   <td class=\"strongs\" align=\"right\">".number_format($res->amount)."</td>
 				   </tr>";

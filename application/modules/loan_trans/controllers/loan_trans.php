@@ -13,25 +13,18 @@ class Loan_trans extends MX_Controller
         $this->modul = $this->components->get(strtolower(get_class($this)));
         $this->title = strtolower(get_class($this));
 
-        $this->currency = $this->load->library('currency_lib');
-        $this->user = $this->load->library('admin_lib');
-        $this->dept = $this->load->library('dept_lib');
-        $this->employee = $this->load->library('employee_lib');
-        $this->journalgl  = $this->load->library('journalgl_lib');
-        $this->loan = $this->load->library('loan_lib');
+        $this->currency = new Currency_lib();
+        $this->user = new Admin_lib();
+//        $this->dept = $this->load->library('dept_lib');
+        $this->employee = new Employee_lib();
+        $this->journalgl  = new Journalgl_lib();
+        $this->loan = new Loan_lib();
         $this->model = new Loan_transs();
         
-        $this->load->library('fusioncharts');
-        $this->swfCharts  = base_url().'public/flash/Column3D.swf';
     }
 
     private $properti, $modul, $title,$dept,$employee;
     private $user,$currency,$model,$loan,$journalgl;
-
-    private  $atts = array('width'=> '800','height'=> '400',
-                      'scrollbars' => 'yes','status'=> 'yes',
-                      'resizable'=> 'yes','screenx'=> '0','screenx' => '\'+((parseInt(screen.width) - 800)/2)+\'',
-                      'screeny'=> '0','class'=> 'print','title'=> 'print', 'screeny' => '\'+((parseInt(screen.height) - 400)/2)+\'');
 
     function index()
     {
@@ -39,28 +32,70 @@ class Loan_trans extends MX_Controller
        $this->get_last();
     }
     
-    function autocomplete()
+    // ajax
+    function get_loan()
     {
-      $keyword = $this->uri->segment(3);
+        $employee = $this->employee->get_id_by_nip($this->input->post('nip'));
+        $loan = $this->loan->get($employee);
+        if ($loan){ echo floatval($loan); }else{ echo 0; }
+    }
+    
+    public function getdatatable($search=null,$nip='null',$dates='null',$type='null')
+    {
+        if(!$search){ $result = $this->model->get($this->modul['limit']);  }
+        else{ 
+            if ($nip != 'null'){$nip = $this->employee->get_id_by_nip($nip); }
+            $result = $this->lm->search($nip, $dates, $type)->result();
+        }
+        $output = null;
+        if ($result){
+	foreach($result as $res)
+	{
+	   $output[] = array ($res->id, $this->employee->get_name($res->employee_id).'- '.$this->employee->get_nip($res->employee_id), $res->currency, $res->acc, $res->type, $res->notes, tglin($res->dates),
+                              idr_format($res->amount));
+	}
+            $this->output
+            ->set_status_header(200)
+            ->set_content_type('application/json', 'utf-8')
+            ->set_output(json_encode($output))
+            ->_display();
+            exit; 
+        }
+    }
+    
+    function get_last()
+    {
+        $this->acl->otentikasi1($this->title);
 
-      // cari di database
-      $data = $this->db->from('students')->like('name',$keyword,'after')->get();
+        $data['title'] = $this->properti['name'].' | Administrator  '.ucwords($this->modul['title']);
+        $data['h2title'] = $this->modul['title'];
+        $data['main_view'] = 'loan_view';
+	$data['form_action'] = site_url($this->title.'/add_process');
+        $data['form_action_report'] = site_url($this->title.'/report_process');
+        $data['form_action_import'] = site_url($this->title.'/import_process');
+        $data['form_action_update'] = site_url($this->title.'/update_process');
+        $data['form_action_del'] = site_url($this->title.'/delete_all');
+        $data['link'] = array('link_back' => anchor('loan','Back', array('class' => 'btn btn-danger')));
+        
+        $data['currency'] = $this->currency->combo();
 
-      // format keluaran di dalam array
-      foreach($data->result() as $row)
-      {
-         $arr['query'] = $keyword;
-         $arr['suggestions'][] = array(
-            'value'  =>$row->name,
-            'data'   =>$row->students_id
-         );
-      }
+        // library HTML table untuk membuat template table class zebra
+        $tmpl = array('table_open' => '<table id="datatable-buttons" class="table table-striped table-bordered">');
 
-      // minimal PHP 5.2
-      echo json_encode($arr);
+        $this->table->set_template($tmpl);
+        $this->table->set_empty("&nbsp;");
+
+        //Set heading untuk table
+        $this->table->set_heading('#','No', 'Code', 'Date', 'Name', 'Type', 'Amount', 'Action');
+
+        $data['table'] = $this->table->generate();
+        $data['source'] = site_url($this->title.'/getdatatable');
+            
+        // Load absen view dengan melewatkan var $data sbgai parameter
+	$this->load->view('template', $data);
     }
 
-    function get_last()
+    function xget_last()
     {
         $this->blank_loan();
         $this->acl->otentikasi1($this->title);
@@ -240,32 +275,9 @@ class Loan_trans extends MX_Controller
        
     }
     
-    function add()
-    {
-//        $this->acl->otentikasi2($this->title);
-
-        $data['title'] = $this->properti['name'].' | Administrator  '.ucwords($this->modul['title']);
-        $data['h2title'] = $this->modul['title'];
-        $data['main_view'] = 'loan_form';
-	$data['form_action'] = site_url($this->title.'/add_process');
-	$data['link'] = array('link_back' => anchor($this->title,'<span>back</span>', array('class' => 'back')));
-        
-        $data['currency'] = $this->currency->combo();
-        $this->load->view('loan_form', $data);
-    }
-    
     function add_process()
     {
-        $this->acl->otentikasi2($this->title);
-
-        $data['title'] = $this->properti['name'].' | Administrator  '.ucwords($this->modul['title']);
-        $data['h2title'] = $this->modul['title'];
-        $data['main_view'] = 'loan_form';
-	$data['form_action'] = site_url($this->title.'/add_process');
-	$data['link'] = array('link_back' => anchor($this->title,'<span>back</span>', array('class' => 'back')));
-         
-        $data['dept'] = $this->dept->combo_all(); 
-        $data['currency'] = $this->currency->combo();
+        if ($this->acl->otentikasi2($this->title,'ajax') == TRUE){
         
 	// Form validation
         $this->form_validation->set_rules('tdate', 'Name', 'required|callback_valid_period');
@@ -277,27 +289,24 @@ class Loan_trans extends MX_Controller
         
         if ($this->form_validation->run($this) == TRUE)
         {
-            $this->model->date         = $this->input->post('tdate');
+            $this->model->dates         = $this->input->post('tdate');
             $this->model->employee_id  = $this->employee->get_id_by_nip($this->input->post('tnip'));
-            $this->model->currency     = $this->input->post('ccur');
+            $this->model->currency     = strtoupper($this->input->post('ccur'));
             $this->model->amount       = $this->input->post('tamount');
             $this->model->type         = $this->input->post('ctype');
             $this->model->acc          = $this->input->post('cacc');
             $this->model->notes        = $this->input->post('tnotes');
             $this->model->log          = $this->session->userdata('log');
+            $this->model->created      = date('Y-m-d H:i:s');
             $this->model->save();
             
-            $this->loan->change_loan($this->employee->get_id_by_nip($this->input->post('tnip')),$this->input->post('ccur'),$this->input->post('tamount'),$this->input->post('ctype'));
-            $this->create_journal($this->input->post('tdate'),$this->input->post('ccur'),$this->input->post('cacc'),$this->input->post('tamount'),$this->input->post('ctype'));
-            $this->session->set_flashdata('message', "One $this->title data successfully saved!");
-//            redirect($this->title.'/add');
-            echo 'true';
+            $this->loan->change_loan($this->employee->get_id_by_nip($this->input->post('tnip')), strtoupper($this->input->post('ccur')),$this->input->post('tamount'),$this->input->post('ctype'));
+            $this->create_journal($this->input->post('tdate'),strtoupper($this->input->post('ccur')),$this->input->post('cacc'),$this->input->post('tamount'),$this->input->post('ctype'));
+//            $this->session->set_flashdata('message', "One $this->title data successfully saved!");
+            echo 'true|'.$this->title.' successfully saved..!';
         }
-        else
-        { 
-//            $this->load->view('loan_form', $data); 
-            echo validation_errors();
-        }
+        else{ echo "error|".validation_errors(); }
+        }else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
     }
     
     
@@ -314,7 +323,7 @@ class Loan_trans extends MX_Controller
         $bank     = $cm->get_id(22);
         $kas      = $cm->get_id(13);
         $kaskecil = $cm->get_id(14);
-        $loan     = $cm->get_id(38);
+        $loan     = $cm->get_id(60);
         $account  = 0;
 
         $this->journalgl->new_journal('0000'.$id, $date, $type, $cur, 'Loan : '.tglmonth($date).' - '.  ucfirst($acc), $amount, $this->session->userdata('log'));
@@ -335,10 +344,10 @@ class Loan_trans extends MX_Controller
     
     function delete($uid)
     {
-        $this->acl->otentikasi_admin($this->title);
+        if ($this->acl->otentikasi_admin($this->title,'ajax') == TRUE){
         $this->model->where('id', $uid)->get();
         
-        if ($this->valid_period($this->model->date) == TRUE)
+        if ($this->valid_period($this->model->dates) == TRUE)
         {
           if ($this->model->type == 'borrow')
           { 
@@ -352,9 +361,10 @@ class Loan_trans extends MX_Controller
 
           $this->model->delete(); 
           $this->session->set_flashdata('message', "1 $this->title successfully removed..!");       
+          echo "true|1 $this->title successfully removed..!";
         }
-        else { $this->session->set_flashdata('message', "Invalid period..!"); }
-        redirect($this->title);  
+        else { echo "error|Invalid period..!"; }
+        }else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
     }
     
     private function blank_loan(){$this->lm->delete_amount(); }
@@ -415,19 +425,6 @@ class Loan_trans extends MX_Controller
         }
         else{ return TRUE; }
     }
-    
-    
-    public function report()
-    {
-        $this->acl->otentikasi2($this->title);
-
-        $data['title'] = $this->properti['name'].' | Administrator Report '.ucwords($this->modul['title']);
-        $data['h2title'] = 'Report '.$this->modul['title'];
-	$data['form_action'] = site_url($this->title.'/report_process');
-        $data['link'] = array('link_back' => anchor($this->title,'<span>back</span>', array('class' => 'back')));
-        
-        $this->load->view('loan_report_panel', $data);
-    }
 
     public function report_process()
     {
@@ -442,10 +439,14 @@ class Loan_trans extends MX_Controller
         
         $data['log'] = $this->session->userdata('log');
         $data['company'] = $this->properti['name'];
-        $data['type'] = $this->input->post('ctype');
+        
         $data['transtype'] = $this->input->post('ctranstype');
                 
-        $data['results'] = $this->lm->report($this->input->post('tstart'),$this->input->post('tend'),$this->input->post('ctype'),$this->input->post('ctranstype'))->result();
+        $period = $this->input->post('reservation');  
+        $start = picker_between_split($period, 0);
+        $end = picker_between_split($period, 1);
+        
+        $data['results'] = $this->lm->report($start,$end,$this->input->post('ctranstype'))->result();
         
         $this->load->view('loan_report', $data);
     }

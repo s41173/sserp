@@ -50,32 +50,47 @@ $atts1 = array(
 	
 	<div id="errorbox" class="errorbox"> <?php echo validation_errors(); ?> </div>
 	
-	<fieldset class="field"> <legend> Employee Attendance - Report </legend>
+	<fieldset class="field"> <legend> Loans Employee - Report </legend>
 	<form name="modul_form" class="myform" id="form" method="post" action="<?php echo $form_action; ?>" target="_blank" >
 				<table>
-               
-                <tr>
-                <td> <label for="cmonth"> Period </label> </td> <td>:</td>
-                <td> <select name="cmonth" class="required">
-         			 <option value="1"> January </option>
-                	 <option value="2"> February </option>
-                	 <option value="3"> March </option>
-                	 <option value="4"> April </option>
-                	 <option value="5"> May </option>
-                	 <option value="6"> June </option>
-                	 <option value="7"> July </option>
-                	 <option value="8"> August </option>
-                	 <option value="9"> September </option>
-                	 <option value="10"> October </option>
-                	 <option value="11"> November </option>
-                	 <option value="12"> December </option>
-              		 </select> - 
-                     <input type="text" class="required" name="tyear" id="tyear" size="4">
-         		</td>
-         		</tr>
-               		
+					
+			<tr>	
+            <td> <label for="tstart"> Period </label> </td> <td>:</td>
+            <td>  
+            <input type="Text" name="tstart" id="d1" title="Start date" size="10" class="required" /> 
+            <img src="<?php echo base_url();?>/jdtp-images/cal.gif" onclick="javascript:NewCssCal('d1','yyyymmdd')" style="cursor:pointer"/> 
+            &nbsp; - &nbsp;
+						   
+		    <input type="Text" name="tend" id="d2" title="End date" size="10" class="required" /> 
+			<img src="<?php echo base_url();?>/jdtp-images/cal.gif" onclick="javascript:NewCssCal('d2','yyyymmdd')" style="cursor:pointer"/> 
+            &nbsp; <br />
+			</td> 						
+			</tr>	
+            
+            <tr>
+            <td> <label for="ctype"> Employee Type </label> </td> <td>:</td>
+            <td> <select name="ctype"> 
+                 <option selected="selected" value="">-- All --</option> 
+                 <option value="academic"> Academic </option>
+                 <option value="non"> Non Academic </option>
+                 </select> 
+            </td>
+            </tr>
+            
+            <tr>
+            <td> <label for="ctranstype"> Transaction Type </label> </td> <td>:</td>
+            <td>     <select name="ctranstype">
+                 	<option value=""> -- All -- </option>
+                    <option value="borrow"> Borrow </option>
+                    <option value="paid"> Paid </option>
+                 </select>
+            </td>
+            </tr>
+             							   
 	           </table>
-               <p align="right"> <input type="submit" name="submit" class="button" title="SUBMIT" value="SUBMIT" /> </p>
+				<p style="margin:15px 0 0 0; float:left;">
+					<input type="submit" name="submit" class="button" title="SUBMIT" value=" SUBMIT " /> 
+				</p>	
 			</form>			  
 	</fieldset>
 </div>

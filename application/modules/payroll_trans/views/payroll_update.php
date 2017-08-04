@@ -78,7 +78,7 @@ $atts1 = array(
                      				         
          <tr>
          <td> <label for="tmonth"> Month </label> </td> <td>:</td>
-         <td> <input type="text" readonly name="tmonth" size="5" title="Name"
+         <td> <input type="text" readonly name="tmonth" size="10" title="Name"
               value="<?php echo set_value('tmonth', isset($default['month']) ? $default['month'] : ''); ?>" /> - 
               <input type="text" readonly name="tyear" size="4" title="Year"
               value="<?php echo set_value('tyear', isset($default['year']) ? $default['year'] : ''); ?>">

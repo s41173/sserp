@@ -94,7 +94,7 @@ $atts1 = array(
     </div>
     
      <div class="form-group">
-      <label for="middle-name" class="control-label col-md-3 col-sm-3 col-xs-12"> Reduction </label>
+      <label for="middle-name" class="control-label col-md-3 col-sm-3 col-xs-12"> Deduction </label>
       <div class="col-md-4 col-sm-6 col-xs-12">
        <input type="number" class="form-control" id="tinsurance" name="tinsurance" size="10" title="Insurance" required /> 
       </div>

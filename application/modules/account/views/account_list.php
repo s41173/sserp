@@ -31,7 +31,7 @@ $(document).ready(function()
 function closeWindow() {
 setTimeout(function() {
 window.close();
-}, 30000);
+}, 300000);
 }
     
 </script>    

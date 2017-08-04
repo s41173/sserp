@@ -14,6 +14,9 @@
 <!--canvas js-->
 <script type="text/javascript" src="<?php echo base_url().'js-old/' ?>canvasjs.min.js"></script>
 
+<!--canvas js-->
+<script type="text/javascript" src="<?php echo base_url().'js-old/' ?>canvasjs.min.js"></script>
+
 <!-- Date time picker -->
  <script type="text/javascript" src="http://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
  
@@ -46,23 +49,23 @@
     
      //chart render
 	
-//	$.getJSON(url, function (result) {
-//		
-//		var chart = new CanvasJS.Chart("chartcontainer", {
-//
-//			theme: "theme1",//theme1
-//			axisY:{title: "", },
-//  		    animationEnabled: true, 
-//			data: [
-//				{
-//					type: "pie",
-//					dataPoints: result
-//				}
-//			]
-//		});
-//
-//		chart.render();
-//	});
+	$.getJSON(url, function (result) {
+		
+		var chart = new CanvasJS.Chart("chartcontainer", {
+
+			theme: "theme3",//theme1
+			axisY:{title: "", },
+  		    animationEnabled: true, 
+			data: [
+				{
+					type: "pie",
+					dataPoints: result
+				}
+			]
+		});
+
+		chart.render();
+	});
 	
 	//chart render
         
@@ -116,6 +119,27 @@
                </div>
                              
             </div>
+                
+            <div class="x_panel">
+                    
+                   <!-- xtitle -->
+                      <div class="x_title">
+                       <h2> Loan Chart </h2>
+
+                        <ul class="nav navbar-right panel_toolbox">
+                          <li><a class="collapse-link"><i class="fa fa-chevron-up"></i></a> </li>
+                          <li><a class="close-link"><i class="fa fa-close"></i></a> </li>
+                        </ul>
+
+                        <div class="clearfix"></div>
+                      </div>
+                      <!-- xtitle -->
+
+                    <div class="x_content">
+                        <div id="chartcontainer" style="height:250px; width:100%;"></div>
+                    </div>    
+                    
+              </div>       
                                 
           </div>  
           

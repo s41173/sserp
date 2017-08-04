@@ -1,153 +1,133 @@
-<style type="text/css">@import url("<?php echo base_url() . 'css/style.css'; ?>");</style>
-<style type="text/css">@import url("<?php echo base_url() . 'development-bundle/themes/base/ui.all.css'; ?>");</style>
-<style type="text/css">@import url("<?php echo base_url() . 'css/jquery.fancybox-1.3.4.css'; ?>");</style>
+<div class="modal-dialog">
+        
+<!-- Modal content-->
+<div class="modal-content">
+<div class="modal-header">
+  <button type="button" class="close" data-dismiss="modal">&times;</button>
+  <h4 class="modal-title"> Add Loan Transaction </h4>
+</div>
+<div class="modal-body">
+ 
+ <!-- error div -->
+ <div class="alert alert-success success"> </div>
+ <div class="alert alert-warning warning"> </div>
+ <div class="alert alert-error error"> </div>
+ 
+ <!-- form add -->
+<div class="x_panel" >
+<div class="x_title">
+  
+  <div class="clearfix"></div> 
+</div>
+<div class="x_content">
 
-<script type="text/javascript" src="<?php echo base_url();?>js/register.js"></script>
-<script type="text/javascript" src="<?php echo base_url();?>js/jquery-1.3.2.js"></script>
-<script type="text/javascript" src="<?php echo base_url();?>js/datetimepicker_css.js"></script>
-<script type="text/javascript" src="<?php echo base_url();?>/development-bundle/ui/ui.core.js"></script>
-<script type="text/javascript" src="<?php echo base_url();?>js/jquery.tools.min.js"></script>
-<script type="text/javascript" src="<?php echo base_url();?>js/hoverIntent.js"></script>
-<script type="text/javascript" src="<?php echo base_url();?>js/jquery.fancybox-1.3.4.pack.js"></script>
-<script type="text/javascript" src="<?php echo base_url();?>js/complete.js"></script> 
-<script type="text/javascript" src="<?php echo base_url();?>js/jquery.tablesorter.js"></script>
-<script type="text/javascript" src="<?php echo base_url();?>js/sortir.js"></script>
-<script type="text/javascript" src="<?php echo base_url();?>js/jquery.maskedinput-1.3.min.js"></script>
-<script type="text/javascript" src="<?php echo base_url();?>js/validate.js"></script> 
-<script type='text/javascript' src='<?php echo base_url();?>js/jquery.validate.js'></script>  
-
-<script type="text/javascript">
-var uri = "<?php echo site_url('ajax')."/"; ?>";
-var baseuri = "<?php echo base_url(); ?>";
-
-function cek_session()
-{
-	$(document).ready(function(){
-		$.ajax({
-			type: 'POST',
-			url: uri +'cek_session',
-			data: $(this).serialize(),
-			success: function(data){ if (data == 'FALSE'){ window.close(); } }
-		})
-		return false;	
-	}); 
-}
-
-function get_loan()
-{	
-   $(document).ready(function(){
-	    var nip = $("#tsearch").val();
-		$.ajax({
-			type: 'POST',
-			url: uri +'get_loan',
-			data: "nip="+ nip,
-			success: function(data)
-			{ document.getElementById("tloan").value = data; }
-		})
-		return false;
-   }); 
-}
-
-</script>
-
-<style>
-        .refresh{ border:1px solid #AAAAAA; color:#000; padding:2px 5px 2px 5px; margin:0px 2px 0px 2px; background-color:#FFF;}
-		.refresh:hover{ background-color:#CCCCCC; color: #FF0000;}
-		.refresh:visited{ background-color:#FFF; color: #000000;}	
-</style>
-
-<?php 
-		
+<?php
+    
 $atts1 = array(
-	  'class'      => 'refresh',
-	  'title'      => 'add cust',
-	  'width'      => '600',
-	  'height'     => '400',
+	  'class'      => 'btn btn-primary button_inline',
+	  'title'      => 'Attendance Report - List',
+	  'width'      => '800',
+	  'height'     => '600',
 	  'scrollbars' => 'yes',
 	  'status'     => 'yes',
 	  'resizable'  => 'yes',
-	  'screenx'    =>  '\'+((parseInt(screen.width) - 600)/2)+\'',
-	  'screeny'    =>  '\'+((parseInt(screen.height) - 400)/2)+\'',
+	  'screenx'    =>  '\'+((parseInt(screen.width) - 800)/2)+\'',
+	  'screeny'    =>  '\'+((parseInt(screen.height) - 600)/2)+\''
 );
 
-?>
-<body onLoad="cek_session();" onUnload="window.opener.location.reload(true);">
-
-<div id="webadmin">
-	<div class="title"> <?php $flashmessage = $this->session->flashdata('message'); ?> </div>
-	<p class="message"> <?php echo ! empty($message) ? $message : '' . ! empty($flashmessage) ? $flashmessage : ''; ?> </p>
-	
-	<div id="errorbox" class="errorbox"> <?php echo validation_errors(); ?> </div>
-	
-	<fieldset class="field"> <legend> Add - Loans </legend>
-    <table>
+?>    
+    
+<form id="upload_form_non" data-parsley-validate class="form-horizontal form-label-left" method="POST" action="<?php echo $form_action; ?>" 
+      enctype="multipart/form-data">
      
-	<form name="modul_form" id="ajaxform" class="myform" method="post" action="<?php echo $form_action; ?>">
-			       
-        <tr>
-            <td> <label for="tdate"> Date </label> </td>  <td>:</td>
-            <td> <input type="Text" name="tdate" id="d1" title="Born date" size="10" class="form_field" /> 
-                 <img src="<?php echo base_url();?>/jdtp-images/cal.gif" onClick="javascript:NewCssCal('d1','yyyymmdd')" style="cursor:pointer"/>
-            </td>
-        </tr>	
-        
-        <tr> 
-         <td> <label for="tvalue"> Currency </label> </td> <td>:</td> 
-         <td> <?php $js = 'id="ccur"'; echo form_dropdown('ccur', $currency, isset($default['currency']) ? $default['currency'] : '', $js); ?> </td>
-        </tr> 
-        
-        <tr> <td> <label for="cacc"> Account </label> </td> <td>:</td> <td>  
-			       <select name="cacc" class="required">
-	                 <option value="bank" /> Bank </option>
-	                 <option value="cash" /> Cash </option>
-			       </select> <br />  
-              </td>
-         </tr>
-        
-        <tr>
-        <td> <label for="tname"> Employee </label> </td> <td>:</td>
-        <td> <input type="text" readonly name="tnip" id="tsearch" size="10" title="Name" />
-              <?php echo anchor_popup(site_url("employees/get_list/"), '[ ... ]', $atts1); ?>
-        </td>
-        </tr>
-        
-      <tr>
-      <td> <label for="ctype"> Type </label> </td> <td>:</td>
-      <td> <select class="required" name="ctype">
+    <div class="form-group">
+      <label for="middle-name" class="control-label col-md-3 col-sm-3 col-xs-12"> Employee </label>
+      <div class="col-md-5 col-sm-5 col-xs-12">
+         <table>
+         <tr> <td> <input id="titem1" class="form-control" type="text" readonly name="tnip" required style="width:120px;"> </td>
+         <td> <?php echo anchor_popup(site_url("employee/get_list/titem1"), '[ ... ]', $atts1); ?> </td>
+         </tr> 
+         </table>
+      </div>
+    </div>
+    
+    <div class="form-group">
+      <label for="middle-name" class="control-label col-md-3 col-sm-3 col-xs-12"> Date </label>
+      <div class="col-md-3 col-sm-4 col-xs-12">
+           <input type="text" title="Date" class="form-control" id="ds1" name="tdate" required
+           value="<?php echo isset($default['dates']) ? $default['dates'] : '' ?>" /> 
+      </div>
+    </div>
+    
+    <div class="form-group">
+      <label for="middle-name" class="control-label col-md-3 col-sm-3 col-xs-12"> Currency </label>
+      <div class="col-md-3 col-sm-12 col-xs-12">
+        <?php $js = 'id="ccur" class="form-control"';
+        echo form_dropdown('ccur', $currency, isset($default['currency']) ? $default['currency'] : '', $js); ?>
+      </div>
+    </div>
+    
+     <div class="form-group">
+      <label for="middle-name" class="control-label col-md-3 col-sm-3 col-xs-12"> Account </label>
+      <div class="col-md-3 col-sm-12 col-xs-12">
+        <select name="cacc" class="form-control">
+	       <option value="bank"> Bank </option>
+	       <option value="cash"> Cash </option> 
+        </select>
+      </div>
+    </div>
+    
+     <div class="form-group">
+      <label for="middle-name" class="control-label col-md-3 col-sm-3 col-xs-12"> Type </label>
+      <div class="col-md-3 col-sm-12 col-xs-12">
+        <select class="form-control" name="ctype">
              <option value="borrow"> Borrow </option>
              <option value="paid"> Paid </option>
-           </select>
-      </td>
-      </tr>  
-      
-      <tr>
-        <td> <label for="tnotes"> Notes </label> </td> <td>:</td>
-        <td> <input type="text" name="tnotes" size="30" title="Notes" />
-        </td>
-      </tr>
-       
-      <tr>
-      <td> <label for="tloan"> Loan </label> </td>  <td>:</td>
-      <td> <input type="text" readonly name="tloan" id="tloan" size="10" title="Loan" /> 
-           <input type="button" value="GET" onClick="get_loan();">
-      </td>
-      </tr> 
-                     				
-      <tr>
-      <td> <label for="tamount"> Amount </label> </td>  <td>:</td>
-      <td> <input type="text" class="required" name="tamount" id="tamount" size="10" title="Amount" 
-           onKeyUp="checkdigit(this.value,'tamount')" 
-           value="<?php echo set_value('tamount', isset($default['amount']) ? $default['amount'] : ''); ?>" /> 
-      </td>
-      </tr>
-        
+        </select>
+      </div>
+    </div>
+    
+     <div class="form-group">
+      <label for="middle-name" class="control-label col-md-3 col-sm-3 col-xs-12"> Notes </label>
+      <div class="col-md-6 col-sm-12 col-xs-12">
+          <textarea class="form-control" cols="30" rows="2" name="tnotes"></textarea>
+      </div>
+     </div>
+    
+     <div class="form-group">
+      <label for="middle-name" class="control-label col-md-3 col-sm-3 col-xs-12"> Loan </label>
+      <div class="col-md-5 col-sm-12 col-xs-12">
+        <table>
+            <tr> <td> <input type="text" readonly class="form-control" name="tloan" id="tloan" size="10" title="Loan" /> </td> 
+            <td> <button type="button" id="bgetloan" class="btn btn-primary button_inline"> GET </button> </td>
+            </tr>
         </table>
-        <p style="margin:15px 0 0 0; float:right;">
-            <input type="submit" name="submit" class="button" title="Klik tombol untuk proses data" value=" Save " /> 
-            <input type="reset" name="reset" class="button" title="Klik tombol untuk proses data" value=" Cancel " />
-        </p>	
-        </form>			  
-	</fieldset>
-</div>
+      </div>
+     </div>
+    
+     <div class="form-group">
+      <label for="middle-name" class="control-label col-md-3 col-sm-3 col-xs-12"> Amount </label>
+      <div class="col-md-3 col-sm-12 col-xs-12">
+        <input type="number" class="form-control" name="tamount" id="tamount" size="10" title="Amount" /> 
+      </div>
+     </div>
 
-</body>
+      <div class="ln_solid"></div>
+      <div class="form-group">
+          <div class="col-md-6 col-sm-6 col-xs-12 col-md-offset-3 btn-group">
+          <button type="submit" class="btn btn-primary" id="button">Save</button>
+          <button type="button" id="bclose" class="btn btn-danger" data-dismiss="modal">Close</button>
+          <button type="reset" id="breset_add" class="btn btn-warning">Reset</button>
+          </div>
+      </div>
+  </form> 
+
+</div>
+</div>
+<!-- form add -->
+
+</div>
+    <div class="modal-footer"> </div>
+</div>
+  
+</div>

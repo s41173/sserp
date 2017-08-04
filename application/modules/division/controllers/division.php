@@ -203,7 +203,7 @@ class Division extends MX_Controller
     
     public function validating_name($name,$role)
     {
-        $this->model->where_not_in('id', $this->session->userdata('curid'));
+        $this->model->where_not_in('id', $this->session->userdata('langid'));
         $val = $this->model->where('name', $name)->where('role', $role)->count();
 
         if ($val > 0)

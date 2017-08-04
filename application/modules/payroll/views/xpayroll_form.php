@@ -66,20 +66,18 @@ $atts1 = array(
 	
 	<div id="errorbox" class="errorbox"> <?php echo validation_errors(); ?> </div>
 	
-	<fieldset class="field"> <legend> Add - Employee Attendance </legend>
+	<fieldset class="field"> <legend> Add - Payroll Journal </legend>
     <table>
      
 	<form name="modul_form" id="ajaxform" class="myform" method="post" action="<?php echo $form_action; ?>">	
         
-         <tr>
-         <td> <label for="tname"> Employee </label> </td> <td>:</td>
-         <td> <input type="text" readonly name="tnip" id="tsearch" size="10" title="Name" />
-              <?php echo anchor_popup(site_url("employees/get_list/non/"), '[ ... ]', $atts1); ?>
-         </td>
-         </tr>
+         <tr> 
+         <td> <label for="tvalue"> Currency </label> </td> <td>:</td> 
+         <td> <?php $js = 'id="ccur"'; echo form_dropdown('ccur', $currency, isset($default['currency']) ? $default['currency'] : '', $js); ?> </td>
+         </tr> 
          
          <tr>
-         <td> <label for="cmonth"> Period </label> </td> <td>:</td>
+         <td> <label for="cmonth"> Month - Period </label> </td> <td>:</td>
          <td> <select name="cmonth" class="required">
          		<option value="1"> January </option>
                 <option value="2"> February </option>
@@ -97,30 +95,38 @@ $atts1 = array(
               <input type="text" class="required" name="tyear" id="tyear" size="4">
          </td>
          </tr>
+         
+         <tr>	
+             <td> <label for="tstart"> Period </label> </td> <td>:</td>
+             <td>  
+               <input type="Text" name="tstart" id="d3" title="Start date" size="10" class="required" /> 
+               <img src="<?php echo base_url();?>/jdtp-images/cal.gif" onclick="javascript:NewCssCal('d3','yyyymmdd')" style="cursor:pointer"/> &nbsp; - &nbsp;
+               
+               <input type="Text" name="tend" id="d2" title="End date" size="10" class="required" /> 
+               <img src="<?php echo base_url();?>/jdtp-images/cal.gif" onclick="javascript:NewCssCal('d2','yyyymmdd')" style="cursor:pointer"/> &nbsp; <br />
+            </td> 					
+        </tr>
+         
+         <tr>                 
+         <td> <label for="tdesc"> Date </label> </td> <td>:</td> 
+         <td> <input type="Text" name="tdate" id="d1" title="Start date" size="10" class="form_field" /> 
+              <img src="<?php echo base_url();?>/jdtp-images/cal.gif" onClick="javascript:NewCssCal('d1','yyyymmdd')" style="cursor:pointer"/> 
+         </td> 
+		 </tr> 
+         
+         <tr> <td> <label for="cacc"> Account </label> </td> <td>:</td> <td>  
+			       <select name="cacc" class="required">
+	                 <option value="bank" /> Bank </option>
+	                 <option value="cash" /> Cash </option>
+			       </select> <br />  
+              </td>
+         </tr>
         
-          <tr>
-          <td> <label for="tpresence"> Presence </label> </td>  <td>:</td>
-          <td> <input type="text" class="required" name="tpresence" id="tpresence" size="5" title="Presence" 
-			   onKeyUp="checkdigit(this.value,'tpresence')" 
-               value="<?php echo set_value('tpresence', isset($default['presence']) ? $default['presence'] : ''); ?>" /> 
-          </td>
-          </tr>
-          
-          <tr>
-          <td> <label for="tlate"> Late </label> </td>  <td>:</td>
-          <td> <input type="text" class="required" name="tlate" id="tlate" size="5" title="Late" 
-               onKeyUp="checkdigit(this.value,'tlate')" value="<?php echo set_value('tlate', isset($default['late']) ? $default['late'] : ''); ?>" /> 
-          </td>
-          </tr>
-          
-          <tr>
-          <td> <label for="tovertime"> Overtime </label> </td>  <td>:</td>
-          <td> <input type="text" class="required" name="tovertime" id="tovertime" size="5" title="Overtime" 
-               onKeyUp="checkdigit(this.value,'tovertime')" 
-               value="<?php echo set_value('tovertime', isset($default['overtime']) ? $default['overtime'] : ''); ?>" /> 
-          </td>
-          </tr>
-        
+         <tr>
+            <td> <label for="tnote"> Note </label> </td>  <td>:</td>
+            <td>  <input type="text" class="required" name="tnote" size="35" title="Note" /> &nbsp; <br /> </td>
+         </tr>
+         
         </table>
         <p style="margin:15px 0 0 0; float:right;">
             <input type="submit" name="submit" class="button" title="Klik tombol untuk proses data" value=" Save " /> 

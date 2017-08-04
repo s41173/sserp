@@ -1,97 +1,60 @@
-<style type="text/css">@import url("<?php echo base_url() . 'css/style.css'; ?>");</style>
-<style type="text/css">@import url("<?php echo base_url() . 'development-bundle/themes/base/ui.all.css'; ?>");</style>
-<style type="text/css">@import url("<?php echo base_url() . 'css/jquery.fancybox-1.3.4.css'; ?>");</style>
-
-<script type="text/javascript" src="<?php echo base_url();?>js/register.js"></script>
-<script type="text/javascript" src="<?php echo base_url();?>js/jquery-1.3.2.js"></script>
-<script type="text/javascript" src="<?php echo base_url();?>js/datetimepicker_css.js"></script>
-<script type="text/javascript" src="<?php echo base_url();?>/development-bundle/ui/ui.core.js"></script>
-<script type="text/javascript" src="<?php echo base_url();?>js/jquery.tools.min.js"></script>
-<script type="text/javascript" src="<?php echo base_url();?>js/hoverIntent.js"></script>
-<script type="text/javascript" src="<?php echo base_url();?>js/jquery.fancybox-1.3.4.pack.js"></script>
-<script type="text/javascript" src="<?php echo base_url();?>js/complete.js"></script> 
-<script type="text/javascript" src="<?php echo base_url();?>js/jquery.tablesorter.js"></script>
-<script type="text/javascript" src="<?php echo base_url();?>js/sortir.js"></script>
-<script type="text/javascript" src="<?php echo base_url();?>js/jquery.maskedinput-1.3.min.js"></script>
-<script type="text/javascript" src="<?php echo base_url();?>js/validate.js"></script> 
-<script type='text/javascript' src='<?php echo base_url();?>js/jquery.validate.js'></script>  
-
-<script type="text/javascript">
-var uri = "<?php echo site_url('ajax')."/"; ?>";
-var baseuri = "<?php echo base_url(); ?>";
-</script>
-
-<style>
-        .refresh{ border:1px solid #AAAAAA; color:#000; padding:2px 5px 2px 5px; margin:0px 2px 0px 2px; background-color:#FFF;}
-		.refresh:hover{ background-color:#CCCCCC; color: #FF0000;}
-		.refresh:visited{ background-color:#FFF; color: #000000;}	
-</style>
-
-<?php 
-		
-$atts1 = array(
-	  'class'      => 'refresh',
-	  'title'      => 'add cust',
-	  'width'      => '600',
-	  'height'     => '400',
-	  'scrollbars' => 'no',
-	  'status'     => 'yes',
-	  'resizable'  => 'yes',
-	  'screenx'    =>  '\'+((parseInt(screen.width) - 600)/2)+\'',
-	  'screeny'    =>  '\'+((parseInt(screen.height) - 400)/2)+\'',
-);
-
-?>
-
-<?php $flashmessage = $this->session->flashdata('message'); ?>
-
-<div id="webadmin">
-	<p class="message"> <?php echo ! empty($message) ? $message : '' . ! empty($flashmessage) ? $flashmessage : ''; ?> </p>
-	
-	<div id="errorbox" class="errorbox"> <?php echo validation_errors(); ?> </div>
-	
-	<fieldset class="field"> <legend> Loans Employee - Report </legend>
-	<form name="modul_form" class="myform" id="form" method="post" action="<?php echo $form_action; ?>" target="_blank" >
-				<table>
-					
-			<tr>	
-            <td> <label for="tstart"> Period </label> </td> <td>:</td>
-            <td>  
-            <input type="Text" name="tstart" id="d1" title="Start date" size="10" class="required" /> 
-            <img src="<?php echo base_url();?>/jdtp-images/cal.gif" onclick="javascript:NewCssCal('d1','yyyymmdd')" style="cursor:pointer"/> 
-            &nbsp; - &nbsp;
-						   
-		    <input type="Text" name="tend" id="d2" title="End date" size="10" class="required" /> 
-			<img src="<?php echo base_url();?>/jdtp-images/cal.gif" onclick="javascript:NewCssCal('d2','yyyymmdd')" style="cursor:pointer"/> 
-            &nbsp; <br />
-			</td> 						
-			</tr>	
-            
-            <tr>
-            <td> <label for="ctype"> Employee Type </label> </td> <td>:</td>
-            <td> <select name="ctype"> 
-                 <option selected="selected" value="">-- All --</option> 
-                 <option value="academic"> Academic </option>
-                 <option value="non"> Non Academic </option>
-                 </select> 
-            </td>
-            </tr>
-            
-            <tr>
-            <td> <label for="ctranstype"> Transaction Type </label> </td> <td>:</td>
-            <td>     <select name="ctranstype">
-                 	<option value=""> -- All -- </option>
-                    <option value="borrow"> Borrow </option>
-                    <option value="paid"> Paid </option>
-                 </select>
-            </td>
-            </tr>
-             							   
-	           </table>
-				<p style="margin:15px 0 0 0; float:left;">
-					<input type="submit" name="submit" class="button" title="SUBMIT" value=" SUBMIT " /> 
-				</p>	
-			</form>			  
-	</fieldset>
+<div class="modal-dialog">
+        
+<!-- Modal content-->
+<div class="modal-content">
+<div class="modal-header">
+  <button type="button" class="close" data-dismiss="modal">&times;</button>
+  <h4 class="modal-title"> Purchase - Report </h4>
 </div>
+<div class="modal-body">
+ 
+ <!-- form add -->
+<div class="x_panel" >
+<div class="x_title">
+  
+  <div class="clearfix"></div>
+</div>
+<div class="x_content">
 
+<form id="" data-parsley-validate class="form-horizontal form-label-left" method="POST" 
+action="<?php echo $form_action_report; ?>" enctype="multipart/form-data">
+    
+     <div class="form-group">
+        <label class="control-label col-md-3 col-sm-3 col-xs-12"> Period </label>
+        <div class="col-md-9 col-sm-9 col-xs-12">     
+<input type="text" readonly style="width: 200px" name="reservation" id="d1" class="form-control active" value=""> 
+        </div>
+    </div>    
+    
+    <div class="form-group">
+        <label class="control-label col-md-3 col-sm-3 col-xs-12"> Transaction Type </label>
+        <div class="col-md-4 col-sm-9 col-xs-12">     
+    <select name="ctranstype" class="form-control">
+        <option value=""> -- All -- </option>
+        <option value="borrow"> Borrow </option>
+        <option value="paid"> Paid </option>
+     </select>
+        </div>
+    </div>
+
+      <div class="ln_solid"></div>
+      <div class="form-group">
+          <div class="col-md-6 col-sm-6 col-xs-12 col-md-offset-3">
+          <div class="btn-group"> 
+           <button type="submit" class="btn btn-primary">Post</button>
+           <button type="button" class="btn btn-danger" data-dismiss="modal">Close</button>
+          </div>
+          </div>
+      </div>
+    
+  </form> 
+  <div id="err"></div>
+</div>
+</div>
+<!-- form add -->
+
+</div>
+    <div class="modal-footer"> </div>
+</div>
+  
+</div>

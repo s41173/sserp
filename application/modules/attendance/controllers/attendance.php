@@ -37,12 +37,32 @@ class Attendance extends MX_Controller
             if ($nip != 'null'){$nip = $this->employee->get_id_by_nip($nip); }
             $result = $this->am->search($nip, $month, $year)->result();
         }
-        
+        $output = null;
         if ($result){
 	foreach($result as $res)
 	{
 	   $output[] = array ($res->id, get_month($res->month).'-'.$res->year, $this->get_sum($res->month, $res->year),
                               $res->month, $res->year);
+	}
+            $this->output
+            ->set_status_header(200)
+            ->set_content_type('application/json', 'utf-8')
+            ->set_output(json_encode($output))
+            ->_display();
+            exit; 
+        }
+    }
+    
+    public function getdatatabledetails($month='null',$year='null',$search=null)
+    {
+        if(!$search){ $result = $this->model->where('month', $month)->where('year', $year)->get(); }
+        
+        $output = null;
+        if ($result){
+	foreach($result as $res)
+	{
+	   $output[] = array ($res->id, get_month($res->month).'-'.$res->year, $res->month, $res->year, $res->presence, $res->late, $res->overtime,
+                              $this->employee->get_name($res->employee_id));
 	}
             $this->output
             ->set_status_header(200)
@@ -83,75 +103,6 @@ class Attendance extends MX_Controller
 	$this->load->view('template', $data);
     }
     
-    function xget_last()
-    {
-        $this->acl->otentikasi1($this->title);
-
-        $data['title'] = $this->properti['name'].' | Administrator  '.ucwords($this->modul['title']);
-        $data['h2title'] = $this->modul['title'];
-        $data['main_view'] = 'attendance_view';
-	$data['form_action'] = site_url($this->title.'/search');
-        $data['link'] = array('link_back' => anchor('payroll_reference/','<span>back</span>', array('class' => 'back')));
-        
-        $data['dept'] = $this->dept->combo_all();
-        
-	$uri_segment = 3;
-        $offset = $this->uri->segment($uri_segment);
-        
-        $p = new Period();
-        $p->get();
-        
-	// ---------------------------------------- //
-        $result = $this->model->where('year', $p->year)->group_by('month')->get($this->modul['limit'], $offset);
-        $num_rows = $this->model->count();
-
-        if ($num_rows > 0)
-        {
-	    $config['base_url'] = site_url($this->title.'/get_last');
-            $config['total_rows'] = $num_rows;
-            $config['per_page'] = $this->modul['limit'];
-            $config['uri_segment'] = $uri_segment;
-            $this->pagination->initialize($config);
-            $data['pagination'] = $this->pagination->create_links(); //array menampilkan link untuk pagination.
-            // akhir dari config untuk pagination
-//            
-//
-            // library HTML table untuk membuat template table class zebra
-            $tmpl = array('table_open' => '<table cellpadding="2" cellspacing="1" class="tablemaster">');
-
-            $this->table->set_template($tmpl);
-            $this->table->set_empty("&nbsp;");
-
-            //Set heading untuk table
-            $this->table->set_heading('No', 'Period', 'Total Employee', '#');
-//
-            $i = 0 + $offset;
-            foreach ($result as $res)
-            {
-                $this->table->add_row
-                (
-                    ++$i, get_month($res->month).'-'.$res->year, $this->get_sum($res->month, $res->year),
-                    anchor($this->title.'/details/'.$res->month.'/'.$res->year,'<span>details</span>',array('class' => 'details1', 'title' => '')).' '.    
-                    anchor($this->title.'/delete_attendance/'.$res->month.'/'.$res->year,'<span>delete</span>',array('class'=> 'delete', 'title' => 'delete' ,'onclick'=>"return confirm('Are you sure you will delete this data?')"))
-                );
-            }
-//
-            $data['table'] = $this->table->generate();
-        }
-        else
-        {
-            $data['message'] = "No $this->title data was found!";
-        }
-//
-        // Load absen view dengan melewatkan var $data sbgai parameter
-	$this->load->view('template', $data);
-    }
-    
-    private function get_sum($month,$year)
-    {
-       return $this->model->where('year', $year)->where('month', $month)->count();
-    }
-    
     function details($param)
     {
         $this->acl->otentikasi1($this->title);
@@ -161,72 +112,34 @@ class Attendance extends MX_Controller
         $year = $val[1];
         
         $data['title'] = $this->properti['name'].' | Administrator  '.ucwords($this->modul['title']);
-        $data['h2title'] = $this->modul['title'];
-        $data['main_view'] = 'attendance_view';
-	$data['form_action'] = site_url($this->title.'/search');
-        $data['link'] = array('link_back' => anchor($this->title,'<span>back</span>', array('class' => 'back')));
+        $data['h2title'] = $this->modul['title'].' Details';
+        $data['main_view'] = 'attendance_details_view';
+	$data['form_action'] = site_url($this->title.'/add_process');
+        $data['form_action_report'] = site_url($this->title.'/report_process');
+        $data['form_action_import'] = site_url($this->title.'/import_process');
+        $data['form_action_update'] = site_url($this->title.'/update_process');
+        $data['form_action_del'] = site_url($this->title.'/delete_all');
+        $data['link'] = array('link_back' => anchor($this->title,'Back', array('class' => 'btn btn-danger')));
         
-        $result = $this->model->where('month', $month)->where('year', $year)->get();
+//        $result = $this->model->where('month', $month)->where('year', $year)->get();
         
          // library HTML table untuk membuat template table class zebra
-        $tmpl = array('table_open' => '<table cellpadding="2" cellspacing="1" class="tablemaster">');
+        $tmpl = array('table_open' => '<table id="datatable-buttons" class="table table-striped table-bordered">');
 
         $this->table->set_template($tmpl);
         $this->table->set_empty("&nbsp;");
 
         //Set heading untuk table
         $this->table->set_heading('No', 'Period', 'Name', 'Presence', 'Late', 'Overtime', '#');
-//
-        $i = 0;
-        foreach ($result as $res)
-        {
-            $this->table->add_row
-            (
-                ++$i, get_month($res->month).'-'.$res->year, $this->employee->get_name($res->employee_id).' - '.$this->employee->get_nip($res->employee_id), $res->presence, $res->late, $res->overtime,
-                anchor($this->title.'/update/'.$res->id,'<span>details</span>',array('class' => 'update', 'title' => '')).' '.    
-                anchor($this->title.'/delete/'.$res->id,'<span>delete</span>',array('class'=> 'delete', 'title' => 'delete' ,'onclick'=>"return confirm('Are you sure you will delete this data?')"))
-            );
-        }
-//
         $data['table'] = $this->table->generate();
+        $data['source'] = site_url($this->title.'/getdatatabledetails/'.$month.'/'.$year);
         $this->load->view('template', $data);
     }
+   
     
-    function search()
+    private function get_sum($month,$year)
     {
-        $this->acl->otentikasi1($this->title);
-
-        $data['title'] = $this->properti['name'].' | Administrator  '.ucwords($this->modul['title']);
-        $data['h2title'] = $this->modul['title'];
-        $data['main_view'] = 'attendance_view';
-	$data['form_action'] = site_url($this->title.'/search');
-        $data['link'] = array('link_back' => anchor($this->title,'<span>back</span>', array('class' => 'back')));
-        $data['dept'] = $this->dept->combo_all();
-	// ---------------------------------------- //
-        $result = $this->am->search($this->employee->get_id_by_nip($this->input->post('tnip')), $this->input->post('cmonth'), $this->input->post('tyear'))->result();
-  
-        // library HTML table untuk membuat template table class zebra
-        $tmpl = array('table_open' => '<table cellpadding="2" cellspacing="1" class="tablemaster">');
-
-        $this->table->set_template($tmpl);
-        $this->table->set_empty("&nbsp;");
-
-        //Set heading untuk table
-        $this->table->set_heading('No', 'Period', 'Name', 'Presence', 'Late', 'Overtime', '#');
-//
-        $i = 0;
-        foreach ($result as $res)
-        {
-            $this->table->add_row
-            (
-                ++$i, get_month($res->month).'-'.$res->year, $this->employee->get_name($res->employee_id).' - '.$this->employee->get_nip($res->employee_id), $res->presence, $res->late, $res->overtime,
-                anchor($this->title.'/update/'.$res->id,'<span>details</span>',array('class' => 'update', 'title' => '')).' '.    
-                anchor($this->title.'/delete/'.$res->id,'<span>delete</span>',array('class'=> 'delete', 'title' => 'delete' ,'onclick'=>"return confirm('Are you sure you will delete this data?')"))
-            );
-        }
-//
-        $data['table'] = $this->table->generate();
-	$this->load->view('template', $data);
+       return $this->model->where('year', $year)->where('month', $month)->count();
     }
     
     function import_process()
@@ -367,15 +280,7 @@ class Attendance extends MX_Controller
     
     function update($uid)
     {
-//        $this->acl->otentikasi2($this->title);
-
-        $data['title'] = $this->properti['name'].' | Administrator  '.ucwords($this->modul['title']);
-        $data['h2title'] = $this->modul['title'];
-        $data['main_view'] = 'attendance_update';
-	$data['form_action'] = site_url($this->title.'/update_process');
-	$data['link'] = array('link_back' => anchor($this->title,'<span>back</span>', array('class' => 'back')));
-        
-        $this->model->where('id', $uid)->get();
+        $res = $this->am->get_by_id($uid)->row();
         
         $data['default']['employee']    = $this->employee->get_name($this->model->employee_id);
         $data['default']['month']       = $this->model->month;
@@ -384,19 +289,14 @@ class Attendance extends MX_Controller
         $data['default']['late']        = $this->model->late;
         $data['default']['overtime']    = $this->model->overtime;
         
-	$this->session->set_userdata('curid', $this->model->id);
-        $this->load->view('attendance_update', $data);
+	$this->session->set_userdata('langid', $uid);
+        echo $res->id.'|'. $this->employee->get_name($res->employee_id).' - '. $this->employee->get_nip($res->employee_id),'|'.$res->month.'|'.$res->year.'|'.$res->presence.'|'.$res->late.'|'.$res->overtime;
     }
     
     // Fungsi update untuk mengupdate db
     function update_process()
     {
-        $this->acl->otentikasi3($this->title);
-
-        $data['title'] = $this->properti['name'].' | Administrator  '.ucwords($this->modul['title']);
-        $data['h2title'] = $this->modul['title'];
-        $data['main_view'] = 'student_form';
-	$data['form_action'] = site_url($this->title.'/update_process');
+        if ($this->acl->otentikasi2($this->title,'ajax') == TRUE){
 
 	// Form validation
         $this->form_validation->set_rules('tmonth', 'Periode', 'required|numeric|callback_valid_period['.$this->input->post('tyear').']');
@@ -406,7 +306,7 @@ class Attendance extends MX_Controller
         
         if ($this->form_validation->run($this) == TRUE)
         {
-            $this->model->where('id', $this->session->userdata('curid'))->get();
+            $this->model->where('id', $this->session->userdata('langid'))->get();
             
             $this->model->presence     = $this->input->post('tpresence');
             $this->model->late         = $this->input->post('tlate');
@@ -415,18 +315,11 @@ class Attendance extends MX_Controller
             
             $this->model->save();
             $this->session->set_flashdata('message', "One $this->title has successfully updated!");
-//            redirect($this->title.'/update/'.$this->session->userdata('curid'));
             
-            echo 'true'; 
+            echo 'true|Data successfully saved..!';
         }
-        else
-        {
-//            $this->load->view('attendance_update', $data);
-           echo validation_errors();
-//            redirect($this->title.'/update/'.$this->session->userdata('curid'));
-        }
-        
-        $this->session->unset_userdata('curid');
+        else{ echo 'error|'.validation_errors(); }
+        }else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
     }
     
     public function valid_absence($nip)

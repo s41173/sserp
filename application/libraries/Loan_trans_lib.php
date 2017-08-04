@@ -22,13 +22,13 @@ class Loan_trans_lib
     {
         $this->ci->db->from($this->table);
         $this->ci->db->where('employee_id', $employee);
-        $this->ci->db->order_by('date', 'asc');
+        $this->ci->db->order_by('dates', 'asc');
         return $this->ci->db->get()->result();
     }   
     
     function add($date,$employee,$cur,$amount,$type,$acc,$notes,$log)
     {
-        $trans = array('date' => $date, 'employee_id' => $employee, 'currency' => $cur,
+        $trans = array('dates' => $date, 'employee_id' => $employee, 'currency' => $cur,
                        'acc' => $acc, 'type' => $type, 'notes' => $notes, 
                        'amount' => $amount, 'log' => $log);
         
@@ -40,7 +40,7 @@ class Loan_trans_lib
     {
         $this->loan->change_loan($employee,$cur,$amount,'borrow');
         
-        $this->ci->db->where('date', $date);
+        $this->ci->db->where('dates', $date);
         $this->ci->db->where('employee_id', $employee);
         $this->ci->db->where('currency', $cur);
         $this->ci->db->where('amount', $amount);

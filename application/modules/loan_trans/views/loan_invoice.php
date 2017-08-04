@@ -23,8 +23,20 @@
 	
 </style>
 </head>
+    
+<script type="text/javascript">
+    
+    function closeWindow() {
+        setTimeout(function() {
+        window.close();
+        }, 300000);
+        
+        window.print();
+    }
+    
+</script>  
 
-<body onLoad="window.print();">
+<body onLoad="closeWindow();">
 
 <div style="width:750px; font-family:Arial, Helvetica, sans-serif; font-size:12px;"> 
 	

@@ -45,14 +45,14 @@ class Loan_model extends Custom_Model
         return $this->db->get(); 
     }
     
-    function total_chart($month,$year,$cur='IDR')
+    function total_chart($cur='IDR')
     {
         $this->db->select_sum('amount');
 
         $this->db->from($this->tableName);
         $this->cek_null($cur,"currency");
-        $this->cek_null($month,"MONTH(date)");
-        $this->cek_null($year,"YEAR(date)");
+//        $this->cek_null($month,"MONTH(date)");
+//        $this->cek_null($year,"YEAR(date)");
         $this->db->where('deleted', $this->deleted);
         $query = $this->db->get()->row_array();
         return $query['amount'];
