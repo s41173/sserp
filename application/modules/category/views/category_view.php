@@ -57,13 +57,14 @@
              </div>
 
                <!-- Trigger the modal with a button --> 
+ <div class="btn-group">
  <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#myModal"> <i class="fa fa-plus"></i>&nbsp;Add New </button>
                <!--<button type="button" class="btn btn-primary" data-toggle="modal" data-target="#myModal3"> Report  </button>-->
                
                <!-- links -->
 	           <?php if (!empty($link)){foreach($link as $links){echo $links . '';}} ?>
                <!-- links -->
-                             
+</div>     
             </div>
           </div>
       

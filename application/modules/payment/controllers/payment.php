@@ -30,7 +30,7 @@ class Payment extends MX_Controller
         if ($result){
 	foreach($result as $res)
 	{
-	   $output[] = array ($res->id, $res->name, base_url().'images/payment/'.$res->image, $res->orders, $res->acc_no, $res->acc_name, $res->created, $res->updated, $res->deleted);
+	   $output[] = array ($res->id, $res->name, base_url().'images/payment/'.$res->image, $res->orders, $res->acc_no, $res->acc_name, $res->defaults, $res->created, $res->updated, $res->deleted);
 	}
             $this->output
             ->set_status_header(200)
@@ -39,6 +39,21 @@ class Payment extends MX_Controller
             ->_display();
             exit; 
         }
+    }
+    
+    function defaults($uid = null)
+    {        
+       if ($this->acl->otentikasi2($this->title,'ajax') == TRUE){ 
+           
+        $val = $this->model->get_default()->row();
+        $lng = array('defaults' => 0);
+        $this->model->update($val->id,$lng);
+
+        $lng = array('defaults' => 1);
+        $this->model->update($uid,$lng);  
+        echo 'true|Defaults Changed..!';
+           
+       }else{ echo "error|Sorry, you do not have the right to change publish status..!"; }
     }
 
     function get_last()
@@ -184,6 +199,7 @@ class Payment extends MX_Controller
                                  'orders' => $this->input->post('torder'), 
                                  'acc_no' => $this->input->post('taccno'), 
                                  'acc_name' => $this->input->post('taccname'), 
+                                 'pos' => $this->input->post('cpos'), 
                                  'image' => null, 'created' => date('Y-m-d H:i:s'));
             }
             else
@@ -193,6 +209,7 @@ class Payment extends MX_Controller
                                  'orders' => $this->input->post('torder'), 
                                  'acc_no' => $this->input->post('taccno'), 
                                  'acc_name' => $this->input->post('taccname'), 
+                                 'pos' => $this->input->post('cpos'), 
                                  'image' => $info['file_name'], 'created' => date('Y-m-d H:i:s'));
             }
 
@@ -217,7 +234,7 @@ class Payment extends MX_Controller
 	$this->session->set_userdata('langid', $payment->id);
 //        $this->load->view('payment_update', $data);
         echo $uid.'|'.$payment->name.'|'.$payment->orders.'|'.$payment->acc_no.'|'.$payment->acc_name.'|'.
-             base_url().'images/payment/'.$payment->image;
+             base_url().'images/payment/'.$payment->image.'|'.$payment->pos.'|'.$payment->defaults;
     }
 
 
@@ -279,6 +296,7 @@ class Payment extends MX_Controller
                 $payment = array('name' => strtolower($this->input->post('tname')),
                                  'orders' => $this->input->post('torder'), 
                                  'acc_no' => $this->input->post('taccno'), 
+                                 'pos' => $this->input->post('cpos'), 
                                  'acc_name' => $this->input->post('taccname'));
                 
                 $img = null;
@@ -290,6 +308,7 @@ class Payment extends MX_Controller
                                  'orders' => $this->input->post('torder'), 
                                  'acc_no' => $this->input->post('taccno'), 
                                  'acc_name' => $this->input->post('taccname'), 
+                                 'pos' => $this->input->post('cpos'), 
                                  'image' => $info['file_name']);
                 
                 $img = base_url().'images/payment/'.$info['file_name'];

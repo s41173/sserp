@@ -64,7 +64,7 @@ $(document).ready(function (e) {
 		var url = sites_details +"/"+ del_id;
 		$(".error").fadeOut();
 		
-		$("#myModal5").modal('show');
+		$("#myModal9").modal('show');
 		$.post(url,
 			{id:$(this).attr('data-id')},
 			function(result)
@@ -135,31 +135,73 @@ $(document).ready(function (e) {
 		return false;	
 	});
 
-		// fungsi ajax get customer
-	// $(document).on('change','#ccategory',function(e)
-	// {	
-	// 	e.preventDefault();
-	// 	var value = $(this).val();
-	// 	var url = sites_ajax+'/'+value;
+	$('#bset').click(function() {
+		
+		var urx = sites+"/set_param";
 
-	// 	if (value){ 
-	// 	    // batas
-	// 		$.ajax({
-	// 			type: 'POST',
-	// 			url: url,
-	//     	    cache: false,
-	// 			headers: { "cache-control": "no-cache" },
-	// 			success: function(result) {
-	// 			var res = result.split('|');
-	// 			$("#tsku").val(res[0]);
-	// 			$("#tshipadd,#tshipaddkurir").val(res[1]);
-	// 			}
-	// 		})
-	// 		return false;
+		var cat = $("#ccategory").val();
+		var size = $("#csize").val();
+		var color = $("#ccolor").val();
+		var publish = $("#cpublish").val();
 
-	// 	}else { swal('Error Load Data...!', "", "error"); }
+		$.ajax({
+			type: 'POST',
+			url: urx,
+		    data: "category=" + cat + "&size=" + size + "&color=" + color + "&publish=" + publish,
+			success: function(data) {
 
-	// });
+				res = data.split("|");
+				if (res[0] == "true")
+				{
+					error_mess(1,res[1],0);
+				}
+				else if(res[0] == 'error') { error_mess(3,res[1],0); }
+				else{ 
+				  error_mess(2,res[1],0);
+			    }
+
+			},
+			error: function(e) 
+			{
+				$("#error").html(e).fadeIn();
+				console.log(e.responseText);	
+			} 
+		})
+		return false;
+		
+	});
+
+	$('#cekallupdate').click(function() {
+		
+		var value = $('input[name="cek[]"]:checked');
+
+		$.ajax({
+			type: 'POST',
+			url: sites_update,
+			data: value,
+			success: function(data) {
+
+				res = data.split("|");
+				if (res[0] == "true")
+				{
+					load_data();
+					error_mess(1,res[1],0);
+				}
+				else if(res[0] == 'error') { error_mess(3,res[1],0); }
+				else{ 
+				  load_data();
+				  error_mess(2,res[1],0);
+			    }
+			},
+			error: function(e) 
+			{
+				$("#error").html(e).fadeIn();
+				console.log(e.responseText);	
+			} 
+		})
+		return false;
+	});
+
 	
 	
 	$('#searchform').submit(function() {
@@ -242,7 +284,7 @@ $(document).ready(function (e) {
 						  for(var i = 0; i < s.length; i++) {
 						  if (s[i][8] == 1){ stts = 'btn btn-success'; }else { stts = 'btn btn-danger'; }
 						  oTable.fnAddData([
-'<input type="checkbox" name="cek[]" value="'+s[i][0]+'" id="cek'+i+'" style="margin:0px"  />',
+'<input type="checkbox" class="cek" name="cek[]" value="'+s[i][0]+'" id="cek'+i+'" style="margin:0px"  />',
 										i+1,
 										s[i][13],
 										s[i][1],
@@ -300,7 +342,7 @@ $(document).ready(function (e) {
 							for(var i = 0; i < s.length; i++) {
 						  if (s[i][8] == 1){ stts = 'btn btn-success'; }else { stts = 'btn btn-danger'; }
 						  oTable.fnAddData([
-'<input type="checkbox" name="cek[]" value="'+s[i][0]+'" id="cek'+i+'" style="margin:0px"  />',
+        '<input type="checkbox" class="cek" name="cek[]" value="'+s[i][0]+'" id="cek'+i+'" style="margin:0px"  />',
 										i+1,
 s[i][13],
 										s[i][1],

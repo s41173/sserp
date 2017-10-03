@@ -177,7 +177,7 @@ echo form_dropdown('cbranch', $branch, isset($default['branch']) ? $default['bra
       
        <div class="form-group">
         <label class="control-label labelx"> Product </label> <br>
-           <input id="titems" class="form-control col-md-3 col-xs-12" type="text" readonly name="tproduct" required>
+           <input id="titems" class="form-control col-md-3 col-xs-12" type="text" readonly name="tproduct" required style="width:150px;">
           <?php echo anchor_popup(site_url("product/get_list/titems"), '[ ... ]', $atts2); ?>
            <input type="hidden" name="tbranchid" value="<?php echo isset($default['branch']) ? $default['branch'] : '' ?>">
           &nbsp;
@@ -203,7 +203,7 @@ echo form_dropdown('cbranch', $branch, isset($default['branch']) ? $default['bra
        
       <div class="form-group">
         <label class="control-label labelx"> Account </label> <br>
-           <input id="titem" class="form-control col-md-3 col-xs-12" type="text" readonly name="titem" required>
+           <input id="titem" class="form-control col-md-2 col-xs-12" type="text" readonly name="titem" required style="width:100px;">
           <?php echo anchor_popup(site_url("account/get_list/"), '[ ... ]', $atts1); ?>
           &nbsp;
       </div>   
@@ -300,9 +300,18 @@ echo form_dropdown('cbranch', $branch, isset($default['branch']) ? $default['bra
                   
      </div>
        
-       <!-- links -->
-       <?php if (!empty($link)){foreach($link as $links){echo $links . '';}} ?>
-       <!-- links -->
+       <div class="btn-group">
+         <button type="button" class="btn btn-warning" data-toggle="modal" data-target="#myModal4"> CSV-Import  </button>
+         <!-- links -->
+         <?php if (!empty($link)){foreach($link as $links){echo $links . '';}} ?>
+         <!-- links -->
+       </div>
+                  
+      <!-- Modal - Import Form -->
+      <div class="modal fade" id="myModal4" role="dialog">
+        <?php $this->load->view('stock_adjustment_import'); ?>    
+      </div>
+      <!-- Modal - Import Form -->
                      
     </div>
   </div>

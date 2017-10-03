@@ -403,6 +403,7 @@ class Stock_adjustment extends MX_Controller
         $data['h2title'] = 'Create New '.$this->modul['title'];
 	$data['form_action'] = site_url($this->title.'/add_process');
         $data['form_action_item'] = site_url($this->title.'/add_item/');
+        $data['form_action_import'] = site_url($this->title.'/import/0/');
         
         $data['currency'] = $this->currency->combo();
         $data['code'] = $this->model->counter();
@@ -447,8 +448,10 @@ class Stock_adjustment extends MX_Controller
 
     }
     
-    function add_trans($id)
+    function add_trans($id=null)
     {
+        if (!$id){ redirect($this->title); } 
+        
         $this->acl->otentikasi2($this->title);
         $this->model->valid_add_trans($id, $this->title);
         
@@ -458,6 +461,7 @@ class Stock_adjustment extends MX_Controller
         $data['h2title'] = 'Create New '.$this->modul['title'];
 	$data['form_action'] = site_url($this->title.'/update_process/'.$id);
         $data['form_action_item'] = site_url($this->title.'/add_item/'.$id);
+        $data['form_action_import'] = site_url($this->title.'/import/'.$id);
         
         $data['currency'] = $this->currency->combo();
         $data['branch'] = $this->branch->combo();
@@ -479,7 +483,110 @@ class Stock_adjustment extends MX_Controller
         $this->load->view('template', $data);
     }
 
+// ========================= Import Process  =========================================================
+    
+    function import($pid=0)
+    {
+        if ($pid != 0 && $this->valid_confirmation($pid) == TRUE){
+        
+	$data['form_action_import'] = site_url($this->title.'/import');
+        $data['error'] = null;
+	
+//        $this->form_validation->set_rules('userfile', 'Import File', '');
+        
+             // ==================== upload ========================
+            
+            $config['upload_path']   = './uploads/';
+            $config['file_name']     = 'adjustment';
+            $config['allowed_types'] = '*';
+//            $config['allowed_types'] = 'csv';
+            $config['overwrite']     = TRUE;
+            $config['max_size']	     = '100000';
+            $config['remove_spaces'] = TRUE;
+            $this->load->library('upload', $config);
+            
+            if ( !$this->upload->do_upload("userfile"))
+            { 
+               $data['error'] = $this->upload->display_errors(); 
+               $this->session->set_flashdata('message', "Error imported!");
+               echo 'error|'.$this->upload->display_errors(); 
+            }
+            else
+            { 
+               // success page 
+              $result = $this->import_process($config['file_name'].'.csv',$pid);
+              
+              $info = $this->upload->data(); 
+              $this->session->set_flashdata('message', "One $this->title data successfully imported!");
+              
+              $res = explode('|', $result);
+              if ($res[0] == 'true'){ echo 'true|CSV Successful Uploaded'; }else{ echo 'error|'.$res[1]; }
+            }   
+        }else{ echo 'error|Failed to import..!!'; }
+        
+    }
+    
+    private function import_process($filename,$pid=0)
+    {
+        $stts = null;
+        $this->load->helper('file');
+//        $csvreader = new CSVReader();
+        $csvreader = $this->load->library('csvreader');
+        $filename = './uploads/'.$filename;
+        
+        $result = $csvreader->parse_file($filename);
+        
+        foreach($result as $res)
+        {
+           if(isset($res['SKU']) && isset($res['COA']) && isset($res['QTY']) && isset($res['PRICE']))
+           {
+              if ($this->product->valid_sku($res['SKU']) == TRUE  && $this->account->valid_coa($res['COA']) == TRUE)
+              {
+//                $trans = array(
+//                             'sku' => $res['SKU'],
+//                             'category' => $this->category->get_id_based_code(strtoupper($res['CATEGORY'])),
+//                             'manufacture' => $this->manufacture->get_id($res['MANUFACTURE']),
+//                             'name' => $res['NAME'],
+//                             'model' => $res['MODEL'],
+//                             'qty' => intval($res['QTY']),
+//                             'price' => $res['PRICE'],
+//                             'publish' => 0,
+//                             'created' => date('Y-m-d H:i:s'));
+                
+                            // start transaction 
+                    $this->db->trans_start();
+                    $id = $this->transmodel->counter();
 
+                    $stockadj = $this->model->get_by_id($pid)->row();
+                    $account = $this->account->get_id_code($res['COA']);
+                    $price = floatval($res['PRICE']);
+                    $product = $this->product->get_id_by_sku($res['SKU']);
+                    
+                    $this->stock->add_stock($product, $stockadj->dates, intval($res['QTY']), $price);
+
+
+                    $pitem = array('id' => $id, 'product_id' => $this->product->get_id_by_sku($res['SKU']), 'stock_adjustment' => $pid,
+                                   'qty' => intval($res['QTY']), 'type' => 'in', 'price' => $res['PRICE'], 'account' => $account);
+
+                    $this->transmodel->add($pitem);
+                    $this->db->trans_complete();
+
+                    if ($this->db->trans_status() == FALSE){  return 'error|Failure Transaction...!!'; } else { return 'true|Success'; }
+              }
+              else{ return 'error|invalid sku & coa'; }
+           }              
+        }
+    }
+    
+    function download()
+    {
+       $this->load->helper('download');
+        
+       $data = file_get_contents("uploads/sample/adjustment_sample.csv"); // Read the file's contents
+       $name = 'adjustment_sample.csv';    
+       force_download($name, $data);
+    }
+    
 //    ======================  Item Transaction   ===============================================================
 
     function add_item($pid=null)

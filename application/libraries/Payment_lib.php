@@ -44,6 +44,17 @@ class Payment_lib extends Main_model {
         foreach($val as $row){ $data['options'][$row->id] = ucfirst($row->name); }
         return $data;
     }
+    
+    function combo_pos()
+    {
+        $this->db->select('id,name');
+        $this->db->where('deleted', NULL);
+        $this->db->where('pos', 1);
+        $this->db->order_by('defaults', 'desc');
+        $val = $this->db->get($this->tableName)->result();
+        foreach($val as $row){ $data['options'][$row->id] = strtoupper($row->name); }
+        return $data;
+    }
 
 
 }

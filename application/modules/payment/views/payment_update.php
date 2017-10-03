@@ -1,7 +1,7 @@
 <div class="modal-dialog">
     <div class="modal-content">
         <div class="modal-header">
-          <h4 class="modal-title" id="myModalLabel"> Manufacture - Update </h4>
+          <h4 class="modal-title" id="myModalLabel"> Payment - Update </h4>
         </div>
         
  <div class="modal-body"> 
@@ -34,6 +34,7 @@
       <div class="col-md-5 col-sm-5 col-xs-12">
 <input id="taccname_update" class="form-control col-md-5 col-xs-12" type="text" name="taccname" placeholder="Account Name">
 <input id="taccno_update" class="form-control col-md-5 col-xs-12" type="text" name="taccno" placeholder="Account No">
+<input type="checkbox" name="cpos" id="cpos_update" value="1" class="" /> POS &nbsp;        
       </div>
     </div>
 

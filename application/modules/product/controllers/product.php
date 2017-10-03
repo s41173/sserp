@@ -33,6 +33,7 @@ class Product extends MX_Controller
     private $properti, $modul, $title, $product, $wt, $branch, $conversi, $period, $stockledger, $stock;
     private $role, $category, $manufacture, $attribute, $attribute_product, $attribute_list, $currency;
 
+    
     function index()
     {
        $this->session->unset_userdata('start'); 
@@ -44,6 +45,17 @@ class Product extends MX_Controller
        
 //       $last_day_april_2010 = date('m-t-Y', strtotime('April 21, 2010'));
 //       echo $last_day_april_2010;
+    }
+    
+    // ajax
+    function set_param(){
+        
+        $this->session->set_userdata('category', $this->input->post('category'));
+        $this->session->set_userdata('size', $this->input->post('size'));
+        $this->session->set_userdata('color', $this->input->post('color'));
+        $this->session->set_userdata('publish', $this->input->post('publish'));
+        
+        echo 'true|Parameter Set...!!';
     }
      
     public function getdatatable($search=null,$branch='null',$cat='null',$col='null',$size='null',$publish='null')
@@ -86,7 +98,7 @@ class Product extends MX_Controller
         $data['form_action_import'] = site_url($this->title.'/import');
         $data['link'] = array('link_back' => anchor('main/','Back', array('class' => 'btn btn-danger')));
 
-        $data['category'] = $this->category->combo_all();
+        $data['category'] = $this->category->combo_code();
         $data['manufacture'] = $this->manufacture->combo_all();
         $data['color'] = $this->attribute->combo_color();
         $data['size'] = $this->attribute->combo_size();
@@ -154,8 +166,11 @@ class Product extends MX_Controller
         $currency = $this->input->post('ccurrency');
         $brand = $this->input->post('cmanufacture');
         $category = $this->input->post('ccategory');
-
-        $products = $this->model->search_list($category,$brand,$currency)->result();        
+        
+        if ($category){
+          $products = $this->model->search_list($category,$brand,$currency)->result();              
+        }else{ $products = null; }
+        
         $qty = 0;
 
         $tmpl = array('table_open' => '<table id="example" width="100%" cellspacing="0" class="table table-striped table-bordered">');
@@ -167,18 +182,21 @@ class Product extends MX_Controller
             $this->table->set_heading('No', 'Code', 'Category', 'Manufacture', 'Name', 'Model', 'Size', 'Color', 'Qty', 'Action');
 
             $i = 0;
-            foreach ($products as $product)
-            {
-               $datax = array('name' => 'button', 'type' => 'button', 'class' => 'btn btn-primary', 'content' => 'Select', 'onclick' => 'setvalue(\''.$product->sku.'\',\''.$target.'\')');
-               $qty = $this->stockledger->get_qty($product->id, $branch, $this->period->month, $this->period->year);
-               
-                $this->table->add_row
-                (
-                    ++$i, strtoupper($product->sku), $this->category->get_name($product->category), 
-                                     $this->manufacture->get_name($product->manufacture), $product->name, $product->model, $product->size,
-                                     $product->color, $qty.' '.$product->unit,
-                    form_button($datax)
-                );
+            if ($products){
+
+                foreach ($products as $product)
+                {
+                   $datax = array('name' => 'button', 'type' => 'button', 'class' => 'btn btn-primary', 'content' => 'Select', 'onclick' => 'setvalue(\''.$product->sku.'\',\''.$target.'\')');
+                   $qty = $this->stockledger->get_qty($product->id, $branch, $this->period->month, $this->period->year);
+
+                    $this->table->add_row
+                    (
+                        ++$i, strtoupper($product->sku), $this->category->get_name($product->category), 
+                                         $this->manufacture->get_name($product->manufacture), $product->name, $product->model, $product->size,
+                                         $product->color, $qty.' '.$product->unit,
+                        form_button($datax)
+                    );
+                }            
             }
 
             $data['table'] = $this->table->generate();
@@ -193,6 +211,41 @@ class Product extends MX_Controller
        $this->model->update($uid,$lng);
        echo 'true|Status Changed...!';
        }else{ echo "error|Sorry, you do not have the right to change publish status..!"; }
+    }
+    
+    function update_all(){
+        
+       if ($this->acl->otentikasi2($this->title,'ajax') == TRUE){ 
+        $cek = $this->input->post('cek');
+        $jumlah = count($cek);
+        
+        if($cek)
+        {
+          $jumlah = count($cek);
+          for ($i=0; $i<$jumlah; $i++)
+          {      
+            $product = array('category' => $this->session->userdata('category'),
+                             'size' => $this->session->userdata('size'),
+                             'color' => $this->session->userdata('color'), 
+                             'publish' => $this->session->userdata('publish')); 
+                
+            $this->model->update($cek[$i], $product);
+          }
+          
+          $this->session->unset_userdata('category');
+          $this->session->unset_userdata('size');
+          $this->session->unset_userdata('color');
+          $this->session->unset_userdata('publish');
+            
+          $mess = intval($jumlah)." ".$this->title."successfully updated..!!";
+          echo 'true|'.$mess;
+        }
+        else
+        { 
+          $mess = "No $this->title Selected..!!";
+          echo 'false|'.$mess;
+        }
+        }else{ echo "error|Sorry, you do not have the right to change product attribute..!"; }
     }
     
     function delete_all($type='soft')
@@ -380,7 +433,7 @@ class Product extends MX_Controller
         $data['link'] = array('link_back' => anchor($this->title,'Back', array('class' => 'btn btn-danger')));
 
         $data['manufacture'] = $this->manufacture->combo();
-        $data['category'] = $this->category->combo();
+        $data['category'] = $this->category->combo_code();
         $data['currency'] = $this->currency->combo();
         $data['source'] = site_url($this->title.'/getdatatable');
         $data['related'] = $this->product->combo_publish($uid);
@@ -931,7 +984,7 @@ class Product extends MX_Controller
               {
                 $account = array(
                              'sku' => $res['SKU'],
-                             'category' => $this->category->get_id(strtoupper($res['CATEGORY'])),
+                             'category' => $this->category->get_id_based_code(strtoupper($res['CATEGORY'])),
                              'manufacture' => $this->manufacture->get_id($res['MANUFACTURE']),
                              'name' => $res['NAME'],
                              'model' => $res['MODEL'],

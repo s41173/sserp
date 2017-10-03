@@ -36,6 +36,7 @@
 	var sites_add  = "<?php echo site_url('product/add_process/');?>";
 	var sites_edit = "<?php echo site_url('product/update_process/');?>";
 	var sites_del  = "<?php echo site_url('product/delete/');?>";
+    var sites_update = "<?php echo site_url('product/update_all/');?>";
 	var sites_get  = "<?php echo site_url('product/update/');?>";
     var sites_details  = "<?php echo site_url('product/details/');?>";
     var sites_ledger  = "<?php echo site_url('product/stock_card/');?>";
@@ -44,6 +45,7 @@
 	var sites_attribute  = "<?php echo site_url('product/attribute/');?>";
 	var sites_image  = "<?php echo site_url('product/image_gallery/');?>";
 	var source = "<?php echo $source;?>";
+    var sites  = "<?php echo site_url('product/');?>";
     
     var url  = "<?php echo $graph;?>";
 	
@@ -166,6 +168,7 @@
                <button type="submit" class="btn btn-primary button_inline"> Filter </button>
                <button type="reset" onClick="" class="btn btn-success button_inline"> Clear </button>
                <button type="button" onClick="load_data();" class="btn btn-danger button_inline"> Reset </button>
+               <button type="button" id="bset" class="btn btn-warning button_inline"> Set Param </button>
               </div>
           </form> <br>
 
@@ -173,7 +176,8 @@
            <!-- searching form -->
            
               
-          <form class="form-inline" id="cekallform" method="post" action="<?php echo ! empty($form_action_del) ? $form_action_del : ''; ?>">
+<form class="form-inline" id="cekallform" method="post" action="<?php //echo ! empty($form_action_del) ? $form_action_del : ''; ?>">
+
                   <!-- table -->
                   
                   <div class="table-responsive">
@@ -182,9 +186,15 @@
                   
                   <div class="form-group" id="chkbox">
                     Check All : 
-                    <button type="submit" id="cekallbutton" class="btn btn-danger btn-xs">
+                    <button type="submit" id="cekallbutton" class="btn btn-danger btn-xs" name="delete">
                        <span class="glyphicon glyphicon-trash"></span>
                     </button>
+                      
+                                        
+        <button type="button" id="cekallupdate" class="btn btn-primary btn-xs" name="update">
+           <span class="glyphicon glyphicon-book"></span>
+        </button>
+                      
                   </div>
                   <!-- Check All Function -->
                   
@@ -234,7 +244,7 @@
       <!-- Modal - Import Form -->
               
       <!-- Modal - Detail -->
-      <div class="modal fade" id="myModal5" role="dialog">
+      <div class="modal fade" id="myModal9" role="dialog">
         <?php $this->load->view('product_details'); ?>    
       </div>
       <!-- Modal - Detail -->

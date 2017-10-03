@@ -94,6 +94,7 @@ class Product_model extends Custom_Model
         $this->db->truncate('stock_temp');
         $this->db->truncate('warehouse_transaction');
     }
+    
 
 }
 

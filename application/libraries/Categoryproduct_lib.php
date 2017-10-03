@@ -28,6 +28,18 @@ class Categoryproduct_lib extends Main_Model {
         foreach($val as $row){ $data['options'][$row->id] = ucfirst($row->name); }
         return $data;
     }
+    
+    function combo_code()
+    {
+        $this->db->select('id, name, code');
+        $this->db->where('deleted', NULL);
+        $this->db->where('publish',1);
+        $this->db->order_by('name', 'asc');
+        $val = $this->db->get($this->tableName)->result();
+        $data['options'][0] = 'Top';
+        foreach($val as $row){ $data['options'][$row->id] = strtoupper($row->code); }
+        return $data;
+    }
 
     function combo_all()
     {
@@ -86,6 +98,18 @@ class Categoryproduct_lib extends Main_Model {
         {
             $this->db->select('id,name');
             $this->db->where('name', $id);
+            $val = $this->db->get($this->tableName)->row();
+            if ($val){ return $val->id; }else { return 0; }
+        }
+        else { return 0; }
+    }
+    
+    function get_id_based_code($id=null)
+    {
+        if ($id)
+        {
+            $this->db->select('id,name');
+            $this->db->where('code', $id);
             $val = $this->db->get($this->tableName)->row();
             if ($val){ return $val->id; }else { return 0; }
         }

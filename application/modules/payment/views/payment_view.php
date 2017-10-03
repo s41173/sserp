@@ -17,6 +17,7 @@
 	var sites_edit = "<?php echo site_url('payment/update_process/');?>";
 	var sites_del  = "<?php echo site_url('payment/delete/');?>";
 	var sites_get  = "<?php echo site_url('payment/update/');?>";
+    var sites_default  = "<?php echo site_url('payment/defaults/');?>";
 	var source = "<?php echo $source;?>";
 	
 </script>

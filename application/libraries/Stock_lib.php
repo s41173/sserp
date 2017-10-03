@@ -171,7 +171,7 @@ class Stock_lib extends Custom_Model {
     
     function unit_cost($pid){ 
         
-        return round($this->get_sum_amount_stock($pid)/$this->get_sum_qty_stock($pid)); 
+        return @round($this->get_sum_amount_stock($pid)/$this->get_sum_qty_stock($pid)); 
         
     }
     

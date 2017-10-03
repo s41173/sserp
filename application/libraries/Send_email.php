@@ -29,10 +29,15 @@ class Send_email extends CI_Email {
         if ($this->email_validation() == TRUE)
         {
               $this->property = $this->ci->property->get();
-
-              $config['charset'] = 'iso-8859-1';
-              $config['wordwrap'] = TRUE;
-              $config['mailtype'] = $this->type;
+              
+               $config['protocol'] = 'smtp';
+               $config['smtp_host'] = "mail.sejahtera-sports.com";
+               $config['smtp_user'] = "info@sejahtera-sports.com";
+               $config['smtp_pass'] = "medan2017";
+               $config['mailpath'] = '/usr/sbin/sendmail';
+               $config['charset']  = 'utf-8';
+               $config['wordwrap'] = TRUE;
+               $config['mailtype'] = $this->type;
               
               $this->initialize($config);
               $this->from($this->from_email, $this->from_name);
@@ -41,13 +46,12 @@ class Send_email extends CI_Email {
               $this->subject($this->subject);
               $this->message($this->mess);
               
-              return $this->print_debugger();
-              
-//              if (@$this->send() != TRUE) 
-//              {
-////                 throw new Exception("Failed To Sent Email");   
+              if (@$this->send() != TRUE) 
+              {
+//                 throw new Exception("Failed To Sent Email");   
 //                  return $this->print_debugger();
-//              }else{ return TRUE; }
+                return FALSE;
+              }else{ return TRUE; }
         }
         else { return FALSE; }
 

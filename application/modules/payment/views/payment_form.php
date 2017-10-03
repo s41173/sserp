@@ -43,6 +43,7 @@
       <div class="col-md-5 col-sm-5 col-xs-12">
         <input id="taccname" class="form-control col-md-5 col-xs-12" type="text" name="taccname" placeholder="Account Name">
         <input id="taccno" class="form-control col-md-5 col-xs-12" type="text" name="taccno" placeholder="Account No">
+        <input type="checkbox" name="cpos" id="cpos" value="1" class="flat" /> POS &nbsp;
       </div>
     </div>
 

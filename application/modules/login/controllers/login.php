@@ -80,6 +80,35 @@ class Login extends MX_Controller {
         if ($err) { echo $err; }
         else { echo $response; }
     }
+    
+    function kirim_email(){
+        
+        $this->load->library('email');
+        
+        $config['protocol'] = 'smtp';
+        $config['smtp_host'] = "mail.sejahtera-sports.com";
+        $config['smtp_user'] = "info@sejahtera-sports.com";
+        $config['smtp_pass'] = "medan2017";
+        $config['mailpath'] = '/usr/sbin/sendmail';
+        $config['charset']  = 'utf-8';
+        $config['wordwrap'] = TRUE;
+        $config['mailtype'] = 'text';
+        
+        $this->email->initialize($config);
+        
+        $this->email->from('info@sejahtera-sports.com', 'SS');
+        $this->email->to('sanjaya.kiran@gmail.com'); 
+//        $this->email->cc('another@another-example.com'); 
+//        $this->email->bcc('them@their-example.com'); 
+
+        $this->email->subject('Email Test');
+        $this->email->message('Testing the email class.');	
+
+        $this->email->send();
+
+        echo $this->email->print_debugger();
+        
+    }
 
     // function untuk memeriksa input user dari form sebagai admin
     function login_process()
@@ -169,11 +198,18 @@ class Login extends MX_Controller {
         {  
             try
             {
-              $this->send_email($username); 
-              $response = array(
-               'Success' => true,
+              if ($this->send_email($username) == TRUE){
+                  $response = array(
+                    'Success' => true,
+                    'User' => $username,
+                    'Info' => 'Password has been sent to your email..!');  
+              }else{
+                  $response = array(
+               'Success' => false,
                'User' => $username,
-               'Info' => 'Password has been sent to your email!');  
+               'Info' => 'Password Submission Process Failed..!');  
+              }
+              
               
             }
             catch(Exception $e) {  
@@ -197,22 +233,22 @@ class Login extends MX_Controller {
     // ajax function
     function cek_login(){ if ($this->session->userdata('username')){ echo 'true'; }else{ echo 'false'; } }
     
-    function send_email($username)
+    private function send_email($username)
     {
         $email = $this->Login_model->get_email($username);
         $pass = $this->Login_model->get_pass($username);
         $mess = "
           ".$this->properti['name']." - ".base_url()."
-          FORGOT PASSWORD :
+          <br> <b> FORGOT PASSWORD : </b> <br>
 
           Your Username is: ".$username."
           Your Password : ".$pass." <hr />
-Your password for this account has been recovered . You don�t need to do anything, this message is simply a notification to protect the security of your account.
-Please note: your password may take awhile to activate. If it doesn�t work on your first try, please try it again later
+Your password for this account has been recovered . You don't need to do anything, this message is simply a notification to protect the security of your account.
+Please note: your password may take awhile to activate. If it doesn't work on your first try, please try it again later
 DO NOT REPLY TO THIS MESSAGE. For further help or to contact support, please email to ".$this->properti['email']."
 ****************************************************************************************************************** ";
 
-        $params = array($this->properti['email'], $this->properti['name'], $email, 'Password Recovery', $mess, 'text');
+        $params = array($this->properti['email'], $this->properti['name'], $email, 'Password Recovery', $mess, 'html');
         $se = $this->load->library('send_email',$params);
 
         if ( $se->send_process() == TRUE ){ return TRUE; }

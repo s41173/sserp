@@ -13,7 +13,7 @@ class Payment_model extends Custom_Model
         $this->tableName = 'payment';
     }
     
-    protected $field = array('id', 'name', 'image', 'orders', 'acc_no', 'acc_name', 'created', 'updated', 'deleted');
+    protected $field = array('id', 'name', 'image', 'orders', 'acc_no', 'acc_name', 'pos', 'defaults', 'created', 'updated', 'deleted');
     protected $com;
             
     function count_all_num_rows()
@@ -29,6 +29,15 @@ class Payment_model extends Custom_Model
         $this->db->where('deleted', $this->deleted);
         $this->db->order_by('name', 'asc'); 
         $this->db->limit($limit, $offset);
+        return $this->db->get(); 
+    }
+    
+    function get_default()
+    {
+        $this->db->select($this->field);
+        $this->db->from($this->tableName); 
+        $this->db->where('deleted', $this->deleted);
+        $this->db->where('defaults', 1);
         return $this->db->get(); 
     }
     

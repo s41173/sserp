@@ -55,6 +55,7 @@
           </form>       
              </div>
 
+  <div class="btn-group">
                <!-- Trigger the modal with a button --> 
    <button type="button" onClick="resets();" class="btn btn-primary" data-toggle="modal" data-target="#myModal"> <i class="fa fa-plus"></i>&nbsp;Add New </button>
    <a class="btn btn-success" href="<?php echo site_url('attribute_list'); ?>"> Attribute Group </a>
@@ -65,7 +66,7 @@
                <!-- links -->
 	           <?php if (!empty($link)){foreach($link as $links){echo $links . '';}} ?>
                <!-- links -->
-                             
+    </div>                         
             </div>
           </div>
       

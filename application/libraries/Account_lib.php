@@ -11,6 +11,13 @@ class Account_lib extends Main_model {
     protected $field = array('id', 'classification_id', 'currency', 'code', 'name', 'alias', 'acc_no', 'bank', 
                              'status', 'default', 'bank_stts', 'created', 'updated', 'deleted');
     
+    function valid_coa($coa){
+        
+        $this->db->where('code', $coa);
+        $val = $this->db->get($this->tableName)->num_rows();
+        if ($val > 0){ return TRUE; }else{ return FALSE; }
+    }
+    
     function get()
     {
        $this->db->select($this->field); 

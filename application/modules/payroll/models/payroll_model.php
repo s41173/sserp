@@ -61,7 +61,7 @@ class Payroll_model extends Custom_Model
 
         $this->db->from($this->tableName);
         $this->cek_null($cur,"currency");
-//        $this->db->where('approved', 1);
+        $this->db->where('approved', 1);
         $this->cek_null($month,"month");
         $this->cek_null($year,"year");
         $query = $this->db->get()->row_array();

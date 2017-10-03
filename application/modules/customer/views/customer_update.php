@@ -172,7 +172,7 @@ echo form_dropdown('cdistrict', $district, isset($default['district']) ? $defaul
       
       <div class="ln_solid"></div>
       <div class="form-group">
-        <div class="col-md-3 col-sm-3 col-xs-12 col-md-offset-3">
+        <div class="col-md-3 col-sm-3 col-xs-12 col-md-offset-3 btn-group">
           <button type="submit" class="btn btn-primary" id="button"> Save General </button>
         </div>
       </div>

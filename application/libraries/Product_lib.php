@@ -47,6 +47,13 @@ class Product_lib extends Custom_Model {
 //        $this->db->update('product', $res);
 //    }
 
+    function valid_sku($sku){
+        
+       $this->db->where('sku', $sku);
+       $val = $this->db->get($this->tableName)->num_rows(); 
+       if ($val > 0){ return TRUE; }else{ return FALSE; }
+    }
+    
     function edit_price($name=null,$price=0)
     {
         $this->db->where('name', $name);
