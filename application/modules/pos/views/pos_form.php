@@ -143,7 +143,7 @@ $atts2 = array(
    <form id="posform" class="form-inline" method="post" action="">
       <div class="form-group">
         <label class="control-label labelx"> Product </label> <br>
-        <input id="titems" class="form-control col-md-3 col-xs-12" type="text" readonly name="cproduct" required>
+        <input id="titems" class="form-control col-md-2 col-xs-12" type="text" name="cproduct" required style="width:150px;">
         <div class="btn-group">  
         <?php echo anchor_popup(site_url("product/get_list/titems/".$branch), '[ ... ]', $atts2); ?>
         <button type="button" id="bget" class="btn btn-success button_inline"> GET </button>

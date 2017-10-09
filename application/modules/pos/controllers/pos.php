@@ -51,13 +51,14 @@ class Pos extends MX_Controller
     function get_product($pid)
     {
         $res = $this->product->get_detail_based_id($pid);
-        echo intval($res->price-$res->discount);
+        if ($res){ echo intval($res->price-$res->discount); }else{ return 0; }
+        
     }
     
     function get_product_based_sku($sku)
     {
         $res = $this->product->get_detail_based_sku($sku);
-        echo intval($res->price-$res->discount);
+        echo @intval($res->price-$res->discount);
     }
 
 //     ============== ajax ===========================
@@ -334,55 +335,36 @@ class Pos extends MX_Controller
 
        $data['h2title'] = 'Print Tax Invoice'.$this->modul['title'];
 
-       $sales = $this->model->get_by_id($sid)->row();
+       
+       $pos = $this->model->get_by_id($sid)->row();
+       $sales = $this->salesmodel->get_by_id($pos->sales_id)->row();
        
        // customer
-       $customer = $this->customer->get_details($sales->cust_id)->row();
-       $data['customer'] = $customer->first_name.' '.$customer->last_name;
-       $data['address'] = $customer->address;
-       $data['city'] = $customer->city;
-       $data['phone'] = $customer->phone1;
-       $data['phone2'] = $customer->phone2;
-
        //sales
-       $data['pono'] = 'SO-'.$sid;
-       $data['podate'] = tglincomplete($sales->dates);
-       $data['desc'] = '';
-       $data['notes'] = '';
+       $data['orderid'] = $pos->orderid;
+       $data['date'] = tglin($sales->dates);
        $data['user'] = $this->session->userdata('username');
        $data['currency'] = 'IDR';
        $data['log'] = $this->session->userdata('log');
-       $data['cost'] = $sales->cost;
-       $data['p1'] = $sales->p1;
-       $data['p2'] = 0;
+       
 
        // sales item
-       $data['items'] = $this->sitem->get_last_item($sid)->result();
+       $data['items'] = $this->model->get_by_orderid($pos->orderid)->result();
 
-       // property display
-       $data['logo'] = $this->properti['logo'];
-       $data['paddress'] = $this->properti['address'];
-       $data['p_phone1'] = $this->properti['phone1'];
-       $data['p_phone2'] = $this->properti['phone2'];
-       $data['p_city'] = ucfirst($this->properti['city']);
-       $data['p_zip'] = $this->properti['zip'];
-       $data['p_npwp'] = '';
-       $data['p_sitename'] = $this->properti['sitename'];
-       $data['p_email'] = $this->properti['email'];
-
-       if ("IDR"){ $data['symbol'] = 'Rp.'; $matauang = 'rupiah'; }
-       else { $data['symbol'] = ''; $matauang = ''; }
-
-
-       $data['status'] = $sales->paid_date;
-       $app = null;
-       if ($sales->approved == 1){ $app = 'A'; } else{ $app = 'NA'; }
-       $data['approve'] = $app;
+       // branch display
+       $branch = $this->branch->get_details($sales->branch_id)->row();
+       $data['b_name'] = ucfirst($branch->name);
+       $data['b_address'] = $branch->address;
+       $data['b_phone1'] = $branch->phone;
+       $data['b_phone2'] = $branch->mobile;
+       $data['b_city'] = ucfirst($branch->city);
+       $data['b_zip'] = $branch->zip;
        
-       $terbilang = $this->load->library('terbilang');
-       $data['terbilang'] = ucwords($terbilang->baca($sales->amount).' '.$matauang);
+       // summary
+       $total = $this->model->total($pos->orderid);
+       $data['total'] = $total['amount'];
 
-       $this->load->view('sales_invoice', $data);
+       $this->load->view('pos_invoice', $data);
        
    }
     

@@ -100,7 +100,7 @@ class Product_lib extends Custom_Model {
            $this->db->select('id, name, qty');
            $this->db->where('sku', $name);
            $res = $this->db->get('product')->row();
-           return $res->id;
+           if ($res){ return $res->id; }else{ return 0; }
         }
     }
 
@@ -133,7 +133,7 @@ class Product_lib extends Custom_Model {
            $this->db->select($this->field);
            $this->db->where('sku', $sku);
            $res = $this->db->get('product')->row();
-           return $res;
+           if ($res){ return $res; }else{ return null; }
         }
     }
     

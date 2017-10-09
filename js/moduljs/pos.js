@@ -16,6 +16,7 @@ $(document).ready(function (e) {
         showDropdowns: true
      });
 
+	 $("#titems").focus();
 
 	load_data();  
 	
@@ -39,7 +40,7 @@ $(document).ready(function (e) {
 		var url = sites_print_invoice +"/"+ del_id +"/invoice";
 		
 		// window.location.href = url;
-		window.open(url, "_blank", "scrollbars=1,resizable=0,height=600,width=800");
+		window.open(url, "_blank", "scrollbars=1,resizable=0,height=600,width=500");
 		
 	});
 
@@ -254,9 +255,7 @@ $(document).ready(function (e) {
 										s[i][5],
 '<div class="btn-group" role"group">'+
 '<a href="" class="btn btn-success btn-xs text-print" id="' +s[i][0]+ '" title="Invoice Status"> <i class="fa fa-print"> </i> </a> '+
-'<a href="" class="btn btn-default btn-xs text-confirmation" id="' +s[i][0]+ '" title="Payment Confirmation"> <i class="fa fa-credit-card-alt"> </i> </a> '+
 '<a href="" class="btn btn-primary btn-xs text-primary" id="' +s[i][1]+ '" title=""> <i class="fa fas-2x fa-edit"> </i> </a> '+
-'<a href="#" class="btn btn-danger btn-xs text-danger" id="'+s[i][0]+'" title="delete"> <i class="fa fas-2x fa-trash"> </i> </a>'+
 '</div>'
 										    ]);										
 											} // End For 

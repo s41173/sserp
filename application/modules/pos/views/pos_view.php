@@ -105,13 +105,6 @@
         <?php echo ! empty($table) ? $table : ''; ?>            
       </div>
 
-      <div class="form-group" id="chkbox">
-        Check All : 
-        <button type="submit" id="cekallbutton" class="btn btn-danger btn-xs">
-           <span class="glyphicon glyphicon-trash"></span>
-        </button>
-      </div>
-      <!-- Check All Function -->
 </form>       
              </div>
 
