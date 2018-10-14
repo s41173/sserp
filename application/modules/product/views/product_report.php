@@ -66,6 +66,7 @@
                     datafields:
                     [
                         { name: "No", type: "string" },
+                        { name: "Sku", type: "string" },
 						{ name: "Category", type: "string" },
 						{ name: "Manufacture", type: "string" },
 						{ name: "Name", type: "string" },
@@ -103,7 +104,8 @@
 				autoshowfiltericon: false,
                 columns: [
                   { text: 'No', dataField: 'No', width: 50 },
-				  { text: 'Category', dataField: 'Category', width : 250 },
+				  { text: 'Sku', dataField: 'Sku', width : 250 },
+                  { text: 'Category', dataField: 'Category', width : 250 },
 				  { text: 'Manufacture', dataField: 'Manufacture', width : 200 },
   				  { text: 'Name', dataField: 'Name', width : 250 },
 				  { text: 'Model', dataField: 'Model', width : 250 },
@@ -200,7 +202,7 @@
 		<table id="table" border="0" width="100%">
 		   <thead>
            <tr>
- 	       <th> No </th> <th> Category </th> <th> Manufacture </th> <th> Name </th> <th> Model </th> <th> Currency </th>
+ 	       <th> No </th> <th> Sku </th> <th> Category </th> <th> Manufacture </th> <th> Name </th> <th> Model </th> <th> Currency </th>
            <th> Qty </th> <th> Min Order </th> <th> Price </th> <th> Discount (%) </th> <th> Disc Price </th> <th> Image </th> <th> Dimension </th> <th> Weight </th> <th> Publish </th>
 		   </tr>
            </thead>
@@ -236,7 +238,8 @@
 				   echo " 
 				   <tr> 
 				       <td class=\"strongs\">".$i."</td> 
-					   <td class=\"strongs\">".category($res->category)."</td>
+					   <td class=\"strongs\">".$res->sku."</td>
+                       <td class=\"strongs\">".category($res->category)."</td>
                        <td class=\"strongs\">".manufacture($res->manufacture)."</td>
                        <td class=\"strongs\">".strtoupper($res->name)."</td>
                        <td class=\"strongs\">".strtoupper($res->model)."</td>

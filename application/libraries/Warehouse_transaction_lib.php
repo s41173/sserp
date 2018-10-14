@@ -83,7 +83,7 @@ class Warehouse_transaction_lib extends Custom_Model {
         $this->db->where('MONTH(dates)', $month);
         $this->db->where('YEAR(dates)', $year);
         $res = $this->db->get($this->tableName)->row_array();
-        return intval($res['debit']-$res['credit']);
+        return floatval($res['debit']-$res['credit']);
     }
     
     function get_sum_transaction_qty_category($cat,$branch,$month,$year)

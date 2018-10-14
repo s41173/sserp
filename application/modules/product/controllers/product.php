@@ -58,11 +58,14 @@ class Product extends MX_Controller
         echo 'true|Parameter Set...!!';
     }
      
-    public function getdatatable($search=null,$branch='null',$cat='null',$col='null',$size='null',$publish='null')
+    public function getdatatable($search=null,$branch='null',$cat='null',$col='null',$size='null',$publish='null',$sku='null')
     {
         if ($branch == 'null'){ $branch = $this->branch->get_branch(); }
         if(!$search){ $result = $this->model->get_last($this->modul['limit'])->result(); }
-        else {$result = $this->model->search($cat,$col,$size,$publish)->result(); }
+        else {
+            if ($sku != 'null'){ $result = $this->model->search_sku($sku)->result();  }
+            else{ $result = $this->model->search($cat,$col,$size,$publish)->result();  } 
+        }
 	
         $output = null;
         if ($result){
@@ -338,9 +341,9 @@ class Product extends MX_Controller
         {
             $config['upload_path'] = './images/product/';
             $config['file_name'] = split_space($this->input->post('tname'));
-            $config['allowed_types'] = 'jpg|gif|png';
+            $config['allowed_types'] = 'jpg|gif|png|jpeg';
             $config['overwrite'] = true;
-            $config['max_size']	= '10000';
+            $config['max_size']	= '50000';
             $config['max_width']  = '30000';
             $config['max_height']  = '30000';
             $config['remove_spaces'] = TRUE;
@@ -363,6 +366,8 @@ class Product extends MX_Controller
             else
             {
                 $info = $this->upload->data();
+                $this->crop_image($info['file_name']);
+                
                 $product = array('name' => strtolower($this->input->post('tname')), 'permalink' => split_space($this->input->post('tname')),
                                   'sku' => $sku, 'model' => $this->input->post('tmodel'), 
                                   'currency' => $this->input->post('ccur'), 'category' => $this->input->post('ccategory'),
@@ -416,7 +421,7 @@ class Product extends MX_Controller
 	$this->session->set_userdata('langid', $product->id);
         
         echo $product->sku.'|'. $this->category->get_name($product->category).'|'. $this->manufacture->get_name($product->manufacture).'|'.$product->name.'|'.$product->model.'|'.$product->currency.'|'.
-             idr_format($product->price).'|'.$product->qty.'|'.base_url().'images/product/'.$product->image.'|'.
+             idr_format($product->pricelow).' - '.idr_format($product->price).'|'.$product->qty.'|'.base_url().'images/product/'.$product->image.'|'.
              $product->dimension_class.'|'.$product->weight.'|'.$product->dimension.'|'.$product->color.'|'.$product->size.'|'.
              $product->dimension.'|'. $this->conversi->calculate($this->stock->unit_cost($uid)).'|'. $this->conversi->calculate($this->stock->get_last_stock_price($uid));
     }
@@ -460,6 +465,7 @@ class Product extends MX_Controller
         $data['default']['metadesc'] = $product->meta_desc;
         $data['default']['metakeywords'] = $product->meta_keywords;
         $data['default']['price'] = $product->price;
+        $data['default']['lowprice'] = $product->pricelow;
         $data['default']['discount'] = $product->discount;
         $data['default']['qty'] = $product->qty;
         $data['default']['min'] = $product->min_order;
@@ -578,7 +584,7 @@ class Product extends MX_Controller
                     $config['file_name'] = split_space($result->name.'_'.$this->input->post('cname'));
                     $config['allowed_types'] = 'jpg|gif|png';
                     $config['overwrite']  = true;
-                    $config['max_size']   = '1000';
+                    $config['max_size']   = '50000';
                     $config['max_width']  = '30000';
                     $config['max_height'] = '30000';
                     $config['remove_spaces'] = TRUE;
@@ -689,6 +695,12 @@ class Product extends MX_Controller
         }else{ return TRUE; }
     }
     
+    function valid_low_price($lowprice){
+        $price = $this->input->post('tprice');
+        if ($lowprice > $price){ $this->form_validation->set_message('valid_low_price', "Invalid Low-Price..!"); return FALSE; }
+        else{ return TRUE; }
+    }
+    
     function valid_attribute($attr,$pid)
     {
         
@@ -719,7 +731,14 @@ class Product extends MX_Controller
         }
         else{ return TRUE; }
     }
-
+    
+    function valid_deleted(){
+      $id = $this->session->userdata('langid');
+      $val = $this->model->get_by_id($id)->row();
+      if ($val->deleted != NULL){ $this->form_validation->set_message('valid_deleted', "Product Already Deleted!"); return FALSE; }
+      else{ return TRUE; }
+    }
+   
     function validating_sku($val)
     {
 	$id = $this->session->userdata('langid');
@@ -772,6 +791,18 @@ class Product extends MX_Controller
         }
         else{ return TRUE; }
     }
+    
+    private function crop_image($filename){
+        
+        $config['image_library'] = 'gd2';
+        $config['source_image'] = './images/product/'.$filename;
+        $config['maintain_ratio'] = TRUE;
+        $config['width']	= 300;
+        $config['height']	= 300;
+
+        $this->load->library('image_lib', $config); 
+        $this->image_lib->resize();
+    }
 
     // Fungsi update untuk mengupdate db
     function update_process($param=0)
@@ -787,7 +818,7 @@ class Product extends MX_Controller
 	// Form validation
         if ($param == 1)
         {
-            $this->form_validation->set_rules('tsku', 'SKU', 'required|callback_validating_sku');
+            $this->form_validation->set_rules('tsku', 'SKU', 'required|callback_validating_sku|callback_valid_deleted');
             $this->form_validation->set_rules('ccategory', 'Category', 'required');
             $this->form_validation->set_rules('cmanufacture', 'Manufacture', 'required');
             $this->form_validation->set_rules('tname', 'Product Name', 'required|callback_validating_name');
@@ -803,13 +834,14 @@ class Product extends MX_Controller
                 $config['file_name'] = split_space($this->input->post('tname'));
                 $config['allowed_types'] = 'jpg|gif|png';
                 $config['overwrite'] = true;
-                $config['max_size']	= '10000';
+                $config['max_size']	= '50000';
                 $config['max_width']  = '30000';
                 $config['max_height']  = '30000';
                 $config['remove_spaces'] = TRUE;
 
                 $this->load->library('upload', $config);
-
+                $data['error'] = null;
+                
                 if ( !$this->upload->do_upload("userfile")) // if upload failure
                 {
                     $info['file_name'] = null;
@@ -823,7 +855,8 @@ class Product extends MX_Controller
                 else
                 {
                     $info = $this->upload->data();
-
+                    $this->crop_image($info['file_name']);
+                    
                     $product = array('name' => strtolower($this->input->post('tname')), 'permalink' => split_space($this->input->post('tname')),
                                       'sku' => $this->input->post('tsku'), 'model' => $this->input->post('tmodel'), 
                                       'currency' => $this->input->post('ccurrency'), 'category' => $this->input->post('ccategory'),
@@ -834,6 +867,7 @@ class Product extends MX_Controller
                 
                 $this->model->update($this->session->userdata('langid'), $product);
                 $this->session->set_flashdata('message', "One $this->title has successfully updated!");
+                echo $data['error'];
                 redirect($this->title.'/update/'.$this->session->userdata('langid'));
                 
                 // end update 1
@@ -854,16 +888,23 @@ class Product extends MX_Controller
         elseif ($param == 3)
         {
             $this->form_validation->set_rules('tprice', 'Price', 'required|numeric');
+            $this->form_validation->set_rules('tlowprice', 'Low-Price', 'required|numeric|callback_valid_low_price');
             $this->form_validation->set_rules('tdisc_p', 'Discount Percentage', 'numeric');
             $this->form_validation->set_rules('tdiscount', 'Discount', 'required|numeric');
             $this->form_validation->set_rules('tmin', 'Minimum Order', 'required|numeric');
             
-            $this->edit_qty($this->session->userdata('langid'), $this->input->post('tqty'));
-            $product = array('price' => $this->input->post('tprice'), 'discount' => $this->input->post('tdiscount'),
-                             'min_order' => $this->input->post('tmin'), 'qty' => $this->input->post('tqty')
-                             );
-            $this->model->update($this->session->userdata('langid'), $product);
-            echo 'true|One '.$this->title.' price and qty has successfully updated!';
+            if ($this->form_validation->run($this) == TRUE){
+               
+                $this->edit_qty($this->session->userdata('langid'), $this->input->post('tqty'));
+                $product = array('price' => $this->input->post('tprice'), 'pricelow' => $this->input->post('tlowprice'),
+                                 'discount' => $this->input->post('tdiscount'),
+                                 'min_order' => $this->input->post('tmin'), 'qty' => $this->input->post('tqty')
+                                 );
+                $this->model->update($this->session->userdata('langid'), $product);
+                echo 'true|One '.$this->title.' price and qty has successfully updated!'; 
+            }else{ echo 'error|'.validation_errors(); }
+            
+
         }
         elseif ($param == 4)
         {
@@ -926,6 +967,43 @@ class Product extends MX_Controller
         else { $this->load->view('product_pivot', $data); }
     }
     
+    function export_csv(){
+        
+        $stts = 'true';
+        $error = null;
+        $sku = $this->input->post('tsku');
+        $qty = $this->input->post('tqty');
+        
+        if ($this->product->valid('sku', $sku) == FALSE){
+            
+            $name = $this->product->get_name_by_sku($sku);
+            
+            for ($i=0; $i<$qty; $i++){
+              $list[$i] = array('sku'=> $sku, 'name'=> strtoupper(split_space($name)));
+            }
+        
+            $fichier = $sku.'_'.split_space($name).'.csv';
+            header( "Content-Type: text/csv;charset=utf-8" );
+            header( "Content-Disposition: attachment;filename=\"$fichier\"" );
+            header("Pragma: no-cache");
+            header("Expires: 0");
+
+            $fp= fopen('php://output', 'w');
+
+            foreach ($list as $fields) 
+            {
+               fputcsv($fp, $fields, ',');
+            }
+            fclose($fp);
+            exit();
+            $error = "CSV Exported...!!";
+            
+        }else{ $stts = 'false'; $error = 'SKU Not Available..!'; }
+        
+        $this->session->set_flashdata('message', $error);
+        redirect($this->title);
+    }
+    
     function import()
     {
         $data['title'] = $this->properti['name'].' | Administrator  '.ucwords($this->modul['title']);
@@ -956,10 +1034,11 @@ class Product extends MX_Controller
             else
             { 
                // success page 
-              $this->import_product($config['file_name'].'.csv');
+              $status = $this->import_product($config['file_name'].'.csv');
               $info = $this->upload->data(); 
               $this->session->set_flashdata('message', "One $this->title data successfully imported!");
-              echo 'true|CSV Successful Uploaded';
+              if ($status == false){ echo "error|Import Failed..!"; }else{ echo 'true|CSV Successful Uploaded'; }
+              
             }                
         
        // redirect($this->title);
@@ -968,14 +1047,13 @@ class Product extends MX_Controller
     
     private function import_product($filename)
     {
-        $stts = null;
         $this->load->helper('file');
 //        $csvreader = new CSVReader();
         $csvreader = $this->load->library('csvreader');
         $filename = './uploads/'.$filename;
         
         $result = $csvreader->parse_file($filename);
-        
+        $stts = true;
         foreach($result as $res)
         {
            if(isset($res['SKU']) && isset($res['CATEGORY']) && isset($res['MANUFACTURE']) && isset($res['NAME']) && isset($res['MODEL']) && isset($res['QTY']) && isset($res['PRICE']))
@@ -992,12 +1070,12 @@ class Product extends MX_Controller
                              'price' => $res['PRICE'],
                              'publish' => 0,
                              'created' => date('Y-m-d H:i:s'));
-            
                 $this->model->add($account);
                 $this->stockledger->create($this->model->max_id(), $this->branch->get_branch(), $this->period->month, $this->period->year);
-              }
-           }              
+              }else{ $stts = false; }
+           }else{ $stts = false; }              
         }
+        return $stts;
     }
     
     function download()
@@ -1187,9 +1265,9 @@ class Product extends MX_Controller
         }
     }
     
-    function calculate_balance(){ if ($this->stockledger->closing() == TRUE){
-      redirect('product/ledger');
-    } }
+    function calculate_balance(){ 
+       if ($this->stockledger->closing() == TRUE){ redirect('product/ledger'); } 
+    }
    
     // ====================================== CLOSING ======================================
     function reset_process(){ $this->model->closing(); $this->model->closing_trans(); } 

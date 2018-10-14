@@ -213,7 +213,7 @@ echo form_dropdown('cvendor', $vendor, isset($default['vendor']) ? $default['ven
       <div class="form-group">
         <label class="control-label labelx"> Product </label> <br>
            <input id="titem" class="form-control col-md-3 col-xs-12" type="text" readonly name="titem" required>
-          <?php echo anchor_popup(site_url("product/get_list/titem/"), '[ ... ]', $atts1); ?>
+           <?php echo anchor_popup(site_url("product/get_list/titem/"), '[ ... ]', $atts1); ?>
           &nbsp;
       </div>
       

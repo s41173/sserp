@@ -24,6 +24,7 @@ class Main_model extends Custom_Model
         $this->db->from('sales');
         $this->db->where("dates BETWEEN (NOW() - INTERVAL ".$val1." DAY) AND (NOW() - INTERVAL ".$val2." DAY) ");
         $this->db->where('confirmation', 0);
+        $this->db->where('deleted', null);
         return $this->db->get(); 
     }
 
@@ -33,6 +34,7 @@ class Main_model extends Custom_Model
         $this->db->from('sales');
         $this->db->where("dates <= (NOW() - INTERVAL ".$val1." DAY)");
         $this->db->where('confirmation', 0);
+        $this->db->where('deleted', null);
         return $this->db->get();
     }
 
@@ -43,6 +45,7 @@ class Main_model extends Custom_Model
 //        $this->db->where('approved', 1);
 //        $this->db->where('currency', 'IDR');
         $this->db->where('confirmation', 0);
+        $this->db->where('deleted', null);
         return $this->db->get();
     }
 
@@ -56,6 +59,7 @@ class Main_model extends Custom_Model
         $this->db->where('approved', 1);
         $this->db->where('currency', 'IDR');
         $this->db->where('status', 0);
+        $this->db->where('deleted', null);
         return $this->db->get();
     }
 
@@ -67,6 +71,7 @@ class Main_model extends Custom_Model
         $this->db->where('approved', 1);
         $this->db->where('currency', 'IDR');
         $this->db->where('status', 0);
+        $this->db->where('deleted', null);
         return $this->db->get();
     }
 
@@ -77,6 +82,7 @@ class Main_model extends Custom_Model
         $this->db->where('approved', 1);
         $this->db->where('currency', 'IDR');
         $this->db->where('status', 0);
+        $this->db->where('deleted', null);
         return $this->db->get();
     }
 
@@ -115,6 +121,7 @@ class Main_model extends Custom_Model
         $this->db->where('product.deleted', NULL);
         $this->db->where('product.publish', 1);
         $this->db->order_by('product.name', 'asc');
+        $this->db->where('deleted', null);
         return $this->db->get();
     }
 

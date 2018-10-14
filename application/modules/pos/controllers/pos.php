@@ -60,6 +60,11 @@ class Pos extends MX_Controller
         $res = $this->product->get_detail_based_sku($sku);
         echo @intval($res->price-$res->discount);
     }
+    
+    function valid_orderid($orderid)
+    {
+        if ($this->model->valid_orderid($orderid) == TRUE){ echo 'true'; }else{ echo 'false'; }
+    }
 
 //     ============== ajax ===========================
      
@@ -212,7 +217,7 @@ class Pos extends MX_Controller
          // Form validation
         $this->form_validation->set_rules('product', 'Product', 'required|callback_valid_product['.$sid.']|callback_valid_request['.$this->input->post('qty').']');
         $this->form_validation->set_rules('qty', 'Qty', 'required|numeric|callback_valid_login');
-        $this->form_validation->set_rules('price', 'Price', 'required|numeric');
+        $this->form_validation->set_rules('price', 'Price', 'required|numeric|callback_valid_price');
         $this->form_validation->set_rules('tax', 'Tax Type', 'required');
 
             if ($this->form_validation->run($this) == TRUE && $this->valid_confirm($sid) == TRUE)
@@ -329,14 +334,14 @@ class Pos extends MX_Controller
         $this->load->view('template', $data);
     }
     
-   function invoice($sid=null,$type=null)
+   function invoice($orderid=null,$type=null)
    {
        $this->acl->otentikasi2($this->title);
 
        $data['h2title'] = 'Print Tax Invoice'.$this->modul['title'];
 
        
-       $pos = $this->model->get_by_id($sid)->row();
+       $pos = $this->model->get_by_orderid($orderid)->row();
        $sales = $this->salesmodel->get_by_id($pos->sales_id)->row();
        
        // customer
@@ -610,6 +615,14 @@ class Pos extends MX_Controller
             $this->form_validation->set_message('valid_name','Name registered..!');
             return FALSE;
         }
+        else{ return TRUE; }
+    }
+    
+    function valid_price($price){
+        $pid = $this->product->get_id_by_sku($this->input->post('product'));
+        $lowprice = $this->product->get_by_id($pid)->row();
+        $lowprice = intval($lowprice->pricelow);
+        if ($price < $lowprice){ $this->form_validation->set_message('valid_price','Invalid Sales Price..!'); return FALSE; }
         else{ return TRUE; }
     }
     

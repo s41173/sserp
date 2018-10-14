@@ -15,7 +15,7 @@ class Product_model extends Custom_Model
     
     protected $field = array('id', 'sku', 'category', 'manufacture', 'name', 'model', 'permalink', 'currency',
                              'description', 'shortdesc', 'spesification', 'meta_title', 'meta_desc', 'meta_keywords',
-                             'price', 'discount', 'qty', 'min_order', 'image', 'url_upload', 'url1', 'url2', 'url3', 'url4', 'url5',
+                             'price', 'pricelow', 'discount', 'qty', 'min_order', 'image', 'url_upload', 'url1', 'url2', 'url3', 'url4', 'url5',
                              'dimension', 'dimension_class', 'weight', 'related', 'publish', 'color', 'size', 'unit',
                              'created', 'updated', 'deleted');
     protected $com;
@@ -40,6 +40,16 @@ class Product_model extends Custom_Model
         $this->cek_null_string($size, 'size');
         $this->cek_null_string($publish, 'publish');
         
+        $this->db->order_by('name', 'asc'); 
+        return $this->db->get(); 
+    }
+    
+    function search_sku($sku=null)
+    {   
+        $this->db->select($this->field);
+        $this->db->from($this->tableName); 
+//        $this->db->where('deleted', $this->deleted);
+        $this->cek_null_string($sku, 'sku');
         $this->db->order_by('name', 'asc'); 
         return $this->db->get(); 
     }

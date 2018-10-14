@@ -230,13 +230,23 @@ action="<?php echo $form_action.'/2'; ?>" >
      action="<?php echo $form_action.'/3'; ?>" >
 
       <div class="form-group">
-        <label class="control-label col-md-2 col-sm-2 col-xs-12"> Price / Discount % </label>
+        <label class="control-label col-md-2 col-sm-2 col-xs-12"> Low - High Price / Discount % </label>
         <div class="col-md-3 col-sm-3 col-xs-12">
- <input type="number" title="Price" class="form-control" id="tprice" name="tprice" required value="<?php echo isset($default['price']) ? $default['price'] : '' ?>" />
+        <table>
+            <tr>  
+
+    <td> <input type="number" title="Price" class="form-control" id="tlowprice" name="tlowprice" required value="<?php echo isset($default['lowprice']) ? $default['lowprice'] : '' ?>" />
+    </td>                
+                
+    <td> <input type="number" title="Price" class="form-control" id="tprice" name="tprice" required value="<?php echo isset($default['price']) ? $default['price'] : '' ?>" />
+    </td>
+            </tr>
+        </table>
+ 
         </div>
         
         <div class="col-md-2 col-sm-2 col-xs-12">
- <input type="number" title="Discount %" class="form-control" id="tdisc_p" name="tdisc_p" value="<?php echo isset($default['disc_p']) ? $default['disc_p'] : '' ?>" />
+ <input type="number" title="Discount %" class="form-control" id="tdisc_p" name="tdisc_p" style="width:80px;" value="<?php echo isset($default['disc_p']) ? $default['disc_p'] : '' ?>" />
         </div>
       </div>
       

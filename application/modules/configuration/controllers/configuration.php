@@ -137,6 +137,7 @@ class Configuration extends MX_Controller
         {
             $this->form_validation->set_rules('tmanager', 'Manager', '');
             $this->form_validation->set_rules('taccounting', 'Accounting', '');
+            $this->form_validation->set_rules('twebmail', 'Webmail', '');
         }
         elseif ($param == 5)
         {
@@ -169,7 +170,7 @@ class Configuration extends MX_Controller
             }
             elseif ($param == 4)
             {   
-                $property = array( 'manager' => $this->input->post('tmanager'), 'accounting' => $this->input->post('taccounting'));
+                $property = array( 'manager' => $this->input->post('tmanager'), 'accounting' => $this->input->post('taccounting'), 'email_link' => $this->input->post('twebmail'));
                 $this->Configuration_model->update(1, $property);
                 echo "true|One $this->title has successfully updated..! ";
             }

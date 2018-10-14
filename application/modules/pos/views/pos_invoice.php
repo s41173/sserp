@@ -4,7 +4,7 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<meta charset="UTF-8">
 	
-	<title>Struk</title>
+	<title> POS - <?php echo $orderid; ?> </title>
 	
 	<style>
 		body {
@@ -49,13 +49,13 @@
     function closeWindow() {
     setTimeout(function() {
     window.close();
-    }, 10000);
+    }, 15000);
     }
 
     </script> 
     
 </head>
-<body onload="closeWindow()">
+<body onload="window.print(); closeWindow();">
 <div class="sometxt">
 	<p>
 		<?php echo $b_name; ?> <br>

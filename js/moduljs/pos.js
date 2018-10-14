@@ -69,6 +69,36 @@ $(document).ready(function (e) {
 		
 	});
 
+	// invoice print
+	$(document).on('click','#bprintinv',function(e)
+	{	
+		e.preventDefault();
+		var value = $("#torder").val();
+		var url = sites+"/valid_orderid/"+value;
+
+		if (value){
+			// batas
+			$.ajax({
+				type: 'POST',
+				url: url,
+				cache: false,
+				headers: { "cache-control": "no-cache" },
+				success: function(result) {
+					if (result == 'true'){
+
+						var url = sites_print_invoice +"/"+ value +"/invoice";
+						window.open(url, "_blank", "scrollbars=1,resizable=0,height=600,width=500");
+					}else{
+						error_mess(3,"Can't Print - No Transaction..!",0);
+					}
+					
+				}
+			})
+			return false;
+		}
+		
+	});
+
 
 	// ajax transaction data 
 	$('#ajaxtransform,#ajaxtransform1').submit(function() {
@@ -202,10 +232,8 @@ $(document).ready(function (e) {
 						  s[i][4],
 						  s[i][5],
 '<div class="btn-group" role"group">'+
-'<a href="" class="btn btn-success btn-xs text-print" id="' +s[i][0]+ '" title="Invoice Status"> <i class="fa fa-print"> </i> </a> '+
-'<a href="" class="btn btn-default btn-xs text-confirmation" id="' +s[i][0]+ '" title="Payment Confirmation"> <i class="fa fa-credit-card-alt"> </i> </a> '+
-'<a href="" class="btn btn-primary btn-xs text-primary" id="' +s[i][0]+ '" title=""> <i class="fa fas-2x fa-edit"> </i> </a> '+
-'<a href="#" class="btn btn-danger btn-xs text-danger" id="'+s[i][0]+'" title="delete"> <i class="fa fas-2x fa-trash"> </i> </a>'+
+'<a href="" class="btn btn-success btn-xs text-print" id="' +s[i][1]+ '" title="Invoice Status"> <i class="fa fa-print"> </i> </a> '+
+'<a href="" class="btn btn-primary btn-xs text-primary" id="' +s[i][1]+ '" title=""> <i class="fa fas-2x fa-edit"> </i> </a> '+
 '</div>'
 							  ]);										
 							  } // End For 
@@ -254,7 +282,7 @@ $(document).ready(function (e) {
 										s[i][4],
 										s[i][5],
 '<div class="btn-group" role"group">'+
-'<a href="" class="btn btn-success btn-xs text-print" id="' +s[i][0]+ '" title="Invoice Status"> <i class="fa fa-print"> </i> </a> '+
+'<a href="" class="btn btn-success btn-xs text-print" id="' +s[i][1]+ '" title="Invoice Status"> <i class="fa fa-print"> </i> </a> '+
 '<a href="" class="btn btn-primary btn-xs text-primary" id="' +s[i][1]+ '" title=""> <i class="fa fas-2x fa-edit"> </i> </a> '+
 '</div>'
 										    ]);										

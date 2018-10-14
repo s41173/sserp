@@ -121,7 +121,7 @@ class Stock_ledger_lib extends Custom_Model {
        $this->db->where('month', $month);
        $this->db->where('year', $year);
        $res = $this->db->get($this->tableName)->row();
-       
+              
        $trs = $this->wt->get_sum_transaction_qty($product, $branch, $month, $year);
        if ($res){ return intval($res->open_qty+$trs); }
        else { return intval($trs); }
@@ -160,8 +160,8 @@ class Stock_ledger_lib extends Custom_Model {
         
         foreach ($transaction as $res)
         {
-            $trans_qty = $this->wt->get_sum_transaction_qty($res->id,$res->branch_id,$month,$year);
-            $trans_balance = floatval($this->wt->get_sum_transaction_balance($res->id, $res->branch_id, $month, $year,'debit')-$this->wt->get_sum_transaction_balance($res->id, $res->branch_id, $month,$year,'credit'));
+            $trans_qty = $this->wt->get_sum_transaction_qty($res->product_id,$res->branch_id,$month,$year);
+            $trans_balance = floatval($this->wt->get_sum_transaction_balance($res->product_id, $res->branch_id, $month, $year,'debit')-$this->wt->get_sum_transaction_balance($res->id, $res->branch_id, $month,$year,'credit'));
             
             $openqty = $this->get_trans($res->product_id, $res->branch_id, $month, $year, 'openqty');
             $openbalance = $this->get_trans($res->product_id, $res->branch_id, $month, $year, 'open_balance');

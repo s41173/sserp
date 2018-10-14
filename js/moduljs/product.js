@@ -211,7 +211,8 @@ $(document).ready(function (e) {
 		var color = $("#ccolor").val();
 		var size = $("#csize").val();
 		var publish = $("#cpublish").val();
-		var param = ['searching',branch,cat,color,size,publish];
+		var sku = $("#tsku").val();
+		var param = ['searching',branch,cat,color,size,publish,sku];
 		
 		// alert(publish+" - "+dates);
 		
@@ -229,6 +230,7 @@ $(document).ready(function (e) {
 				if (!param[3]){ param[3] = 'null'; }
 				if (!param[4]){ param[4] = 'null'; }
 				if (!param[5]){ param[5] = 'null'; }
+				if (!param[6]){ param[6] = 'null'; }
 				load_data_search(param);
 			}
 		})
@@ -268,7 +270,7 @@ $(document).ready(function (e) {
 			
 		    $.ajax({
 				type : 'GET',
-				url: source+"/"+search[0]+"/"+search[1]+"/"+search[2]+"/"+search[3]+"/"+search[4]+"/"+search[5],
+				url: source+"/"+search[0]+"/"+search[1]+"/"+search[2]+"/"+search[3]+"/"+search[4]+"/"+search[5]+"/"+search[6],
 				//force to handle it as text
 				contentType: "application/json",
 				dataType: "json",

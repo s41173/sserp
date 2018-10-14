@@ -10,11 +10,18 @@ $(document).ready(function (e) {
     })
 	
     	// ajax loading
-	$('.loader').ajaxStart(function(){
-		$(this).fadeIn();
-	}).ajaxStop(function(){
-		$(this).fadeOut();
-	});
+	// $('.loader').ajaxStart(function(){
+	// 	$(this).fadeIn();
+	// }).ajaxStop(function(){
+	// 	$(this).fadeOut();
+	// });
+
+	$(document).ajaxStart(function(){
+        $(".loader").css("display", "block");
+    });
+    $(document).ajaxComplete(function(){
+        $(".loader").css("display", "none");
+    });
    
     // function general
 	$("#error,#success,#warning").hide();
@@ -280,7 +287,7 @@ $(document).ready(function (e) {
 			success: function(data)
 		    {
 				res = data.split("|");
-				
+			
 				if(res[0]=='true')
 				{
 					// invalid file format.

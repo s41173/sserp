@@ -12,7 +12,7 @@ class Product_lib extends Custom_Model {
     private $wt;
     protected $field = array('id', 'sku', 'category', 'manufacture', 'name', 'model', 'permalink', 'currency',
                              'description', 'shortdesc', 'spesification', 'meta_title', 'meta_desc', 'meta_keywords',
-                             'price', 'discount', 'qty', 'min_order', 'image', 'url_upload', 'url1', 'url2', 'url3', 'url4', 'url5',
+                             'price', 'pricelow', 'discount', 'qty', 'min_order', 'image', 'url_upload', 'url1', 'url2', 'url3', 'url4', 'url5',
                              'dimension', 'dimension_class', 'weight', 'related', 'publish',
                              'created', 'updated', 'deleted');
 
@@ -103,6 +103,7 @@ class Product_lib extends Custom_Model {
            if ($res){ return $res->id; }else{ return 0; }
         }
     }
+   
 
     function get_name($id=null)
     {
@@ -110,6 +111,17 @@ class Product_lib extends Custom_Model {
         {
            $this->db->select('id, name, qty, weight, price, discount');
            $this->db->where('id', $id);
+           $res = $this->db->get('product')->row();
+           return $res->name;
+        }
+    }
+    
+    function get_name_by_sku($code=null)
+    {
+        if ($code)
+        {
+           $this->db->select('id, name, qty, weight, price, discount');
+           $this->db->where('sku', $code);
            $res = $this->db->get('product')->row();
            return $res->name;
         }

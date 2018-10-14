@@ -28,6 +28,7 @@
 	var sites_edit = "<?php echo site_url('pos/update_process/');?>";
 	var sites_del  = "<?php echo site_url('pos/delete/');?>";
 	var sites_get  = "<?php echo site_url('pos/update/');?>";
+    var sites_print_invoice  = "<?php echo site_url('pos/invoice/');?>";
     var sites  = "<?php echo site_url('pos');?>";
 	var source = "<?php echo $source;?>";
 	
@@ -81,7 +82,7 @@
                
                <div class="col-md-2 col-sm-12 col-xs-12">
                    <label class="control-label labelx"> Order-ID </label>
-                   <input type="email" class="form-control" id="torder" required name="temail" readonly value="<?php echo isset($orderid) ? $orderid : '' ?>" >
+                   <input type="text" class="form-control" id="torder" required name="torder" readonly value="<?php echo isset($orderid) ? $orderid : '' ?>" >
                </div>
                
                 <div class="col-md-2 col-sm-12 col-xs-12">
@@ -108,7 +109,7 @@
       <div class="form-group">
         <div class="col-md-4 col-sm-4 col-xs-12 col-md-offset-9">
           <div class="btn-group">    
-          <button type="button" class="btn btn-success" id=""> Print </button>
+          <button type="button" class="btn btn-success" id="bprintinv"> Print </button>
           <a class="btn btn-primary" href="<?php echo site_url('pos/add/'); ?>"> New Transaction </a> 
           </div>
         </div>

@@ -127,6 +127,11 @@
            
            <form id="searchform" class="form-inline">
               
+               <div class="form-group">
+                <label> SKU </label> <br>
+                <input type="text" name="tsku" id="tsku" class="form-control" style="width:110px; margin-right:5px;" placeholder="SKU">
+              </div>   
+               
               <div class="form-group">
                 <label> Branch </label> <br>
                 <?php $js = "class='select2_single form-control' id='cbranch' tabindex='-1' style='min-width:150px;' "; 
@@ -135,7 +140,7 @@
                
               <div class="form-group">
                 <label> Category </label> <br>  
-                <?php $js = "class='select2_single form-control' id='ccategory' tabindex='-1' style='min-width:170px;' "; 
+                <?php $js = "class='select2_single form-control' id='ccategory' tabindex='-1' style='min-width:120px;' "; 
 			        echo form_dropdown('ccategory', $category, isset($default['category']) ? $default['category'] : '', $js); ?>
               </div>
                
@@ -153,7 +158,7 @@
               
               <div class="form-group">
                 <label> Publish </label> <br>  
-                <select name="cpublish" id="cpublish" class="select2_single form-control" style="min-width:150px;">
+                <select name="cpublish" id="cpublish" class="select2_single form-control" style="min-width:120px;">
                    <option value="1"> Publish </option>
                    <option value="0"> Unpublish </option>
                 </select>
@@ -208,6 +213,7 @@
             <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#myModal3"> Report  </button>
             <button type="button" class="btn btn-warning" data-toggle="modal" data-target="#myModal4"> CSV-Import  </button>
             <a class="btn btn-success" href="<?php echo site_url('product/ledger'); ?>"> Ledger </a>
+            <button type="button" class="btn btn-warning" data-toggle="modal" data-target="#myModal10"> CSV-Export  </button>
                
                <!-- links -->
 	           <?php if (!empty($link)){foreach($link as $links){echo $links . '';}} ?>
@@ -246,6 +252,12 @@
       <!-- Modal - Detail -->
       <div class="modal fade" id="myModal9" role="dialog">
         <?php $this->load->view('product_details'); ?>    
+      </div>
+      <!-- Modal - Detail -->
+      
+       <!-- Modal - Detail -->
+      <div class="modal fade" id="myModal10" role="dialog">
+        <?php $this->load->view('product_export'); ?>    
       </div>
       <!-- Modal - Detail -->
       
