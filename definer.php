@@ -1,5 +1,4 @@
 <?php
-define('API', 'http://http://cms.delicaindonesia.com/administrator/api/');
-define('BASE_URL', 'https://delicaindonesia.com');
-
+define('api', 'https://lit-journey-84438.herokuapp.com/api/bulking');
+define('clientcode', 'tpi');
 ?>

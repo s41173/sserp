@@ -64,12 +64,13 @@
                     datatype: "array",
                     datafields:
                     [
-                        { name: "No", type: "string" },
+                        { name: "Log-ID", type: "string" },
 						{ name: "User", type: "string" },
 						{ name: "Date", type: "string" },
 						{ name: "Time", type: "string" },
 						{ name: "Component", type: "string" },
-						{ name: "Activity", type: "string" }
+						{ name: "Activity", type: "string" },
+                        { name: "Field", type: "string" }
                     ]
                 };
 			
@@ -92,12 +93,13 @@
 				showaggregates: true,
 				autoshowfiltericon: false,
                 columns: [
-                  { text: 'No', dataField: 'No', width: 50 },
+                  { text: 'Log-ID', dataField: 'Log-ID', width: 120 },
 				  { text: 'User', dataField: 'User', width : 200 },
 				  { text: 'Date', dataField: 'Date', width : 100 },
   				  { text: 'Time', dataField: 'Time', width : 120 },
 				  { text: 'Component', dataField: 'Component' },
-  				  { text: 'Activity', dataField: 'Activity', width : 200 }
+  				  { text: 'Activity', dataField: 'Activity', width : 200 },
+                  { text: 'Field', dataField: 'Field', width : 130 }
                 ]
             });
 			
@@ -117,16 +119,12 @@
 				var value = args.value;
 				var res;
 			
-				if (col == 'Code')
-				{ 			
-				   res = value.split("CD-00");
-				   openwindow(res[1]);
-				}
+				if (col == 'Log-ID'){ openwindow(value); }
  			});
 			
 			function openwindow(val)
 			{
-				var site = "<?php echo site_url('ap_payment/print_invoice/');?>";
+				var site = "<?php echo site_url('log/invoice/');?>";
 				window.open(site+"/"+val, "", "width=800, height=600"); 
 				//alert(site+"/"+val);
 			}
@@ -186,7 +184,8 @@
 		<table id="table" border="0" width="100%">
 		   <thead>
            <tr>
- 	       <th> No </th> <th> User </th> <th> Date </th> <th> Time </th> <th> Component </th> <th> Activity </th>  
+ 	       <th> Log-ID </th> <th> User </th> <th> Date </th> <th> Time </th> <th> Component </th> <th> Activity </th> 
+           <th> Field </th> 
 		   </tr>
            </thead>
 		  
@@ -212,12 +211,13 @@
 				{	
 				   echo " 
 				   <tr> 
-				       <td class=\"strongs\">".$i."</td> 
+				       <td class=\"strongs\">".$res->id."</td> 
 					   <td class=\"strongs\">".user($res->userid)."</td> 
 					   <td class=\"strongs\">".tglin($res->date)."</td> 
 					   <td class=\"strongs\">".$res->time."</td>
 					   <td class=\"strongs\">".com($res->component_id)."</td> 
    					   <td class=\"strongs\">".$res->activity."</td> 
+                       <td class=\"strongs\">".$res->field."</td> 
 				   </tr>";
 				   $i++;
 				}
@@ -232,8 +232,6 @@
           <img src="<?php echo base_url().'images/back.png'; ?>"> 
         </a>
         
-	</div>
-	
 </div>
 
 </body>

@@ -41,6 +41,7 @@ class Cashout_trans_model extends Custom_Model
         $this->db->truncate('cashout'); 
     }
    
+   
 }
 
 ?>

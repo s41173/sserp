@@ -30,17 +30,19 @@ class Product_model extends Custom_Model
         return $this->db->get(); 
     }
     
-    function search($cat=null,$col=null,$size=null,$publish=null)
+    function search($cat=null,$col=null,$size=null,$brand=null,$publish=null,$limit=500)
     {   
         $this->db->select($this->field);
         $this->db->from($this->tableName); 
         $this->db->where('deleted', $this->deleted);
-        $this->cek_null_string($cat, 'category');
-        $this->cek_null_string($col, 'color');
-        $this->cek_null_string($size, 'size');
-        $this->cek_null_string($publish, 'publish');
+        $this->cek_null($cat, 'category');
+        $this->cek_null($col, 'color');
+        $this->cek_null($size, 'size');
+        $this->cek_null($brand, 'manufacture');
+        $this->cek_nol($publish, 'publish');
         
         $this->db->order_by('name', 'asc'); 
+        $this->db->limit($limit);
         return $this->db->get(); 
     }
     
@@ -51,6 +53,18 @@ class Product_model extends Custom_Model
 //        $this->db->where('deleted', $this->deleted);
         $this->cek_null_string($sku, 'sku');
         $this->db->order_by('name', 'asc'); 
+        return $this->db->get(); 
+    }
+    
+    function search_name($name=null,$limit=null,$offset=null)
+    {   
+        $this->db->select($this->field);
+        $this->db->from($this->tableName); 
+        $this->db->where('deleted', $this->deleted);
+//        $this->db->like('name', $name);
+        $this->db->like('name', $name, 'both'); 
+        $this->db->order_by('name', 'asc'); 
+        $this->db->limit($limit,$offset);
         return $this->db->get(); 
     }
     

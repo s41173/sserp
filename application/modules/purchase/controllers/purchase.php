@@ -10,7 +10,7 @@ class Purchase extends MX_Controller
         $this->load->model('Purchase_item_model', 'transmodel', TRUE);
 
         $this->properti = $this->property->get();
-        $this->acl->otentikasi();
+//        $this->acl->otentikasi();
 
         $this->modul = $this->components->get(strtolower(get_class($this)));
         $this->title = strtolower(get_class($this));
@@ -28,219 +28,70 @@ class Purchase extends MX_Controller
         $this->wt = new Warehouse_transaction_lib();
         $this->trans = new Trans_ledger_lib();
         $this->pr = new Purchase_return_lib();
+        
+        $this->api = new Api_lib();
+        $this->acl = new Acl();
+        $this->decoded = $this->api->otentikasi('decoded');
+        
+        header('Access-Control-Allow-Origin: *');
+        header('Access-Control-Allow-Methods: GET, POST, PATCH, PUT, DELETE, OPTIONS');
+        header('Access-Control-Allow-Headers: Origin, Content-Type, X-Auth-Token');  
     }
 
-    private $properti, $modul, $title, $request, $branch, $stock, $wt, $trans;
-    private $vendor,$user,$tax,$journalgl,$product,$currency,$unit,$ap,$pr;
- 
+    private $properti, $modul, $title, $request, $branch, $stock, $wt, $trans,$decoded;
+    private $vendor,$user,$tax,$journalgl,$product,$currency,$unit,$ap,$pr,$api,$acl;
+    protected $error = null;
+    protected $status = 200;
+    protected $output = null;
+    
     function index()
     {
-       $this->get_last();
-    }
-    
-    public function getdatatable($search=null,$vendor='null',$dates='null')
-    {
-        if(!$search){ $result = $this->model->get_last_purchase($this->modul['limit'])->result(); }
-        else{ $result = $this->model->search($vendor, $dates)->result(); }
-        
-        if ($result){
-	foreach($result as $res)
-	{
-	   $output[] = array ($res->id, $res->no, strtoupper($res->currency), tglin($res->dates), ucfirst($res->acc), $this->vendor->get_vendor_name($res->vendor),
-                              $res->notes, idr_format($res->total + $res->costs), idr_format($res->p2), $this->status($res->status),
-                              $res->approved);
-	}
-            $this->output
-            ->set_status_header(200)
-            ->set_content_type('application/json', 'utf-8')
-            ->set_output(json_encode($output))
-            ->_display();
-            exit; 
-        }
-    }
-    
-    function get_last()
-    {
-        $this->acl->otentikasi1($this->title);
-
-        $data['title'] = $this->properti['name'].' | Administrator  '.ucwords($this->modul['title']);
-        $data['h2title'] = $this->modul['title'];
-        $data['main_view'] = 'purchase_view';
-	$data['form_action'] = site_url($this->title.'/add_process');
-        $data['form_action_update'] = site_url($this->title.'/update_process');
-        $data['form_action_del'] = site_url($this->title.'/delete_all');
-        $data['form_action_report'] = site_url($this->title.'/report_process');
-        $data['form_action_product'] = site_url($this->title.'/report_product_process');
-        $data['link'] = array('link_back' => anchor('main/','Back', array('class' => 'btn btn-danger')));
-        
-        $data['currency'] = $this->currency->combo();
-        $data['vendor'] = $this->vendor->combo();
-	// ---------------------------------------- //
- 
-        $config['first_tag_open'] = $config['last_tag_open']= $config['next_tag_open']= $config['prev_tag_open'] = $config['num_tag_open'] = '<li>';
-        $config['first_tag_close'] = $config['last_tag_close']= $config['next_tag_close']= $config['prev_tag_close'] = $config['num_tag_close'] = '</li>';
-
-        $config['cur_tag_open'] = "<li><span><b>";
-        $config['cur_tag_close'] = "</b></span></li>";
-
-        // library HTML table untuk membuat template table class zebra
-        $tmpl = array('table_open' => '<table id="datatable-buttons" class="table table-striped table-bordered">');
-
-        $this->table->set_template($tmpl);
-        $this->table->set_empty("&nbsp;");
-
-        //Set heading untuk table
-        $this->table->set_heading('#','No', 'Code', 'Cur', 'Date', 'Acc', 'Vendor', 'Total', 'Balance', '#', 'Action');
-
-        $data['table'] = $this->table->generate();
-        $data['source'] = site_url($this->title.'/getdatatable');
+        if ($this->acl->otentikasi1($this->title) == TRUE){
             
-        // Load absen view dengan melewatkan var $data sbgai parameter
-	$this->load->view('template', $data);
+            $datax = (array)json_decode(file_get_contents('php://input'));
+            if (isset($datax['limit'])){ $this->limitx = $datax['limit']; }else{ $this->limitx = $this->modul['limit']; }
+            if (isset($datax['offset'])){ $this->offsetx = $datax['offset']; }
+            
+            $vendor = null; $date = null;
+            if (isset($datax['vendor'])){ $vendor = $datax['vendor']; }
+            if (isset($datax['date'])){ $date = $datax['date']; }
+            if($vendor == null & $date == null){ $result = $this->model->get_last_purchase($this->limitx, $this->offsetx)->result(); }
+            else {$result = $this->model->search($vendor,$date)->result(); }  
+
+            foreach($result as $res)
+            {
+                $this->output[] = array ("id"=>$res->id, "code"=>'PO-'.$res->no, "no"=>$res->no, "docno"=>$res->docno, "currency"=>strtoupper($res->currency), "date"=>tglin($res->dates), "account"=>ucfirst($res->acc), "vendor"=>$this->vendor->get_vendor_name($res->vendor),
+                                         "note"=>$res->notes, "amount"=>floatval($res->total + $res->costs), "balance"=>floatval($res->p2), "trans_status"=>$this->status($res->status),
+                                         "status"=>$res->approved);
+            }
+        }else{ $this->reject_token(); }
+        $this->api->response(array('error' => $this->error, 'content' => $this->output), $this->status); 
     }
 
-    public function chart($cur='IDR')
+    // function get purchase list dengan parameter status 0 atau 1
+    function get_list()
     {
-        $fusion = $this->load->library('fusioncharts');
-        $chart  = base_url().'public/flash/Column3D.swf';
-        
-        $ps = new Period();
-        $ps->get();
-        $py = new Payment_status_lib();
-        
-        if ($this->input->post('ccurrency')){ $cur = $this->input->post('ccurrency'); }else { $cur = 'IDR'; }
-        if ($this->input->post('tyear')){ $year = $this->input->post('tyear'); }else { $year = $ps->year; }
-        
-        $arpData[0][1] = 'January';
-        $arpData[0][2] =  $this->model->total_chart($cur,1,$year);
-//
-        $arpData[1][1] = 'February';
-        $arpData[1][2] =  $this->model->total_chart($cur,2,$year);
-//
-        $arpData[2][1] = 'March';
-        $arpData[2][2] =  $this->model->total_chart($cur,3,$year);
-//
-        $arpData[3][1] = 'April';
-        $arpData[3][2] =  $this->model->total_chart($cur,4,$year);
-//
-        $arpData[4][1] = 'May';
-        $arpData[4][2] =  $this->model->total_chart($cur,5,$year);
-//
-        $arpData[5][1] = 'June';
-        $arpData[5][2] =  $this->model->total_chart($cur,6,$year);
-//
-        $arpData[6][1] = 'July';
-        $arpData[6][2] =  $this->model->total_chart($cur,7,$year);
+        if ($this->acl->otentikasi1($this->title) == TRUE){
+            
+          $datax = (array)json_decode(file_get_contents('php://input'));
+          $vendor = null; $status = null;
 
-        $arpData[7][1] = 'August';
-        $arpData[7][2] = $this->model->total_chart($cur,8,$year);
+          if (isset($datax['vendor'])){ $vendor = $datax['vendor']; }
+          if (isset($datax['status'])){ $status = $datax['status']; }
+            
+          $purchases = $this->model->get_purchase_list('IDR',$vendor,$status)->result();
+          foreach ($purchases as $res)
+          {
+              $this->output[] = array ("id"=>$res->id, "code"=>'PO-'.$res->no, "no"=>$res->no, "docno"=>$res->docno, "currency"=>strtoupper($res->currency), "date"=>tglin($res->dates), "account"=>ucfirst($res->acc), "vendor"=>$this->vendor->get_vendor_name($res->vendor),
+                                       "note"=>$res->notes, "amount"=>floatval($res->total+$res->costs), "balance"=>floatval($res->p2), "trans_status"=>$this->status($res->status),
+                                       "status"=>$res->approved);             
+          }
         
-        $arpData[8][1] = 'September';
-        $arpData[8][2] = $this->model->total_chart($cur,9,$year);
-//        
-        $arpData[9][1] = 'October';
-        $arpData[9][2] = $this->model->total_chart($cur,10,$year);
-//        
-        $arpData[10][1] = 'November';
-        $arpData[10][2] = $this->model->total_chart($cur,11,$year);
-//        
-        $arpData[11][1] = 'December';
-        $arpData[11][2] = $this->model->total_chart($cur,12,$year);
-
-        $strXML1 = $fusion->setDataXML($arpData,'','') ;
-        $graph   = $fusion->renderChart($chart,'',$strXML1,"Tuition", "98%", 400, false, false) ;
-        return $graph;
-        
+        }else{ $this->reject_token(); }
+        $this->api->response(array('error' => $this->error, 'content' => $this->output), $this->status); 
     }
     
-    function get_list($currency=null,$vendor=null,$st=null)
-    {
-        $this->acl->otentikasi1($this->title);
-
-        $data['title'] = $this->properti['name'].' | Administrator  '.ucwords($this->modul['title']);
-        $data['h2title'] = $this->modul['title'];
-        $data['form_action'] = site_url($this->title.'/get_list');
-        $data['main_view'] = 'vendor_list';
-        $data['currency'] = $this->currency->combo();
-        $data['vendor'] = $this->vendor->combo();
-        $data['link'] = array('link_back' => anchor($this->title.'/get_list','<span>back</span>', array('class' => 'back')));
-
-        $purchases = $this->model->get_purchase_list($currency,$vendor,$st)->result();
-
-        $tmpl = array('table_open' => '<table id="example" width="100%" cellspacing="0" class="table table-striped table-bordered">');
-
-        $this->table->set_template($tmpl);
-        $this->table->set_empty("&nbsp;");
-
-        //Set heading untuk table
-        $this->table->set_heading('No', 'Code', 'Date', 'Acc', 'Cur', 'Notes', 'Total', 'Balance', 'Action');
-
-        $i = 0;
-        foreach ($purchases as $purchase)
-        {
-           $datax = array(
-                            'name' => 'button',
-                            'type' => 'button',
-                            'class' => 'btn btn-primary',
-                            'content' => 'Select',
-                            'onclick' => 'setvalue(\''.$purchase->no.'\',\'titem\')'
-                         );
-
-            $this->table->add_row
-            (
-                ++$i, 'PO-00'.$purchase->no, tglin($purchase->dates), ucfirst($purchase->acc), strtoupper($purchase->currency), $purchase->notes, number_format($purchase->total,2), number_format($purchase->p2,2),
-                form_button($datax)
-            );
-        }
-
-        $data['table'] = $this->table->generate();
-        $this->load->view('purchase_list', $data);
-    }
-
-    function get_list_settled($currency=null,$vendor=null)
-    {
-        $this->acl->otentikasi1($this->title);
-
-        $data['title'] = $this->properti['name'].' | Administrator  '.ucwords($this->modul['title']);
-        $data['h2title'] = $this->modul['title'];
-        $data['form_action'] = site_url($this->title.'/get_list');
-        $data['main_view'] = 'vendor_list';
-        $data['currency'] = $this->currency->combo();
-        $data['vendor'] = $this->vendor->combo();
-        $data['link'] = array('link_back' => anchor($this->title.'/get_list','<span>back</span>', array('class' => 'back')));
-
-        $purchases = $this->model->get_purchase_list($currency,$vendor,1)->result();
-
-        $tmpl = array('table_open' => '<table id="example" width="100%" cellspacing="0" class="table table-striped table-bordered">');
-
-        $this->table->set_template($tmpl);
-        $this->table->set_empty("&nbsp;");
-
-        //Set heading untuk table
-        $this->table->set_heading('No', 'Code', 'Date', 'Acc', 'Cur', 'Notes', 'Total', 'Balance', 'Action');
-
-        $i = 0;
-        foreach ($purchases as $purchase)
-        {
-           $datax = array(
-                            'name' => 'button',
-                            'type' => 'button',
-                            'class' => 'btn btn-primary',
-                            'content' => 'Select',
-                            'onclick' => 'setvalue(\''.$purchase->no.'\',\'titem\')'
-                         );
-
-            $this->table->add_row
-            (
-                ++$i, 'PO-00'.$purchase->no, tglin($purchase->dates), ucfirst($purchase->acc), strtoupper($purchase->currency), $purchase->notes, number_format($purchase->total,2), number_format($purchase->p2,2),
-                form_button($datax)
-            );
-        }
-
-        $data['table'] = $this->table->generate();
-        $this->load->view('purchase_list', $data);
-    }
-    
+    // api function
     function item_list($po)
     {
         $this->acl->otentikasi($this->title);
@@ -279,16 +130,15 @@ class Purchase extends MX_Controller
 
     function confirmation($pid)
     {
-        if ($this->acl->otentikasi3($this->title,'ajax') == TRUE){
+        if ($this->acl->otentikasi3($this->title) == TRUE && $this->model->valid_add_trans($pid, $this->title) == TRUE){
         $purchase = $this->model->get_by_id($pid)->row();
 
-        if ($purchase->approved == 1){ echo "warning|$this->title already approved..!"; }
-        elseif ($this->valid_period($purchase->dates) == FALSE){ echo "error|$this->title Invalid Period..!"; }
+        if ($purchase->approved == 1){ $this->error = "$this->title already approved..!"; $this->status = 401; }
+        elseif ($this->valid_period($purchase->dates) == FALSE){ $this->error = "Invalid Period..!"; $this->status = 401; }
         else
         {
             $total = $purchase->total;
-
-            if ($total == 0 && $purchase->p2 == 0){  echo "error|$this->title has no value..!"; }
+            if ($total == 0 && $purchase->p2 == 0){ $this->error = "$this->title has no value..!"; $this->status = 401; }
             else
             {
                 $this->over_status($purchase->no); // over status
@@ -304,13 +154,12 @@ class Purchase extends MX_Controller
                                          $purchase->no, 'AP', $purchase->total + $purchase->costs, $purchase->p1,$purchase->p2);
                 
                 $data = array('approved' => 1);
-                $this->model->update($pid, $data);
-
-               echo "true|$this->title PO-00$purchase->no confirmed..!";
+                if ($this->model->update($pid, $data) == true){ $this->error = "PO-0$purchase->no confirmed..!";}else{ $this->error = 'Failed to confirm'; $this->status = 401; }
             }
         }
         
-        }else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
+        }else{ $this->reject_token(); }
+        $this->api->response(array('error' => $this->error), $this->status); 
     }
     
     private function add_stock($pid)
@@ -322,7 +171,7 @@ class Purchase extends MX_Controller
            $this->stock->add_stock($res->product, $purchase->dates, $res->qty, $res->amount); // adding stock
            $this->wt->add($purchase->dates, 'PO-00'.$purchase->no, $this->branch->get_branch(), $purchase->currency, $res->product, $res->qty, 0,
                            $res->price, $res->price*$res->qty,
-                           $this->session->userdata('log'));
+                           $this->decoded->log);
        }
     }
     
@@ -371,8 +220,8 @@ class Purchase extends MX_Controller
         if ($p1 > 0)
         {  
            // create journal- GL
-           $this->journalgl->new_journal('0'.$no,$date,'PJ',$currency,$code,$amount, $this->session->userdata('log'));
-           $this->journalgl->new_journal('0'.$no,$date,'CD',$currency,'DP Payment : PJ-00'.$no,$p1, $this->session->userdata('log'));
+           $this->journalgl->new_journal('0'.$no,$date,'PJ',$currency,$code,$amount, $this->decoded->log);
+           $this->journalgl->new_journal('0'.$no,$date,'CD',$currency,'DP Payment : PJ-00'.$no,$p1, $this->decoded->log);
            
            $jid = $this->journalgl->get_journal_id('PJ','0'.$purchase->no);
            $dpid = $this->journalgl->get_journal_id('CD','0'.$purchase->no);
@@ -389,7 +238,7 @@ class Purchase extends MX_Controller
         }
         else 
         { 
-           $this->journalgl->new_journal('0'.$no,$date,'PJ',$currency,$code,$amount, $this->session->userdata('log'));
+           $this->journalgl->new_journal('0'.$no,$date,'PJ',$currency,$code,$amount, $this->decoded->log);
            
            $jid = $this->journalgl->get_journal_id('PJ','0'.$purchase->no);
             
@@ -402,16 +251,18 @@ class Purchase extends MX_Controller
 
     function delete($uid)
     {
-        if ($this->acl->otentikasi_admin($this->title,'ajax') == TRUE){
-        $val = $this->model->get_by_id($uid)->row();
-        
+        if ($this->acl->otentikasi3($this->title) == TRUE && $this->model->valid_add_trans($uid, $this->title) == TRUE){
+            
+            $val = $this->model->get_by_id($uid)->row();
             if ( $this->valid_period($val->dates) == TRUE && $this->ap->cek_relation_trans($val->no,'no','PO') == TRUE && $this->pr->cek_relation($val->no, 'purchase'))
             {
-               if ($val->approved == 1){ $this->rollback($uid,$val->no); } else { $this->remove($uid,$val->no); }
+               if ($val->approved == 1){ $this->error = $this->rollback($uid,$val->no); } else { $this->error = $this->remove($uid,$val->no); }
             }
-            else{ echo "error|1 $this->title can't removed, journal approved, related to another component..!"; } 
+            elseif ($this->valid_period($val->dates) != TRUE){ $this->error = 'Invalid Period'; $this->status = 401; }
+            else{ $this->error =  "$this->title can't removed, journal approved, related to another component..!"; $this->status = 401; } 
 
-        }else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
+        }else{ $this->reject_token(); }
+        $this->api->response(array('error' => $this->error), $this->status); 
     }
     
     private function rollback($uid,$po)
@@ -429,45 +280,19 @@ class Purchase extends MX_Controller
       
       $trans = array('approved' => 0);
       $this->model->update($uid, $trans);
-      echo "true|1 $this->title successfully rollback..!";
+      return "$this->title successfully rollback..!";
     }
     
     private function remove($uid,$po)
     {
        $this->transmodel->delete_po($uid); // model to delete purchase item
        $this->model->force_delete($uid); // memanggil model untuk mendelete data
-       echo "true|1 $this->title successfully removed..!";
+       return "$this->title successfully removed..!";
     }
 
     function add()
     {
-        $this->acl->otentikasi2($this->title);
-
-        $data['title'] = $this->properti['name'].' | Administrator '.ucwords($this->modul['title']);
-        $data['h2title'] = 'Create New '.$this->modul['title'];
-	$data['form_action'] = site_url($this->title.'/add_process');
-        $data['form_action_item'] = site_url($this->title.'/add_item/');
-        
-        $data['currency'] = $this->currency->combo();
-        $data['code'] = $this->model->counter();
-        $data['user'] = $this->session->userdata("username");
-        $data['vendor'] = $this->vendor->combo();
-        $data['tax'] = $this->tax->combo();
-        $data['over'] = $this->ap->combo_over();
-        
-        $data['main_view'] = 'purchase_form';
-        $data['source'] = site_url($this->title.'/getdatatable');
-        $data['link'] = array('link_back' => anchor($this->title,'Back', array('class' => 'btn btn-danger')));
-        
-        $data['total'] = 0;
-        $data['items'] = null;
-        
-        $this->load->view('template', $data);
-    }
-
-    function add_process()
-    {
-        if ($this->acl->otentikasi2($this->title,'ajax') == TRUE){
+        if ($this->acl->otentikasi2($this->title) == TRUE){
 
 	// Form validation
         $this->form_validation->set_rules('cvendor', 'Vendor', 'required');
@@ -481,21 +306,18 @@ class Purchase extends MX_Controller
         if ($this->form_validation->run($this) == TRUE)
         {
 //            if ($this->input->post('tpr')){ $this->add_request($this->input->post('tno'), $this->input->post('tpr')); }
-            
             $purchase = array('vendor' => $this->input->post('cvendor'), 'no' => $this->input->post('tno'), 
                               'request' => 0, 'status' => 0, 'docno' => $this->input->post('tdocno'),
                               'dates' => $this->input->post('tdate'), 'acc' => $this->input->post('cacc'), 'currency' => $this->input->post('ccurrency'), 
                               'notes' => $this->input->post('tnote'), 'desc' => $this->input->post('tdesc'), 'shipping_date' => $this->input->post('tshipping'), 
-                              'user' => $this->user->get_id($this->session->userdata('username')),
-                              'log' => $this->session->userdata('log'));
+                              'user' => $this->decoded->userid,
+                              'log' => $this->decoded->log);
             
-            $this->model->add($purchase);
-            
-            echo "true|One $this->title data successfully saved!|".$this->model->max_id();
+            if ($this->model->add($purchase) == true){ $this->error = $this->model->max_id();}else{ $this->error = 'Failure Saved..'; $this->status = 401; }
         }
-        else{ echo "error|".validation_errors(); }
-        }else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
-
+        else{ $this->error = validation_errors(); $this->status = 401; }
+        }else{ $this->reject_token(); }
+        $this->api->response(array('error' => $this->error), $this->status); 
     }
     
     private function add_request($po,$req)
@@ -509,146 +331,162 @@ class Purchase extends MX_Controller
        }
     }
 
-    function add_trans($pid=null)
+    function get($pid=null)
     {
-        $this->acl->otentikasi2($this->title);
-        $this->model->valid_add_trans($pid, $this->title);
+        if ($this->acl->otentikasi1($this->title) == TRUE && $this->model->valid_add_trans($pid, $this->title) == TRUE){
+           
+            $purchase = $this->model->get_by_id($pid)->row();
+
+            $data['no'] = $purchase->no;
+            $data['over'] = $this->ap->combo_over($purchase->vendor,$purchase->currency);
+
+            $data['vendor'] = $purchase->vendor;
+            $data['request'] = $purchase->request;
+            $data['date'] = $purchase->dates;
+            $data['acc'] = $purchase->acc;
+            $data['currency'] = $purchase->currency;
+            $data['note'] = $purchase->notes;
+            $data['desc'] = $purchase->desc;
+            $data['shipping'] = $purchase->shipping_date;
+            $data['user'] = $this->user->get_username($purchase->user);
+            $data['docno'] = $purchase->docno;
+
+            $data['tax'] = $purchase->tax;
+            $data['totaltax'] = $purchase->total;
+            $data['p1'] = $purchase->p1;
+            $data['costs'] = $purchase->costs;
+            $data['total'] = $purchase->p2;
+
+            $data['over'] = $purchase->ap_over;
+            $data['overamount'] = $purchase->over_amount;
+
+    //        ============================ Purchase Item  =========================================
+            $items = null;
+            foreach ($this->transmodel->get_last_item($pid)->result() as $value) {
+                $items[] = array("id"=>$value->id,"purchase_id"=>$value->purchase_id,"product_id"=>$value->product,"sku"=> $this->product->get_sku($value->product),
+                                 "product"=> $this->product->get_name($value->product), "qty"=>$value->qty,"price"=>floatval($value->price),"tax"=>floatval($value->tax),"total"=>floatval($value->amount),"amount"=> floatval($value->tax+$value->amount));
+            }
+            $data['items'] = $items;
+        
+        }else{ $this->reject_token(); }
+        $this->api->response(array('error' => $this->error, 'content' => $data), $this->status); 
+    }
+
+    
+    function get_item($id=null,$pid=null)
+    {
+       if ($this->acl->otentikasi1($this->title) == TRUE && isset($id) && isset($pid)){
+           
+          $data = null; 
+          if ($this->transmodel->valid_id($id) == FALSE){ $this->error = 'Invalid Transaction ID'; $this->status = 401; } 
+          if ($this->model->valid_add_trans($pid, $this->title) == FALSE){ $this->error = 'Invalid Purchase ID'; $this->status = 401; } 
+          
+          if ($this->error == null){
+            $val = $this->transmodel->get_by_id($id)->row();
+//            $data['taxcombo'] = $this->tax->combo();
+            $data['product_id'] = $val->product;
+            $data['sku'] = $this->product->get_sku($val->product);
+            $data['product'] = $this->product->get_name($val->product);
+            $data['qty'] = $val->qty;
+            $data['amount'] = $val->price;
+            $data['tax'] = $val->tax;
+          }
+                    
+       }else{ $this->reject_token(); }
+       $this->api->response(array('error' => $this->error, 'content' => $data), $this->status); 
+    }
+    
+    function edit_item($id,$pid)
+    {   
+        if ($this->acl->otentikasi2($this->title) == TRUE && isset($id) && isset($pid)){
         
         $purchase = $this->model->get_by_id($pid)->row();
-        
-        $data['title'] = $this->properti['name'].' | Administrator '.ucwords($this->modul['title']);
-        $data['h2title'] = 'Create New '.$this->modul['title'];
-	$data['form_action'] = site_url($this->title.'/update_process/'.$pid);
-        $data['form_action_item'] = site_url($this->title.'/add_item/'.$pid);
-        $data['currency'] = $this->currency->combo();
-        $data['vendor'] = $this->vendor->combo();
-        $data['unit'] = $this->unit->combo();
-        $data['tax'] = $this->tax->combo();
-        $data['code'] = $purchase->no;
-        $data['user'] = $this->session->userdata("username");
-        
-        $data['main_view'] = 'purchase_form';
-        $data['source'] = site_url($this->title.'/getdatatable');
-        $data['link'] = array('link_back' => anchor($this->title,'Back', array('class' => 'btn btn-danger')));
+        $data = null; 
+        if ($this->transmodel->valid_id($id) == FALSE){ $this->error = 'Invalid Transaction ID'; $this->status = 401; } 
+        if ($this->model->valid_add_trans($pid, $this->title) == FALSE){ $this->error = 'Invalid Purchase ID'; $this->status = 401; }     
+        if ($this->valid_confirmation($purchase->no) == FALSE){ $this->error = "Can't change value - Order approved..!"; $this->status = 401; }     
+           
+        if ($this->error == null){
+            $this->form_validation->set_rules('titem', 'Item Name', 'required');
+            $this->form_validation->set_rules('tqty', 'Qty', 'required|numeric');
+            $this->form_validation->set_rules('tamount', 'Unit Price', 'required');
+            $this->form_validation->set_rules('ctax', 'Tax', 'required');
 
-        $data['over'] = $this->ap->combo_over($purchase->vendor,$purchase->currency);
-
-        $data['default']['vendor'] = $purchase->vendor;
-        $data['default']['request'] = $purchase->request;
-        $data['default']['date'] = $purchase->dates;
-        $data['default']['acc'] = $purchase->acc;
-        $data['default']['currency'] = $purchase->currency;
-        $data['default']['note'] = $purchase->notes;
-        $data['default']['desc'] = $purchase->desc;
-        $data['default']['shipping'] = $purchase->shipping_date;
-        $data['default']['user'] = $this->user->get_username($purchase->user);
-        $data['default']['docno'] = $purchase->docno;
-
-        $data['default']['tax'] = $purchase->tax;
-        $data['default']['totaltax'] = $purchase->total;
-        $data['default']['p1'] = $purchase->p1;
-        $data['default']['costs'] = $purchase->costs;
-        $data['default']['total'] = $purchase->p2;
-        
-        $data['default']['over'] = $purchase->ap_over;
-        $data['default']['overamount'] = $purchase->over_amount;
-
-//        ============================ Purchase Item  =========================================
-        $data['items'] = $this->transmodel->get_last_item($pid)->result();
-        
-        $this->load->view('template', $data);
-    }
-
-    
-    function edit_item($id,$po)
-    {
-       $this->acl->otentikasi2($this->title); 
-       $val = $this->transmodel->get_by_id($id)->row();  
-       $data['form_action_item'] = site_url($this->title.'/edit_item_process/'.$id.'/'.$po); 
-       
-       $data['tax'] = $this->tax->combo();
-       
-       $data['default']['item'] = $this->product->get_name($val->product);
-       $data['default']['qty'] = $val->qty;
-       $data['default']['amount'] = $val->price;       
-       $data['default']['tax'] = $val->tax;
-        
-       $this->load->view('purchase_update_item', $data); 
-    }
-    
-    function edit_item_process($id,$po)
-    {   
-        $this->form_validation->set_rules('titem', 'Item Name', 'required');
-        $this->form_validation->set_rules('tqty', 'Qty', 'required|numeric');
-        $this->form_validation->set_rules('tamount', 'Unit Price', 'required');
-
-        if ($this->form_validation->run($this) == TRUE && $this->valid_confirmation($po) == TRUE)
-        {
-           $pitem = array('product' => $this->product->get_id($this->input->post('titem')), 'purchase_id' => $po, 'qty' => $this->input->post('tqty'),
-                          'price' => $this->input->post('tamount'),
-                          'amount' => $this->input->post('tqty') * $this->input->post('tamount'),
-                          'tax' => $this->tax->calculate($this->input->post('ctax'),$this->input->post('tqty'),$this->input->post('tamount')));
-            $this->transmodel->update($id,$pitem);
-            $this->update_trans($po);
+            if ($this->form_validation->run($this) == TRUE)
+            {
+                $pitem = array('product' => $this->product->get_id_by_sku($this->input->post('titem')), 'purchase_id' => $pid, 'qty' => $this->input->post('tqty'),
+                               'price' => $this->input->post('tamount'),
+                               'amount' => $this->input->post('tqty') * $this->input->post('tamount'),
+                               'tax' => $this->tax->calculate($this->input->post('ctax'),$this->input->post('tqty'),$this->input->post('tamount')));
+                if ( $this->transmodel->update($id,$pitem) == true && $this->update_trans($pid) == true){ $this->error = 'Item transaction posted..!';}else{
+                   $this->error = 'Failure to posted transaction..!'; $this->status = 401; 
+                }
+            }
         }
         
-        redirect($this->title.'/edit_item/'.$id.'/'.$po);
+       }else{ $this->reject_token(); }
+       $this->api->response(array('error' => $this->error), $this->status); 
     }
     
 //    ======================  Item Transaction   ===============================================================
 
     function add_item($pid=null)
     {
-        $po = $this->model->get_by_id($pid)->row();
-        
-        $this->form_validation->set_rules('titem', 'Item Name', 'required');
-        $this->form_validation->set_rules('tqty', 'Qty', 'required|numeric');
-        $this->form_validation->set_rules('tamount', 'Unit Price', 'required');
+        if ($this->acl->otentikasi1($this->title) == TRUE && $this->model->valid_add_trans($pid, $this->title) == TRUE){
+            $po = $this->model->get_by_id($pid)->row();
 
-        if ($this->form_validation->run($this) == TRUE && $this->valid_confirmation($po->no) == TRUE && $pid != null)
-        {   
-            $pitem = array('product' => $this->product->get_id_by_sku($this->input->post('titem')), 'purchase_id' => $pid, 'qty' => $this->input->post('tqty'),
-                           'price' => $this->input->post('tamount'),
-                           'amount' => $this->input->post('tqty') * $this->input->post('tamount'),
-                           'tax' => $this->tax->calculate($this->input->post('ctax'),$this->input->post('tqty'),$this->input->post('tamount')));
-            $this->transmodel->add($pitem);
-            $this->update_trans($pid);
-            echo 'true';
-        }
-        elseif ( $this->valid_confirmation($po->no) != TRUE ){ echo "error|Can't change value - Journal approved..!"; }
-        elseif (!$pid){ echo "error|Can't change value - Journal not created..!"; }
-        else{ echo 'error|'.validation_errors(); } 
+            $this->form_validation->set_rules('titem', 'Item Name', 'required');
+            $this->form_validation->set_rules('tqty', 'Qty', 'required|numeric');
+            $this->form_validation->set_rules('tamount', 'Unit Price', 'required');
+            $this->form_validation->set_rules('ctax', 'Tax', 'required');
+
+            if ($this->form_validation->run($this) == TRUE && $this->valid_confirmation($po->no) == TRUE && $pid != null)
+            {   
+                $pitem = array('product' => $this->product->get_id_by_sku($this->input->post('titem')), 'purchase_id' => $pid, 'qty' => $this->input->post('tqty'),
+                               'price' => $this->input->post('tamount'),
+                               'amount' => $this->input->post('tqty') * $this->input->post('tamount'),
+                               'tax' => $this->tax->calculate($this->input->post('ctax'),$this->input->post('tqty'),$this->input->post('tamount')));
+               
+                if ($this->transmodel->add($pitem) == true && $this->update_trans($pid) == true){ $this->error = 'Item transaction posted..!'; 
+                }else{ $this->error = 'Failure to posted transaction..!'; $this->status = 401; }
+            }
+            elseif ( $this->valid_confirmation($po->no) != TRUE ){ $this->error = "Can't change value - Journal approved..!"; $this->status = 401; }
+            elseif (!$pid){ $this->error = "Can't change value - Journal not created..!"; $this->status = 401; }
+            else{ $this->error = validation_errors(); $this->status = 401; } 
+            
+        }else{ $this->reject_token(); }
+        $this->api->response(array('error' => $this->error), $this->status); 
     }
 
     private function update_trans($pid)
     {
         $totals = $this->transmodel->total($pid);
         $purchase = array('tax' => $totals['tax'], 'total' => $totals['amount'] + $totals['tax']);
-	$this->model->update($pid, $purchase);
+	return $this->model->update($pid, $purchase);
     }
 
     function delete_item($id)
     {
-        if ($this->acl->otentikasi2($this->title,'ajax') == TRUE){ 
+        if ($this->acl->otentikasi2($this->title) == TRUE && isset($id)){ 
             
-        $pid = $this->transmodel->get_by_id($id)->row();   
-        $purchase = $this->model->get_by_id($pid->purchase_id)->row();
+            $pid = $this->transmodel->get_by_id($id)->row();
+            $purchase = $this->model->get_by_id($pid->purchase_id)->row();
         
-        if ($this->valid_confirmation($purchase->no) == TRUE){
-            $this->transmodel->delete($id); 
-            $this->update_trans($pid->purchase_id);
-            echo 'true|Transaction removed..!';
-        }
-        else{ echo "warning|Journal approved, can't deleted..!"; }
-        }else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
+            if ($this->transmodel->valid_id($id) == true && $this->valid_confirmation($purchase->no) == TRUE){
+                if ($this->transmodel->delete($id) == true && $this->update_trans($pid->purchase_id) == true){ $this->error = 'Transaction removed..!';
+                }else{ $this->error = 'Failure to posted transaction..!'; $this->status = 401;  }
+            }
+            else{ $this->error = "Journal approved, can't deleted..!"; $this->status = 401; }
+        }else{ $this->reject_token(); }
+        $this->api->response(array('error' => $this->error), $this->status); 
     }
 //    ==========================================================================================
 
     // Fungsi update untuk mengupdate db
-    function update_process($pid=null)
+    function update($pid=null)
     {
-        if ($this->acl->otentikasi2($this->title,'ajax') == TRUE){
-
+        if ($this->acl->otentikasi2($this->title) == TRUE && $this->model->valid_add_trans($pid, $this->title) == TRUE){
+   
 	// Form validation
         $this->form_validation->set_rules('cvendor', 'Vendor', 'required');
         $this->form_validation->set_rules('tno', 'PO - No', 'required|numeric|callback_valid_confirmation');
@@ -663,8 +501,7 @@ class Purchase extends MX_Controller
         if ($this->form_validation->run($this) == TRUE)
         {
             $purchases = $this->model->get_by_id($pid)->row();
-
-            $purchase = array('vendor' => $this->input->post('cvendor'), 'log' => $this->session->userdata('log'), 'docno' => $this->input->post('tdocno'),
+            $purchase = array('vendor' => $this->input->post('cvendor'), 'log' => $this->decoded->log, 'docno' => $this->input->post('tdocno'),
                               'dates' => $this->input->post('tdate'), 'acc' => $this->input->post('cacc'), 'currency' => $this->input->post('ccurrency'),
                               'notes' => $this->input->post('tnote'), 'desc' => $this->input->post('tdesc'),
                               'shipping_date' => $this->input->post('tshipping'), 'user' => $this->user->get_id($this->input->post('tuser')),
@@ -672,12 +509,12 @@ class Purchase extends MX_Controller
                               'p2' => $this->calculate_balance($this->input->post('tcosts'),$purchases->total,$this->input->post('tp1'),$this->input->post('toveramount')),
                               'status' => $this->get_status($this->calculate_balance($this->input->post('tcosts'),$purchases->total,$this->input->post('tp1'),$this->input->post('toveramount')))
                              );
-
-            $this->model->update($pid, $purchase);
-            echo "true|One $this->title data successfully updated!|".$pid;
+//
+            if ($this->model->update($pid, $purchase) == true){ $this->error = "One $this->title data successfully updated!";}else{ $this->error = 'Failure to posted transaction..!'; $this->status = 401; }
         }
-        else{ echo 'error|'.validation_errors(); }
-        }else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
+        else{ $this->error = validation_errors(); $this->status = 401; }
+        }else{ $this->reject_token(); }
+        $this->api->response(array('error' => $this->error), $this->status); 
     }
     
     private function over_status($po,$type=0)
@@ -688,7 +525,7 @@ class Purchase extends MX_Controller
        else { $data = array('credit_over' => 0); }
        
        if ($type != 0){ $data = array('credit_over' => 0); }
-       $this->ap->set_over_stts($purchases->ap_over, $data);
+       return $this->ap->set_over_stts($purchases->ap_over, $data);
     }
 
     private function calculate_balance($cost,$total,$p1,$over)
@@ -778,14 +615,13 @@ class Purchase extends MX_Controller
 
 // ===================================== PRINT ===========================================
 
-   function invoice($pid=null,$type=null)
+   function invoice($pid=null)
    {
+       if ($this->acl->otentikasi1($this->title) == TRUE && $this->model->valid_add_trans($pid, $this->title) == TRUE){
        $this->acl->otentikasi2($this->title);
        $purchase = $this->model->get_by_id($pid)->row();
        $vendor = $this->vendor->get_by_id($purchase->vendor)->row();
 
-       $data['h2title'] = 'Print Invoice'.$this->modul['title'];
-
        $data['pono'] = $purchase->no;
        $data['logo'] = $this->properti['logo'];
        $data['podate'] = tgleng($purchase->dates);
@@ -798,7 +634,7 @@ class Purchase extends MX_Controller
        $data['user'] = $this->user->get_username($purchase->user);
        $data['currency'] = strtoupper($purchase->currency);
        $data['docno'] = $purchase->docno;
-       $data['log'] = $this->session->userdata('log');
+       $data['log'] = $this->decoded->log;
 
        $data['cost'] = $purchase->costs;
        $data['p2'] = $purchase->p2;
@@ -814,7 +650,12 @@ class Purchase extends MX_Controller
        if ($purchase->currency == 'IDR'){  $data['terbilang'] = $tt->baca($amount[0]).' rupiah'; }
        else { $data['terbilang'] = $tt->baca($amount[0]); } 
        
-       $data['items'] = $this->transmodel->get_last_item($pid)->result();
+       $items = null;
+       foreach ($this->transmodel->get_last_item($pid)->result() as $value) {
+            $items[] = array("id"=>$value->id,"purchase_id"=>$value->purchase_id,"product_id"=>$value->product,"sku"=> $this->product->get_sku($value->product),
+                             "product"=> $this->product->get_name($value->product), "qty"=>$value->qty,"price"=>floatval($value->price),"tax"=>floatval($value->tax),"total"=>floatval($value->amount),"amount"=> floatval($value->tax+$value->amount));
+       }
+       $data['items'] = $items;
 
        // property display
        $data['p_name'] = $this->properti['name'];
@@ -825,90 +666,39 @@ class Purchase extends MX_Controller
        $data['p_zip'] = $this->properti['zip'];
        $data['p_npwp'] = '';
 
-       $this->load->view('purchase_invoice', $data);
+       }else{ $this->reject_token(); }
+       $this->api->response(array('error' => $this->error, 'content' => $data), $this->status); 
    }
 
-   
-   function invoice_po($po=null,$type=null)
-   {
-       $this->acl->otentikasi2($this->title);
-       $purchase = $this->model->get_purchase_by_no($po)->row();
-       $vendor = $this->vendor->get_by_id($purchase->vendor)->row();
-
-       $data['h2title'] = 'Print Invoice'.$this->modul['title'];
-
-       $data['pono'] = $purchase->no;
-       $data['logo'] = $this->properti['logo'];
-       $data['podate'] = tgleng($purchase->dates);
-       $data['vendor'] = $vendor->prefix.' '.$vendor->name;
-       $data['address'] = $vendor->address;
-       $data['city'] = $vendor->city;
-       $data['phone'] = $vendor->phone1;
-       $data['phone2'] = $vendor->phone2;
-       $data['desc'] = '';
-       $data['user'] = $this->user->get_username($purchase->user);
-       $data['currency'] = strtoupper($purchase->currency);
-       $data['docno'] = $purchase->docno;
-       $data['log'] = $this->session->userdata('log');
-
-       $data['cost'] = $purchase->costs;
-       $data['p2'] = $purchase->p2;
-       $data['p1'] = $purchase->p1;
-       $data['over'] = $purchase->over_amount;
-       
-       if ($purchase->ap_over > 0){ $data['ap_over'] = 'CD-00'.$purchase->ap_over.' / '.tglin($this->ap->get_dates($purchase->ap_over)); }
-       else { $data['ap_over'] = ""; }
-       
-       // terbilang
-        $amount = explode('.', $purchase->p2);
-       $tt = new Terbilang();
-       if ($purchase->currency == 'IDR'){  $data['terbilang'] = $tt->baca($amount[0]).' rupiah'; }
-       else { $data['terbilang'] = $tt->baca($amount[0]); } 
-       
-       $data['items'] = $this->transmodel->get_last_item($purchase->no)->result();
-
-       // property display
-       $data['p_name'] = $this->properti['name'];
-       $data['paddress'] = $this->properti['address'];
-       $data['p_phone1'] = $this->properti['phone1'];
-       $data['p_phone2'] = $this->properti['phone2'];
-       $data['p_city'] = ucfirst($this->properti['city']);
-       $data['p_zip'] = $this->properti['zip'];
-       $data['p_npwp'] = '';
-
-       $this->load->view('purchase_invoice', $data);
-   }
 // ===================================== PRINT ===========================================
 
 // ====================================== REPORT =========================================
 
-    function report_process()
+    function report()
     {
-        $this->acl->otentikasi2($this->title);
-        $data['title'] = $this->properti['name'].' | Report '.ucwords($this->modul['title']);
+        if ($this->acl->otentikasi2($this->title) == TRUE){
 
         $vendor = $this->input->post('cvendor');
         $cur = $this->input->post('ccurrency');
-        
-        $period = $this->input->post('reservation');  
-        $start = picker_between_split($period, 0);
-        $end = picker_between_split($period, 1);
+        $start = $this->input->post('start');
+        $end = $this->input->post('end');
         
         $type = $this->input->post('ctype');
         $status = $this->input->post('cstatus');
         $acc = $this->input->post('cacc');
 
         $data['currency'] = strtoupper($cur);
-        $data['start'] = $start;
-        $data['end'] = $end;
+        $data['start'] = tglin($start);
+        $data['end'] = tglin($end);
         $data['acc'] = $acc;
         $data['rundate'] = tglin(date('Y-m-d'));
-        $data['log'] = $this->session->userdata('log');
+        $data['log'] = $this->decoded->log;
 
 //        Property Details
         $data['company'] = $this->properti['name'];
 
-        $data['purchases'] = $this->model->report($vendor,$cur,$start,$end,$status,$acc)->result();
+        $output[] = $this->model->report($vendor,$cur,$start,$end,$status,$acc)->result();
+        $data['result'] = $output;
         $total = $this->model->total($vendor,$cur,$start,$end,$status,$acc);
         
         $data['total'] = $total['total'] - $total['tax'];
@@ -917,41 +707,48 @@ class Purchase extends MX_Controller
         $data['p2'] = $total['p2'];
         $data['costs'] = $total['costs'];
         $data['ptotal'] = $total['total'] + $total['costs'];
+        $this->output = $data;
         
-        if ($type == '1'){ $page = "purchase_report_details"; }elseif ($type == '0'){ $page = "purchase_report"; }elseif ($type == '2'){ $page = "purchase_pivot"; }
-        if ($this->input->post('cformat') == 0){  $this->load->view($page, $data); }
-        elseif ($this->input->post('cformat') == 1)
-        {
-            $pdf = new Pdf();
-            $pdf->create($this->load->view($page, $data, TRUE));
-        }
+        }else{ $this->reject_token(); }
+        $this->api->response(array('error' => $this->error, 'content' => $this->output), $this->status); 
+        
+//        if ($type == '1'){ $page = "purchase_report_details"; }elseif ($type == '0'){ $page = "purchase_report"; }elseif ($type == '2'){ $page = "purchase_pivot"; }
+//        if ($this->input->post('cformat') == 0){  $this->load->view($page, $data); }
+//        elseif ($this->input->post('cformat') == 1)
+//        {
+//            $pdf = new Pdf();
+//            $pdf->create($this->load->view($page, $data, TRUE));
+//        }
     }
     
     
-    function report_product_process()
+    function report_product()
     {
-        $this->acl->otentikasi2($this->title);
+        if ($this->acl->otentikasi2($this->title) == TRUE){
         $data['title'] = $this->properti['name'].' | Report '.ucwords($this->modul['title']);
 
         $product = $this->product->get_id_by_sku($this->input->post('titem'));
         $cur = $this->input->post('ccurrency');
-        
-        $period = $this->input->post('reservation');  
-        $start = picker_between_split($period, 0);
-        $end = picker_between_split($period, 1);
+        $start = $this->input->post('start');
+        $end = $this->input->post('end');
 
         $data['currency'] = strtoupper($cur);
-        $data['start'] = $start;
-        $data['end'] = $end;
+        $data['start'] = tglin($start);
+        $data['end'] = tglin($end);
         $data['rundate'] = tgleng(date('Y-m-d'));
-        $data['log'] = $this->session->userdata('log');
+        $data['log'] = $this->decoded->log;
 
-//        Property Details
+//        Property Details  
         $data['company'] = $this->properti['name'];
-        $data['purchases'] = $this->model->report_product($product,$cur,$start,$end)->result();
+        $output[] = $this->model->report_product($product,$cur,$start,$end)->result();
+        $data['result'] = $output;
+        $this->output = $data;
         
-        $page = "purchase_product_report";
-        $this->load->view($page, $data);
+//        $page = "purchase_product_report";
+//        $this->load->view($page, $data);
+        
+        }else{ $this->reject_token(); }
+        $this->api->response(array('error' => $this->error, 'content' => $this->output), $this->status); 
         
 //        if ($type == '0'){ $page = "purchase_product_report"; }elseif ($type == '1'){ $page = "purchase_product_pivot"; }
 //        if ($this->input->post('cformat') == 0){  $this->load->view($page, $data); }

@@ -176,7 +176,7 @@
 	
 	function get_begin_balance($cur='IDR',$start)
 	{
-		$bl = new Balance();
+//		$bl = new Balance();
 		$am = new Account_model();
 		$start_kas = $am->get_start_balance_by_classification($cur,7,$start);
 		$start_bank = $am->get_start_balance_by_classification($cur,8,$start);

@@ -106,7 +106,26 @@ class Balance_account_lib extends Custom_Model {
        $this->db->where('year',$year);
        return $this->db->get($this->tableName)->row();
     }
+    
+    function get_balance_by_cla($cur='IDR',$cla=null,$month=null,$year=null)
+    {      
+        $this->db->select_sum('balances.beginning');
+        $this->db->select_sum('balances.end');
+        
+        $this->db->from('balances, accounts');
+        $this->db->where('balances.account_id = accounts.id');
+        $this->db->where('month',$month);
+        $this->db->where('year',$year);
+        $this->db->where('balances.currency', $cur);
+        $this->cek_null($cla,"accounts.classification_id");
+        $this->db->where('accounts.deleted', NULL);
+        return $this->db->get()->row(); 
+    }
 
+    function reset(){
+       $trans = array('beginning' => 0, 'end' => 0, 'vamount' => 0);
+       return $this->db->update($this->tableName, $trans); 
+    }
 
 
 }

@@ -56,6 +56,25 @@ class Stock_ledger_lib extends Custom_Model {
         $this->db->where('end_qty', 0);
         $this->db->delete($this->tableName);
     }
+    
+    // function untuk get begin saldo felxible
+    function get_prev_balance($pid=null,$branch=null,$date=null, $month=0, $year=0){
+        
+        if ($pid != null && $date != null){
+            $date = new DateTime($date); // For today/now, don't pass an arg.
+            $date->modify("-1 day");
+            $prevdate = $date->format("Y-m-d");
+            $bulan = date('n', strtotime($prevdate));
+            $tahun = date('Y', strtotime($prevdate));
+
+            $opening = $this->get_trans($pid, $branch, $month, $year, 'openqty');
+
+            $tglawal = date('Y-m-d',strtotime($bulan.'/1/'.$tahun));
+            $res_trans = $this->wt->get_sum_interval_qty($pid, $branch, $tglawal, $prevdate);
+            
+            return $opening+$res_trans;
+        }else{ return 0; }
+    }
 
     function get_trans($pid,$branch=null,$month,$year,$type=null)
     {

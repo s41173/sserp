@@ -13,7 +13,6 @@ class Account_model extends Custom_Model
     protected $table = null;
     protected $com;
     
-    
     function get_account($cla=null)
     {
         $this->db->select('accounts.id, accounts.name, accounts.alias, accounts.code');
@@ -32,6 +31,8 @@ class Account_model extends Custom_Model
         $this->db->from('accounts');
         $this->cek_null($cla, 'classification_id');
         $this->db->order_by('accounts.code','asc');
+        $this->db->where('accounts.deleted', NULL);
+        $this->db->where('accounts.status', 1);
         $this->db->distinct();
         return $this->db->get(); 
     }
@@ -128,6 +129,47 @@ class Account_model extends Custom_Model
     }
     
     function get_balance_by_classification($cur='IDR',$cla=null,$month=null,$year=null,$emonth=null,$eyear=null)
+    {      
+        $this->db->select_sum('transactions.vamount');
+        $this->db->select_sum('transactions.debit');
+        $this->db->select_sum('transactions.credit');
+        
+        $this->db->from('gls, transactions, accounts, classifications');
+        $this->db->where('gls.id = transactions.gl_id');
+        $this->db->where('transactions.account_id = accounts.id');
+        $this->db->where('accounts.classification_id = classifications.id');
+        $this->cek_between_month($month, $emonth);
+        $this->cek_between_year($year, $eyear);
+        $this->db->where('gls.currency', $cur);
+        $this->cek_null($cla,"classifications.id");
+        $this->db->where('gls.approved', 1);
+        $this->db->where('accounts.deleted', NULL);
+        $res = $this->db->get()->row(); 
+        return floatval($res->vamount);
+    }
+    
+    // get summary balance by flexible years
+     function get_balance_anual_by_classification($cur='IDR',$cla=null,$start=null,$end=null)
+    { 
+        $this->db->select_sum('transactions.vamount');
+        $this->db->select_sum('transactions.debit');
+        $this->db->select_sum('transactions.credit');
+        
+        $this->db->from('gls, transactions, accounts, classifications');
+        $this->db->where('gls.id = transactions.gl_id');
+        $this->db->where('transactions.account_id = accounts.id');
+        $this->db->where('accounts.classification_id = classifications.id');
+        $this->cek_between_year($start, $end);
+        $this->db->where('gls.currency', $cur);
+        $this->cek_null($cla,"classifications.id");
+        $this->db->where('gls.approved', 1);
+        $this->db->where('accounts.deleted', NULL);
+        $res = $this->db->get()->row(); 
+        return floatval($res->vamount);
+    }
+    
+    // get summary balance by flexible dates
+     function get_balance_period_by_classification($cur='IDR',$cla=null,$start=null,$end=null)
     {
 //        $this->db->select('accounts.id, gls.id, gls.no, gls.dates, gls.currency, gls.notes, gls.balance,
 //                           transactions.debit, transactions.credit, transactions.vamount, gls.approved');
@@ -140,10 +182,7 @@ class Account_model extends Custom_Model
         $this->db->where('gls.id = transactions.gl_id');
         $this->db->where('transactions.account_id = accounts.id');
         $this->db->where('accounts.classification_id = classifications.id');
-//        $this->db->where('MONTH(gls.dates)', $month);
-//        $this->db->where('YEAR(gls.dates)', $year);
-        $this->cek_between_month($month, $emonth);
-        $this->cek_between_year($year, $eyear);
+        $this->cek_between($start, $end);
         $this->db->where('gls.currency', $cur);
         $this->cek_null($cla,"classifications.id");
         $this->db->where('gls.approved', 1);
@@ -151,6 +190,7 @@ class Account_model extends Custom_Model
         $res = $this->db->get()->row(); 
         return floatval($res->vamount);
     }
+    
     
     function get_start_balance_by_classification($cur='IDR',$cla=null,$start=null)
     {

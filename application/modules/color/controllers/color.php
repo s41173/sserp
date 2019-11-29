@@ -9,73 +9,40 @@ class Color extends MX_Controller
         $this->load->model('Color_model', 'model', TRUE);
 
         $this->properti = $this->property->get();
-        $this->acl->otentikasi();
 
         $this->modul = $this->components->get(strtolower(get_class($this)));
         $this->title = strtolower(get_class($this));
-
+        
+        $this->api = new Api_lib();
+        $this->acl = new Acl();
+        
+        header('Access-Control-Allow-Origin: *');
+        header('Access-Control-Allow-Methods: GET, POST, PATCH, PUT, DELETE, OPTIONS');
+        header('Access-Control-Allow-Headers: Origin, Content-Type, X-Auth-Token'); 
     }
 
-    private $properti, $modul, $title;
+    private $properti, $modul, $title, $api, $acl;
+    protected $error = null;
+    protected $status = 200;
+    protected $output = null;
 
     function index()
     {
-       $this->get_last(); 
-    }
-    
-    public function getdatatable($search=null)
-    {
-        if(!$search){ $result = $this->model->get_last($this->modul['limit'])->result(); }
+        if ($this->acl->otentikasi1($this->title) == TRUE){
+        $datax = (array)json_decode(file_get_contents('php://input')); 
+        if (isset($datax['limit'])){ $this->limitx = $datax['limit']; }else{ $this->limitx = $this->modul['limit']; }
+        if (isset($datax['offset'])){ $this->offsetx = $datax['offset']; }
         
-        if ($result){
+        $result = $this->model->get_last($this->limitx, $this->offsetx)->result();
+        $resx = null;
 	foreach($result as $res)
-	{   
-	   $output[] = array ($res->id, $res->name, $res->descs,
-                             $res->created, $res->updated, $res->deleted);
+	{
+           $resx[] = array ("id"=>$res->id, "name"=>$res->name, "desc"=>$res->descs);
 	}
-            $this->output
-            ->set_status_header(200)
-            ->set_content_type('application/json', 'utf-8')
-            ->set_output(json_encode($output))
-            ->_display();
-            exit; 
-        }
-    }
-
-    function get_last()
-    {
-        $this->acl->otentikasi1($this->title);
-
-        $data['title'] = $this->properti['name'].' | Administrator  '.ucwords($this->modul['title']);
-        $data['h2title'] = $this->modul['title'];
-        $data['main_view'] = 'color_view';
-	$data['form_action'] = site_url($this->title.'/add_process');
-        $data['form_action_update'] = site_url($this->title.'/update_process');
-        $data['form_action_del'] = site_url($this->title.'/delete_all');
-        $data['link'] = array('link_back' => anchor('attribute/','Back', array('class' => 'btn btn-danger')));
-	// ---------------------------------------- //
- 
-        $config['first_tag_open'] = $config['last_tag_open']= $config['next_tag_open']= $config['prev_tag_open'] = $config['num_tag_open'] = '<li>';
-        $config['first_tag_close'] = $config['last_tag_close']= $config['next_tag_close']= $config['prev_tag_close'] = $config['num_tag_close'] = '</li>';
-
-        $config['cur_tag_open'] = "<li><span><b>";
-        $config['cur_tag_close'] = "</b></span></li>";
-
-        // library HTML table untuk membuat template table class zebra
-        $tmpl = array('table_open' => '<table id="datatable-buttons" class="table table-striped table-bordered">');
-
-        $this->table->set_template($tmpl);
-        $this->table->set_empty("&nbsp;");
-
-        //Set heading untuk table
-        $this->table->set_heading('#','No', 'Name', 'Desc', 'Action');
-
-        $data['table'] = $this->table->generate();
-        $data['source'] = site_url($this->title.'/getdatatable');
-            
-        // Load absen view dengan melewatkan var $data sbgai parameter
-	$this->load->view('template', $data);
-    }
+        $data['result'] = $resx; $this->output = $data;
+        }else{ $this->reject_token();}
+        $this->response('content');
+    } 
     
     function primary($uid = null)
     {
@@ -126,44 +93,18 @@ class Color extends MX_Controller
       if ($val->primary == 1){ return FALSE; }else { return TRUE; }
     }
 
-    function delete($uid,$type='soft')
+    function delete($uid)
     {
-        if ($this->acl->otentikasi_admin($this->title,'ajax') == TRUE && $this->cek_primary($uid) == TRUE){
-        if ($type == 'soft'){
+      if ($this->acl->otentikasi3($this->title) == TRUE && $this->model->valid_add_trans($uid, $this->title) == TRUE){ 
            $this->model->delete($uid);
-           $this->session->set_flashdata('message', "1 $this->title successfully removed..!");
-           
-           echo "true|1 $this->title successfully soft removed..!";
-       }
-       else
-       {
-        if ( $this->cek_relation($uid) == TRUE )
-        {
-           $this->model->delete($uid);
-           $this->session->set_flashdata('message', "1 $this->title successfully removed..!");
-           
-           echo "true|1 $this->title successfully removed..!";
-        }
-        else { $this->session->set_flashdata('message', "$this->title related to another component..!"); 
-        echo  "invalid|$this->title related to another component..!";} 
-       }
-       }else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
+           $this->error = "$this->title successfully removed..!";
+      }else{ $this->reject_token('Invalid Token or Expired..!'); }
+      $this->response();
     }
 
-    private function cek_relation($id)
-    {   
-        if ($this->cek_primary($id) == TRUE) { return TRUE; } else { return FALSE; }
-    }
-
-    function add_process()
+    function add()
     {
-        if ($this->acl->otentikasi2($this->title,'ajax') == TRUE){
-
-        $data['title'] = $this->properti['name'].' | Administrator  '.ucwords($this->modul['title']);
-        $data['h2title'] = $this->modul['title'];
-        $data['main_view'] = 'category_view';
-	$data['form_action'] = site_url($this->title.'/add_process');
-	$data['link'] = array('link_back' => anchor('category/','<span>back</span>', array('class' => 'back')));
+      if ($this->acl->otentikasi2($this->title) == TRUE){
 
 	// Form validation
         $this->form_validation->set_rules('tname', 'Name', 'required|callback_valid');
@@ -174,40 +115,38 @@ class Color extends MX_Controller
             $category = array('name' => strtolower($this->input->post('tname')), 
                               'created' => date('Y-m-d H:i:s'), 'descs' => $this->input->post('tdesc'));
 
-            $this->model->add($category);
-            $this->session->set_flashdata('message', "One $this->title data successfully saved!");
-            
-            echo 'true|Data successfully saved..!';
+            if ($this->model->add($category) != true){ $this->error = $this->reject();
+            }else{ $this->error = $this->title.' successfully saved..!'; }
         }
-        else{ echo 'error|'.validation_errors(); }
-        }else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
-
+        else{ $this->reject(validation_errors()); }
+      }else{ $this->reject_token('Invalid Token or Expired..!'); }
+      $this->response();
     }
 
     // Fungsi update untuk menset texfield dengan nilai dari database
-    function update($uid=null)
-    {        
+    function get($uid=null)
+    {       
+        if ($this->acl->otentikasi1($this->title) == TRUE && $this->model->valid_add_trans($uid, $this->title) == TRUE){ 
         $category = $this->model->get_by_id($uid)->row();
-//
-	$this->session->set_userdata('langid', $category->id);
-//        $this->load->view('category_update', $data);
-        
-        echo $uid.'|'.$category->name.'|'.$category->descs;
+        $data['name'] = $category->name;
+        $data['desc'] = $category->descs;
+        $this->output = $data;
+       }else{ $this->reject_token('Invalid Token or Expired..!'); }
+       $this->response('content');
     }
 
     function valid($code)
     {
         if ($this->model->valid('name',$code) == FALSE)
         {
-            $this->form_validation->set_message('valid_code', "This $this->title is already registered.!");
+            $this->form_validation->set_message('valid', "This $this->title is already registered.!");
             return FALSE;
         }
         else{ return TRUE; }
     }
 
-    function validation($code)
+    function validation($code,$id)
     {
-	$id = $this->session->userdata('langid');
 	if ($this->model->validating('name',$code,$id) == FALSE)
         {
             $this->form_validation->set_message('validation_code', 'This color is already registered!');
@@ -217,31 +156,23 @@ class Color extends MX_Controller
     }
 
     // Fungsi update untuk mengupdate db
-    function update_process()
+    function update($uid=null)
     {
-        if ($this->acl->otentikasi2($this->title,'ajax') == TRUE){
-
-        $data['title'] = $this->properti['name'].' | Administrator  '.ucwords($this->modul['title']);
-        $data['h2title'] = $this->modul['title'];
-        $data['main_view'] = 'category_update';
-	$data['form_action'] = site_url($this->title.'/update_process');
-	$data['link'] = array('link_back' => anchor('category/','<span>back</span>', array('class' => 'back')));
+        if ($this->acl->otentikasi2($this->title) == TRUE && $this->model->valid_add_trans($uid, $this->title) == TRUE){
 
 	// Form validation
-        $this->form_validation->set_rules('tname', 'Name', 'required|callback_validation');
+        $this->form_validation->set_rules('tname', 'Name', 'required|callback_validation['.$uid.']');
         $this->form_validation->set_rules('tdesc', 'Code', 'required');
 
         if ($this->form_validation->run($this) == TRUE)
         {
             $category = array('name' => strtolower($this->input->post('tname')),'descs' => $this->input->post('tdesc'));
-
-	    $this->model->update($this->session->userdata('langid'), $category);
-            $this->session->set_flashdata('message', "One $this->title has successfully updated!");
-            
-            echo 'true|Data successfully saved..!';
+            if ($this->model->update($uid,$category) != true){ $this->error = $this->reject('failed to post');
+            }else{ $this->error = $this->title.' successfully saved..!'; }
         }
-        else{ echo 'error|'.validation_errors(); }
-        }else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
+        else{ $this->reject(validation_errors()); }
+      }else{ $this->reject_token('Invalid Token or Expired..!'); }
+      $this->response();
     }
     
                 // ====================================== CLOSING ======================================

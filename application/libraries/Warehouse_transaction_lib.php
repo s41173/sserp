@@ -99,6 +99,28 @@ class Warehouse_transaction_lib extends Custom_Model {
         $res = $this->db->get()->row_array();
         return intval($res['debit']-$res['credit']);
     }
+    
+    function get_sum_interval_qty($product,$branch=null,$start,$end)
+    {
+        $this->db->select_sum('debit');
+        $this->db->select_sum('credit');
+        $this->db->where('product_id', $product);
+        $this->cek_null($branch, 'branch_id');
+        $this->between('dates', $start, $end);
+        $res = $this->db->get($this->tableName)->row_array();
+        return floatval($res['debit']-$res['credit']);
+    }
+    
+    function get_sum_qty($product,$branch=null,$start,$end,$type=0)
+    {
+        $this->db->select_sum('debit');
+        $this->db->select_sum('credit');
+        $this->db->where('product_id', $product);
+        $this->cek_null($branch, 'branch_id');
+        $this->between('dates', $start, $end);
+        $res = $this->db->get($this->tableName)->row_array();
+        if ($type == 0){ return floatval($res['debit']); }else{ return floatval($res['credit']); }
+    }
    
 }
 

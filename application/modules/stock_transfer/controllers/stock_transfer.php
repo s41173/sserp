@@ -10,7 +10,6 @@ class Stock_transfer extends MX_Controller
         $this->load->model('Stock_transfer_item_model', 'transmodel', TRUE);
 
         $this->properti = $this->property->get();
-        $this->acl->otentikasi();
 
         $this->modul = $this->components->get(strtolower(get_class($this)));
         $this->title = strtolower(get_class($this));
@@ -28,209 +27,48 @@ class Stock_transfer extends MX_Controller
         $this->stockledger = new Stock_ledger_lib();
         $this->period = new Period_lib();
         $this->period = $this->period->get();
+        
+        $this->api = new Api_lib();
+        $this->acl = new Acl();
+        
+        header('Access-Control-Allow-Origin: *');
+        header('Access-Control-Allow-Methods: GET, POST, PATCH, PUT, DELETE, OPTIONS');
+        header('Access-Control-Allow-Headers: Origin, Content-Type, X-Auth-Token'); 
     }
 
     private $properti, $modul, $title, $stockvalue=0, $journalgl, $stock, $stockledger;
-    private $user,$product,$wt,$opname,$currency,$account,$branch,$period;
+    private $user,$product,$wt,$opname,$currency,$account,$branch,$period,$api,$acl;
+    
+    protected $error = null;
+    protected $status = 200;
+    protected $output = null;
 
     function index()
     {
-         $this->get_last();
-    }
-    
-    public function getdatatable($search=null,$dates='null')
-    {
-        if(!$search){ $result = $this->model->get_last($this->modul['limit'])->result(); }
-        else{ $result = $this->model->search($dates)->result(); }
+        if ($this->acl->otentikasi1($this->title) == TRUE){
+        $datax = (array)json_decode(file_get_contents('php://input')); 
+        if (isset($datax['limit'])){ $this->limitx = $datax['limit']; }else{ $this->limitx = $this->modul['limit']; }
+        if (isset($datax['offset'])){ $this->offsetx = $datax['offset']; }
+        $date = null; if (isset($datax['date'])){ $date = $datax['date']; }
         
-        if ($result){
+        if($date == null){ $result = $this->model->get_last($this->limitx, $this->offsetx)->result();}
+        else{ $result = $this->model->search($date)->result(); }
+        
+        $resx = null;
 	foreach($result as $res)
-	{
-	   $output[] = array ($res->id, $res->no, tglin($res->dates), strtoupper($res->currency), $this->branch->get_name($res->branch_from), $this->branch->get_name($res->branch_to), $res->desc, $res->staff, 
-                              $this->user->get_username($res->user), $res->approved, $res->log);
+	{   
+           $resx[] = array ("id"=>$res->id, "no"=>$res->no, "date"=>tglin($res->dates), "currency"=>$res->currency,
+                            "from"=> $this->branch->get_name($res->branch_from), "to"=> $this->branch->get_name($res->branch_to), "description"=>$res->desc, "staff"=>$res->staff, 
+                            "user"=>$this->user->get_username($res->user),
+                            "log"=> $res->log, "posted"=>$res->approved
+                           );
 	}
-            $this->output
-            ->set_status_header(200)
-            ->set_content_type('application/json', 'utf-8')
-            ->set_output(json_encode($output))
-            ->_display();
-            exit; 
-        }
-    }
+        $data['result'] = $resx; $data['counter'] = $this->model->counter(); $this->output = $data;
+        }else{ $this->reject_token(); }
+        $this->response('content');
+    } 
     
-    function get_last()
-    {
-        $this->acl->otentikasi1($this->title);
-
-        $data['title'] = $this->properti['name'].' | Administrator  '.ucwords($this->modul['title']);
-        $data['h2title'] = $this->modul['title'];
-        $data['main_view'] = 'stock_transfer_view';
-	$data['form_action'] = site_url($this->title.'/add_process');
-        $data['form_action_update'] = site_url($this->title.'/update_process');
-        $data['form_action_del'] = site_url($this->title.'/delete_all');
-        $data['form_action_report'] = site_url($this->title.'/report_process');
-        $data['link'] = array('link_back' => anchor('main/','Back', array('class' => 'btn btn-danger')));
-        
-        $data['branch'] = $this->branch->combo_all();
-	// ---------------------------------------- //
- 
-        $config['first_tag_open'] = $config['last_tag_open']= $config['next_tag_open']= $config['prev_tag_open'] = $config['num_tag_open'] = '<li>';
-        $config['first_tag_close'] = $config['last_tag_close']= $config['next_tag_close']= $config['prev_tag_close'] = $config['num_tag_close'] = '</li>';
-
-        $config['cur_tag_open'] = "<li><span><b>";
-        $config['cur_tag_close'] = "</b></span></li>";
-
-        // library HTML table untuk membuat template table class zebra
-        $tmpl = array('table_open' => '<table id="datatable-buttons" class="table table-striped table-bordered">');
-
-        $this->table->set_template($tmpl);
-        $this->table->set_empty("&nbsp;");
-
-        //Set heading untuk table
-        $this->table->set_heading('#', 'No', 'Code', 'From', 'To', 'Date', 'Currency', 'Notes', 'Action');
-
-        $data['table'] = $this->table->generate();
-        $data['source'] = site_url($this->title.'/getdatatable');
-            
-        // Load absen view dengan melewatkan var $data sbgai parameter
-	$this->load->view('template', $data);
-    }
-
-    function xget_last()
-    {
-        $this->acl->otentikasi1($this->title);
-
-        $data['title'] = $this->properti['name'].' | Administrator  '.ucwords($this->modul['title']);
-        $data['h2title'] = $this->modul['title'];
-        $data['main_view'] = 'stock_adjustment_view';
-	$data['form_action'] = site_url($this->title.'/search');
-        $data['link'] = array('link_back' => anchor('warehouse_reference/','<span>back</span>', array('class' => 'back')));
-        
-	$uri_segment = 3;
-        $offset = $this->uri->segment($uri_segment);
-
-	// ---------------------------------------- //
-        $stock_adjustments = $this->model->get_last($this->modul['limit'], $offset)->result();
-        $num_rows = $this->model->count_all_num_rows();
-
-        if ($num_rows > 0)
-        {
-	    $config['base_url'] = site_url($this->title.'/get_last_stock_adjustment');
-            $config['total_rows'] = $num_rows;
-            $config['per_page'] = $this->modul['limit'];
-            $config['uri_segment'] = $uri_segment;
-            $this->pagination->initialize($config);
-            $data['pagination'] = $this->pagination->create_links(); //array menampilkan link untuk pagination.
-            // akhir dari config untuk pagination
-            
-
-            // library HTML table untuk membuat template table class zebra
-            $tmpl = array('table_open' => '<table cellpadding="2" cellspacing="1" class="tablemaster">');
-
-            $this->table->set_template($tmpl);
-            $this->table->set_empty("&nbsp;");
-
-            //Set heading untuk table
-            $this->table->set_heading('No', 'Code', 'Date', 'Currency', 'Notes', 'Staff', 'Log', 'Action');
-
-            $i = 0 + $offset;
-            foreach ($stock_adjustments as $stock_adjustment)
-            {
-                $datax = array('name'=> 'cek[]','id'=> 'cek'.$i,'value'=> $stock_adjustment->id,'checked'=> FALSE, 'style'=> 'margin:0px');
-                
-                $this->table->add_row
-                (
-                    ++$i, 'IAJ-00'.$stock_adjustment->no, tglin($stock_adjustment->dates), $stock_adjustment->currency, $stock_adjustment->desc, $stock_adjustment->staff, $stock_adjustment->log,
-                    anchor($this->title.'/confirmation/'.$stock_adjustment->id,'<span>update</span>',array('class' => $this->post_status($stock_adjustment->approved), 'title' => 'edit / update')).' '.
-                    anchor_popup($this->title.'/print_invoice/'.$stock_adjustment->no,'<span>print</span>',$this->atts).' '.
-                    anchor($this->title.'/add_trans/'.$stock_adjustment->no,'<span>details</span>',array('class' => 'update', 'title' => '')).' '.
-                    anchor($this->title.'/delete/'.$stock_adjustment->id.'/'.$stock_adjustment->no,'<span>delete</span>',array('class'=> 'delete', 'title' => 'delete' ,'onclick'=>"return confirm('Are you sure you will delete this data?')"))
-                );
-            }
-
-            $data['table'] = $this->table->generate();
-        }
-        else
-        {
-            $data['message'] = "No $this->title data was found!";
-        }
-
-        // Load absen view dengan melewatkan var $data sbgai parameter
-	$this->load->view('template', $data);
-    }
-
-    function search()
-    {
-        $this->acl->otentikasi1($this->title);
-
-        $data['title'] = $this->properti['name'].' | Administrator Find '.ucwords($this->modul['title']);
-        $data['h2title'] = 'Find '.$this->modul['title'];
-        $data['main_view'] = 'stock_adjustment_view';
-	$data['form_action'] = site_url($this->title.'/search');
-        $data['link'] = array('link_back' => anchor($this->title,'<span>back</span>', array('class' => 'back')));
-
-        $stock_adjustments = $this->model->search($this->input->post('tno'), $this->input->post('tdate'))->result();
-        
-        $tmpl = array('table_open' => '<table cellpadding="2" cellspacing="1" class="tablemaster">');
-
-        $this->table->set_template($tmpl);
-        $this->table->set_empty("&nbsp;");
-
-        //Set heading untuk table
-        $this->table->set_heading('No', 'Code', 'Date', 'Currency', 'Notes', 'Staff', 'Log', 'Action');
-
-        $i = 0;
-        foreach ($stock_adjustments as $stock_adjustment)
-        {
-            $datax = array('name'=> 'cek[]','id'=> 'cek'.$i,'value'=> $stock_adjustment->id,'checked'=> FALSE, 'style'=> 'margin:0px');
-
-            $this->table->add_row
-            (
-                ++$i, 'IAJ-00'.$stock_adjustment->no, tglin($stock_adjustment->dates), $stock_adjustment->currency, $stock_adjustment->desc, $stock_adjustment->staff, $stock_adjustment->log,
-                anchor($this->title.'/confirmation/'.$stock_adjustment->id,'<span>update</span>',array('class' => $this->post_status($stock_adjustment->approved), 'title' => 'edit / update')).' '.
-                anchor_popup($this->title.'/print_invoice/'.$stock_adjustment->no,'<span>print</span>',$this->atts).' '.
-                anchor($this->title.'/add_trans/'.$stock_adjustment->no,'<span>details</span>',array('class' => 'update', 'title' => '')).' '.
-                anchor($this->title.'/delete/'.$stock_adjustment->id.'/'.$stock_adjustment->no,'<span>delete</span>',array('class'=> 'delete', 'title' => 'delete' ,'onclick'=>"return confirm('Are you sure you will delete this data?')"))
-            );
-        }
-
-        $data['table'] = $this->table->generate();
-        $this->load->view('template', $data);
-    }
-
-
-    function get_list()
-    {
-        $this->acl->otentikasi1($this->title);
-
-        $data['title'] = $this->properti['name'].' | Administrator  '.ucwords($this->modul['title']);
-        $data['h2title'] = $this->modul['title'];
-        $data['main_view'] = 'product_list';
-        $data['form_action'] = site_url($this->title.'/get_list');
-
-        $stocks = $this->model->get_list($this->input->post('tno'))->result();
-
-        $tmpl = array('table_open' => '<table cellpadding="2" cellspacing="1" class="tablemaster">');
-
-        $this->table->set_template($tmpl);
-        $this->table->set_empty("&nbsp;");
-
-        //Set heading untuk table
-        $this->table->set_heading('No', 'Code', 'Date', 'Notes', 'Staff', 'Action');
-
-        $i = 0;
-        foreach ($stocks as $stock)
-        {
-          $datax = array('name' => 'button', 'type' => 'button', 'content' => 'Select', 'onclick' => 'setvalue(\''.$stock->no.'\',\'tbpbg\')');
-          $this->table->add_row( ++$i, 'IAJ-00'.$stock->no, tgleng($stock->dates), $stock->desc, $stock->staff, form_button($datax) );
-        }
-
-        $data['table'] = $this->table->generate();
-        $this->load->view('stock_adjustment_list', $data);
-        
-    }
-
-//    ===================== approval ===========================================
+    // =============== approval ===========================================
 
     private function post_status($val)
     {
@@ -241,15 +79,15 @@ class Stock_transfer extends MX_Controller
 
     function confirmation($pid)
     {
+       if ($this->acl->otentikasi3($this->title) == TRUE && $this->model->valid_add_trans($pid, $this->title) == TRUE){   
         $stock_adjustment = $this->model->get_by_id($pid)->row();
 
-        if ($stock_adjustment->approved == 1) { echo "warning|$this->title already approved..!"; }
-        elseif ($stock_adjustment->balance == 0){ echo "error|Invalid Balance...!"; }
+        if ($stock_adjustment->approved == 1) { $this->reject("$this->title already approved..!"); }
+        elseif ($stock_adjustment->balance == 0){ $this->reject("error|Invalid Balance...!"); }
         else
         {
             // start transaction 
             $this->db->trans_start();
-           
             $data = array('approved' => 1);
             $this->model->update($pid, $data);
            
@@ -260,10 +98,11 @@ class Stock_transfer extends MX_Controller
            $this->add_warehouse_transaction($stock_adjustment->id);
            $this->db->trans_complete();
            
-           if ($this->db->trans_status() === FALSE){ echo "error|TRAJ-00$stock_adjustment->no failed confirmed..!";  }
-           else { echo "true|IAJ-00$stock_adjustment->no confirmed..!"; }
+           if ($this->db->trans_status() === FALSE){ $this->reject("TRAJ-00$stock_adjustment->no failed confirmed..!");  }
+           else { $this->reject("IAJ-00$stock_adjustment->no confirmed..!"); }
         }
-
+      }else{ $this->reject_token(); }
+      $this->response();
     }
     
     private function create_journal($pid,$from,$to,$date,$currency,$code,$no,$amount)
@@ -303,13 +142,14 @@ class Stock_transfer extends MX_Controller
 
     function delete($uid)
     {
-        if ($this->acl->otentikasi_admin($this->title,'ajax') == TRUE){
+      if ($this->acl->otentikasi3($this->title) == TRUE && $this->model->valid_add_trans($uid, $this->title) == TRUE){
         $val = $this->model->get_by_id($uid)->row();
 
         if ( $val->approved == 1 ){ $this->rollback($uid,$val->no); }
         else{ $this->remove($uid,$val->no);}
 
-        }else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
+      }else{ $this->reject_token(); }
+      $this->response();
     }
     
     private function rollback($uid,$po)
@@ -321,12 +161,8 @@ class Stock_transfer extends MX_Controller
        $this->model->update($uid, $data);
        $this->db->trans_complete();
        
-       if ($this->db->trans_status() === FALSE)
-       {
-         echo "warning|1 $this->title canceled rollback..!";
-       }
-       else{ echo "true|1 $this->title successfully rollback..!"; }
-       
+       if ($this->db->trans_status() === FALSE){ $this->reject("1 $this->title canceled rollback..!"); }
+       else{ $this->error = "1 $this->title successfully rollback..!"; }
     }
     
     private function remove($uid)
@@ -350,42 +186,16 @@ class Stock_transfer extends MX_Controller
        $this->model->force_delete($uid); 
        $this->db->trans_complete();
        
-       if ($this->db->trans_status() === FALSE){ echo "warning|1 $this->title canceled removed..!"; }
-       else { echo "true|1 $this->title successfully removed..!"; }
+       if ($this->db->trans_status() === FALSE){ $this->reject("1 $this->title canceled removed..!"); }
+       else { $this->error = "1 $this->title successfully removed..!"; }
     }
 
     private function cek_relation($id=null)
     { $return = $this->return_stock->cek_relation($id, $this->title); if ($return == TRUE) { return TRUE; } else { return FALSE; } }
-
+    
     function add()
     {
-        $this->acl->otentikasi2($this->title);
-
-        $data['title'] = $this->properti['name'].' | Administrator '.ucwords($this->modul['title']);
-        $data['h2title'] = 'Create New '.$this->modul['title'];
-	$data['form_action'] = site_url($this->title.'/add_process');
-        $data['form_action_item'] = site_url($this->title.'/add_item/');
-        
-        $data['currency'] = $this->currency->combo();
-        $data['code'] = $this->model->counter();
-        $data['pid'] = null;
-        $data['user'] = $this->session->userdata("username");
-        $data['branch'] = $this->branch->combo();
-        
-        $data['main_view'] = 'stock_transfer_form';
-        $data['source'] = site_url($this->title.'/getdatatable');
-        $data['link'] = array('link_back' => anchor($this->title,'Back', array('class' => 'btn btn-danger')));
-        
-        $data['total'] = 0;
-        $data['items'] = null;
-        $data['default']['from'] = null;
-        
-        $this->load->view('template', $data);
-    }
-    
-    function add_process()
-    {
-         if ($this->acl->otentikasi2($this->title,'ajax') == TRUE){
+         if ($this->acl->otentikasi2($this->title) == TRUE){
 
 	// Form validation
         $this->form_validation->set_rules('tno', 'IAJ - No', 'required|numeric|callback_valid_no');
@@ -401,73 +211,62 @@ class Stock_transfer extends MX_Controller
             $stock_adjustment = array('no' => $this->input->post('tno'), 'approved' => 0, 'staff' => $this->input->post('tstaff'), 
                                       'currency' => $this->input->post('ccurrency'), 'dates' => $this->input->post('tdate'), 
                                       'branch_from' => $this->input->post('cfrom'), 'branch_to' => $this->input->post('cto'),
-                                      'desc' => $this->input->post('tnote'), 'user' => $this->user->get_id($this->session->userdata('username')),
-                                      'log' => $this->session->userdata('log'), 'created' => date('Y-m-d H:i:s'));
+                                      'desc' => $this->input->post('tnote'), 'user' => $this->decodedd->userid,
+                                      'log' => $this->decodedd->log, 'created' => date('Y-m-d H:i:s'));
 
-            $this->model->add($stock_adjustment);
-            echo "true|One $this->title data successfully saved!|".$this->model->max_id();
+            if ($this->model->add($stock_adjustment) == true){ $this->error = $this->model->max_id();}else{ $this->error = 'Failure Saved..'; $this->status = 401; }
         }
-        else{ echo "error|".validation_errors(); }
-        }else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
-
+        else{ $this->reject(validation_errors()); }
+        }else{ $this->reject_token(); }
+        $this->response(); 
     }
     
-    function add_trans($id)
+    function get($id)
     {
-        $this->acl->otentikasi2($this->title);
-        $this->model->valid_add_trans($id, $this->title);
-        
-        
+      if ($this->acl->otentikasi2($this->title) == TRUE && $this->model->valid_add_trans($id, $this->title) == TRUE){  
+       
         $cash = $this->model->get_by_id($id)->row();
+        $data['no'] = $cash->no;
+        $data['id'] = $id;
+        $data['dates'] = $cash->dates;
+        $data['staff'] = $cash->staff;
+        $data['currency'] = $cash->currency;
+        $data['note'] = $cash->desc;
+        $data['from'] = $cash->branch_from;
+        $data['to'] = $cash->branch_to;
         
-        $data['title'] = $this->properti['name'].' | Administrator '.ucwords($this->modul['title']);
-        $data['h2title'] = 'Create New '.$this->modul['title'];
-	$data['form_action'] = site_url($this->title.'/update_process/'.$id);
-        $data['form_action_item'] = site_url($this->title.'/add_item/'.$id);
-        
-        $data['currency'] = $this->currency->combo();
-        $data['branch'] = $this->branch->combo();
-        $data['code'] = $cash->no;
-        $data['user'] = $this->session->userdata("username");
-        $data['pid'] = $id;
-        
-        $data['main_view'] = 'stock_transfer_form';
-        $data['source'] = site_url($this->title.'/getdatatable');
-        $data['link'] = array('link_back' => anchor($this->title,'Back', array('class' => 'btn btn-danger')));
-        
-        $data['default']['dates'] = $cash->dates;
-        $data['default']['staff'] = $cash->staff;
-        $data['default']['currency'] = $cash->currency;
-        $data['default']['note'] = $cash->desc;
-        $data['default']['from'] = $cash->branch_from;
-        $data['default']['to'] = $cash->branch_to;
-        
-        $data['items'] = $this->transmodel->get_last_item($id)->result();
-        $this->load->view('template', $data);
+        $items = null;
+        foreach ($this->transmodel->get_last_item($id)->result() as $value) {
+            $items[] = array("id"=>$value->id,"product_id"=>$value->product_id, "sku"=> $this->product->get_sku($value->product_id), "unit"=> $this->product->get_unit($value->product_id),
+                             "product"=> $this->product->get_name($value->product_id), "qty"=>$value->qty,
+                             "amount"=>floatval($value->price));
+        }
+        $data['items'] = $items;
+        $this->output = $data;
+      }else{ $this->reject_token(); }
+      $this->response('c');
     }
 
 
 //    ======================  Item Transaction   ===============================================================
 
     function add_item($pid=null)
-    {           
+    {         
+       if ($this->acl->otentikasi2($this->title) == TRUE && $this->model->valid_add_trans($pid, $this->title) == TRUE){  
         $this->form_validation->set_rules('tproduct', 'Item Name', 'required|callback_valid_request['.$this->input->post('tqty').']');
         $this->form_validation->set_rules('tqty', 'Qty', 'required|numeric');   
 
         if ($this->form_validation->run($this) == TRUE && $this->valid_confirmation($pid) == TRUE)
         {
-            
             $qty = $this->input->post('tqty');
 
             // start transaction 
             $this->db->trans_start();
             $id = $this->transmodel->counter();
-
             $price = $this->stock->min_stock($this->product->get_id_by_sku($this->input->post('tproduct')),
                                              $qty, $pid, 'TR', $id);
             
             $this->stock->rollback('TR', $pid, $id);
-            
             $pitem = array('id' => $id, 'product_id' => $this->product->get_id_by_sku($this->input->post('tproduct')), 
                            'stock_transfer' => $pid, 'qty' => $qty, 'price' => $price, 'amount' => intval($qty*$price));
 
@@ -475,9 +274,11 @@ class Stock_transfer extends MX_Controller
             $this->update_trans($pid);
             $this->db->trans_complete();
            
-            if ($this->db->trans_status() == FALSE){  echo 'error|Failure Transaction...!!'; } else { echo 'true'; }
+            if ($this->db->trans_status() == FALSE){ $this->reject(); } else { $this->error = "Transaction Posted"; }
         }
-        else{ echo 'error|'.validation_errors(); }
+        else{ $this->reject(validation_errors()); }
+      }else{ $this->reject_token(); }
+      $this->response();
     }
     
     private function update_trans($pid)
@@ -489,7 +290,7 @@ class Stock_transfer extends MX_Controller
 
     function delete_item($id)
     {
-        if ($this->acl->otentikasi2($this->title,'ajax') == TRUE){
+      if ($this->acl->otentikasi2($this->title) == TRUE && $this->transmodel->valid_add_trans($id) == TRUE){
         
         $stockitem = $this->transmodel->get_item_by_id($id);
         $stockadj = $this->model->get_by_id($stockitem->stock_transfer)->row();
@@ -498,27 +299,25 @@ class Stock_transfer extends MX_Controller
             
         $this->transmodel->delete($id);
         $this->update_trans($stockitem->stock_transfer);
-        $this->session->set_flashdata('message', "1 item successfully removed..!");
-        echo 'true|Transaction removed..!';
+        $this->error = 'Transaction removed..!';
         
-        }else{ echo "warning|Journal approved, can't deleted..!"; }
-        }else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
+        }else{ $this->reject("Journal approved, can't deleted..!"); }
+        }else{ $this->reject_token(); }
+      $this->response();
     }
     
 //    ==========================================================================================
 
-    // Fungsi update untuk mengupdate db
-    function update_process($pid=null)
+    function update($pid=null)
     {
-        $this->acl->otentikasi2($this->title);
+      if ($this->acl->otentikasi2($this->title) == TRUE && $this->model->valid_add_trans($pid, $this->title) == TRUE){ 
 	// Form validation
-        $this->form_validation->set_rules('tid', 'IAJ - No', 'required|callback_valid_confirmation');
         $this->form_validation->set_rules('tno', 'IAJ - No', 'required|numeric');
         $this->form_validation->set_rules('tdate', 'Invoice Date', 'required|callback_valid_period');
         $this->form_validation->set_rules('tnote', 'Note', 'required');
         $this->form_validation->set_rules('tstaff', 'Workshop Staff', 'required');
         $this->form_validation->set_rules('ccurrency', 'Currency', 'required');
-        $this->form_validation->set_rules('cfrom', 'From Outlet', 'required|callback_validating_branch');
+        $this->form_validation->set_rules('cfrom', 'From Outlet', 'required|callback_validating_branch['.$pid.']');
         $this->form_validation->set_rules('cto', 'To Outlet', 'required');
 
         if ($this->form_validation->run($this) == TRUE && $this->valid_confirmation($pid) == TRUE)
@@ -526,14 +325,15 @@ class Stock_transfer extends MX_Controller
             $stock_adjustment = array('staff' => $this->input->post('tstaff'), 
                                       'currency' => $this->input->post('ccurrency'), 'dates' => $this->input->post('tdate'), 
                                       'branch_from' => $this->input->post('cfrom'), 'branch_to' => $this->input->post('cto'),
-                                      'desc' => $this->input->post('tnote'), 'user' => $this->user->get_id($this->session->userdata('username')),
-                                      'log' => $this->session->userdata('log'));
+                                      'desc' => $this->input->post('tnote'), 'user' => $this->decodedd->userid,
+                                      'log' => $this->decodedd->log);
 
-            $this->model->update($pid, $stock_adjustment);
-            echo "true|One $this->title data successfully updated!|".$pid;
+            if ($this->model->update($pid,$stock_adjustment) == true){ $this->error = "$this->title data successfully updated!|";}else{ $this->error = 'Failure Saved..'; $this->status = 401; }
         }
-        elseif ($this->valid_confirmation($pid) != TRUE){ echo "warning|Journal approved, can't deleted..!"; }
-        else{ echo 'error|'.validation_errors(); }
+        elseif ($this->valid_confirmation($pid) != TRUE){ $this->reject("Journal approved, can't deleted..!"); }
+        else{ $this->reject(validation_errors()); }
+      }else{ $this->reject_token(); }
+      $this->response();
     }
     
     public function valid_period($date=null)
@@ -583,11 +383,11 @@ class Stock_transfer extends MX_Controller
         else {  return TRUE; }
     }
     
-    public function validating_branch($from)
+    public function validating_branch($from,$id)
     {
         $to = $this->input->post('cto');
         
-        if ($this->transmodel->get_last_item($this->input->post('tid'))->num_rows() > 0){
+        if ($this->transmodel->get_last_item($id)->num_rows() > 0){
             $this->form_validation->set_message('validating_branch', "Can't Change Source / Destination..!");
             return FALSE;
         }
@@ -636,9 +436,7 @@ class Stock_transfer extends MX_Controller
   
    function invoice($pid=null)
    {
-       $this->acl->otentikasi2($this->title);
-
-       $data['h2title'] = 'Print Invoice'.$this->modul['title'];
+       if ($this->acl->otentikasi2($this->title) == TRUE && $this->model->valid_add_trans($pid, $this->title) == TRUE){  
 
        $stock_adjustment = $this->model->get_by_id($pid)->row();
 
@@ -646,63 +444,57 @@ class Stock_transfer extends MX_Controller
        $data['podate'] = tglin($stock_adjustment->dates);
        $data['user'] = $this->user->get_username($stock_adjustment->user);
        $data['staff'] = $stock_adjustment->staff;
-       $data['log'] = $this->session->userdata('log');
+       $data['log'] = $this->decodedd->log;
        $data['from'] = $this->branch->get_name($stock_adjustment->branch_from);
        $data['to'] = $this->branch->get_name($stock_adjustment->branch_to);
        
-        // property display
-       $data['company'] = $this->properti['name'];
-       $data['address'] = $this->properti['address'];
-       $data['phone1'] = $this->properti['phone1'];
-       $data['phone2'] = $this->properti['phone2'];
-       $data['city'] = ucfirst($this->properti['city']);
-       $data['zip'] = $this->properti['zip'];
-       $data['website'] = $this->properti['sitename'];
-       $data['email'] = $this->properti['email'];
-
-       $data['items'] = $this->transmodel->get_last_item($pid)->result();
-
-       $this->load->view('stock_transfer_invoice', $data);
+       $items = null;
+       foreach ($this->transmodel->get_last_item($pid)->result() as $value) {
+           $items[] = array("id"=>$value->id,"product_id"=>$value->product_id, "sku"=> $this->product->get_sku($value->product_id), "unit"=> $this->product->get_unit($value->product_id),
+                            "product"=> $this->product->get_name($value->product_id), "qty"=>$value->qty,
+                            "amount"=>floatval($value->price));
+       }
+       $data['items'] = $items;
+       $this->output = $data;
+       }else{ $this->reject_token(); }
+      $this->response('c');
    }
 
 // ===================================== PRINT ===========================================
 
 // ====================================== REPORT =========================================
 
+
     function report()
     {
-        $this->acl->otentikasi2($this->title);
+      if ($this->acl->otentikasi1($this->title) == TRUE){
 
-        $data['title'] = $this->properti['name'].' | Administrator Report '.ucwords($this->modul['title']);
-        $data['h2title'] = 'Report '.$this->modul['title'];
-	$data['form_action'] = site_url($this->title.'/report_process');
-        $data['link'] = array('link_back' => anchor($this->title,'<span>back</span>', array('class' => 'back')));
+        $start = $this->input->post('start');
+        $end = $this->input->post('end');
         
-        $this->load->view('stock_adjustment_report_panel', $data);
-    }
-
-    function report_process()
-    {
-        $this->acl->otentikasi2($this->title);
-        $data['title'] = $this->properti['name'].' | Report '.ucwords($this->modul['title']);
-        
-        $period = $this->input->post('reservation');  
-        $start = picker_between_split($period, 0);
-        $end = picker_between_split($period, 1);
-        
-        $data['start'] = $start;
-        $data['end'] = $end;
+        $data['start'] = tglin($start);
+        $data['end'] = tglin($end);
         $data['rundate'] = tgleng(date('Y-m-d'));
-        $data['log'] = $this->session->userdata('log');
+        $data['log'] = $this->decodedd->log;
 
-//        Property Details
-        $data['company'] = $this->properti['name'];
-
-        $data['reports'] = $this->model->report($start,$end)->result();
-        $data['reports_category'] = $this->model->report_category($start,$end)->result();
+//        $data['reports'] = $this->model->report($start,$end)->result();
+//        $data['reports_category'] = $this->model->report_category($start,$end)->result();
         
-        if ($this->input->post('ctype') == 0){ $this->load->view('stock_transfer_report_category', $data);}
-        else { $this->load->view('stock_transfer_report_details', $data); }
+        $items = null;
+        foreach ($this->model->report_category($start,$end)->result() as $res) {
+            
+            $items[] = array ("id"=>$res->id, "code"=>'TRAJ-00'.$res->no, "no"=>$res->no, "date"=>tglin($res->dates),
+                              "from"=> $this->branch->get_name($res->branch_from), "to"=> $this->branch->get_name($res->branch_to), "description"=>$res->desc, "staff"=>$res->staff, 
+                              "product"=> $this->product->get_name($res->product_id), 
+                              "sku"=> $this->product->get_sku($res->product_id), "unit"=> $this->product->get_unit($res->product_id), 
+                              "qty"=>$res->qty, "amount"=>floatval($res->price), "balance"=>floatval($res->qty*$res->price)
+                             );
+        }
+        $data['items'] = $items;
+        $this->output = $data;
+        
+      }else{ $this->reject_token(); }
+      $this->response('c');
     }
 
 

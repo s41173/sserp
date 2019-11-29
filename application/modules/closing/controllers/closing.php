@@ -9,7 +9,6 @@ class Closing extends MX_Controller
         $this->load->model('Closing_model', '', TRUE);
         
         $this->properti = $this->property->get();
-        $this->acl->otentikasi();
         $this->modul = $this->components->get(strtolower(get_class($this)));
         $this->title = strtolower(get_class($this));
 
@@ -22,27 +21,27 @@ class Closing extends MX_Controller
         $this->period = new Period();
         $this->period = $this->period->get();
         $this->balancelib = new Balance_account_lib();
-
+        
+        $this->api = new Api_lib();
+        $this->acl = new Acl();
+        
+        header('Access-Control-Allow-Origin: *');
+        header('Access-Control-Allow-Methods: GET, POST, PATCH, PUT, DELETE, OPTIONS');
+        header('Access-Control-Allow-Headers: Origin, Content-Type, X-Auth-Token'); 
     }
-
-    private $atts = array('width'=> '800','height'=> '600',
-                      'scrollbars' => 'yes','status'=> 'yes',
-                      'resizable'=> 'yes','screenx'=> '0','screenx' => '\'+((parseInt(screen.width) - 800)/2)+\'',
-                      'screeny'=> '0','class'=> 'print','title'=> 'print', 'screeny' => '\'+((parseInt(screen.height) - 600)/2)+\'');
 
     private $properti, $modul, $title, $component,$balancelib;
-    private $user,$product,$sales,$journal,$period;
-
-    function index()
-    { 
-        $this->closing_process();
-    }
+    private $user,$product,$journal,$period,$api,$acl;
+    protected $error = null;
+    protected $status = 200;
+    protected $output = null;
     
-    private function closing_process()
+    private function index()
     {
-        $ps = new Period();
-        $ps->get();
-        if ($ps->month == $ps->closing_month){ $this->annual();}else { $this->monthly(); }
+       if ($this->acl->otentikasi3($this->title) == TRUE){  
+         if ($this->period->month == $this->period->closing_month){ $this->annual();}else { $this->monthly(); }
+       }else{ $this->reject_token(); }
+       $this->api->response(array('error' => $this->error, 'content' => $this->output), $this->status); 
     }
     
     public function cek_component()
@@ -117,41 +116,9 @@ class Closing extends MX_Controller
 	$this->load->view('template', $data);
     }
 
-    function search()
+    function calculate()
     {
-        $this->acl->otentikasi1($this->title);
-
-        $data['title'] = $this->properti['name'].' | Administrator Find '.ucwords($this->modul['title']);
-        $data['h2title'] = 'Find '.$this->modul['title'];
-        $data['main_view'] = 'closing_view';
-	$data['form_action'] = site_url($this->title.'/search');
-        $data['link'] = array('link_back' => anchor($this->title,'<span>back</span>', array('class' => 'back')));
-
-        $closings = $this->Closing_model->search($this->input->post('tdate'))->result();
-        
-        $tmpl = array('table_open' => '<table cellpadding="2" cellspacing="1" class="tablemaster">');
-
-        $this->table->set_template($tmpl);
-        $this->table->set_empty("&nbsp;");
-
-        //Set heading untuk table
-        $this->table->set_heading('No', 'Code', 'Date', 'Notes', 'Log');
-
-        $i = 0;
-        foreach ($closings as $closing)
-        {
-            $datax = array('name'=> 'cek[]','id'=> 'cek'.$i,'value'=> $closing->id,'checked'=> FALSE, 'style'=> 'margin:0px');
-
-            $this->table->add_row
-            (++$i, 'CLO-00'.$closing->id, tgleng($closing->dates).' - '.$closing->times, $closing->notes, $closing->log);
-        }
-
-        $data['table'] = $this->table->generate();
-        $this->load->view('template', $data);
-    }
-
-    function calculate($page=null)
-    {
+        if ($this->acl->otentikasi2($this->title) == TRUE){ 
         $this->load->model('Account_model', 'am', TRUE);
         
         $accounts = new Accounts();
@@ -165,10 +132,6 @@ class Closing extends MX_Controller
         
         foreach ($accounts as $account)
         {    
-           // tambahkan sebuah fungsi untuk hitung laba tahun berjalan 
-//           if ($account->id == 21 || $account->id == 22)
-//           {
-
             $res_trans = $this->am->get_balance($account->id,$ps->month,$ps->year)->row_array(); 
             $res_trans = floatval($res_trans['vamount']);
 
@@ -177,19 +140,20 @@ class Closing extends MX_Controller
             $bl->where('account_id', $account->id)->get();
             $res1 = floatval($bl->beginning + $res_trans + $bl->vamount);
 
-            $this->balancelib->create($account->id, $ps->month, $ps->year, floatval($bl->beginning), $res1); // create end saldo this month
-            $this->balancelib->create($account->id, $next[0], $next[1], $res1, 0); // create beginning saldo next month
-            $bl->clear();               
+            $status1 = $this->balancelib->create($account->id, $ps->month, $ps->year, floatval($bl->beginning), $res1); // create end saldo this month
+            $status2 = $this->balancelib->create($account->id, $next[0], $next[1], $res1, 0); // create beginning saldo next month
+            $bl->clear();
+            if ($status1 == TRUE && $status2 == TRUE){ $this->error = "Calculating Ending Balance Sucessed..!"; }
+            else{ $this->error = "Pending Calculating..!"; $this->status = 401; } 
         }
-        
-        $this->session->set_flashdata('message', "Calculating Ending Balance Sucessed..!");
-        redirect($page);    
+       }else{ $this->reject_token(); }
+       $this->api->response(array('error' => $this->error, 'content' => $this->output), $this->status); 
     }
     
     function monthly()
     {
+       if ($this->acl->otentikasi3($this->title) == TRUE){ 
         $this->load->model('Account_model', 'am', TRUE);
-        
         $accounts = new Accounts();
         $ps = new Period();
         $bl = new Balances();
@@ -197,6 +161,7 @@ class Closing extends MX_Controller
         $ps->get();
         
         $res = null;
+        $status1 = FALSE; $status2 = FALSE;
         foreach ($accounts as $account)
         {    
             $next = $this->next_period();  
@@ -208,24 +173,29 @@ class Closing extends MX_Controller
             $bl->where('year', $ps->year);
             $bl->where('account_id', $account->id)->get();
             $res1 = floatval($bl->beginning + $bl->vamount + $res_trans);
-//            $res1 = floatval($bl->beginning + $res_trans);
-
-            $this->balancelib->create($account->id, $ps->month, $ps->year, floatval($bl->beginning), $res1); // create end saldo this month
-            $this->balancelib->create($account->id, $next[0], $next[1], $res1, 0); // create beginning saldo next month
-            $bl->clear();               
+            $status1 = $this->balancelib->create($account->id, $ps->month, $ps->year, floatval($bl->beginning), $res1); // create end saldo this month
+            $status2 = $this->balancelib->create($account->id, $next[0], $next[1], $res1, 0); // create beginning saldo next month
+            $bl->clear();    
         }
-        
         // update ledger stock
         $stock = new Stock_ledger_lib();
         $stock->closing();
+        
+        // update tank storage 
+//        $tankledger = new Tankledger_lib();
+//        $tankledger->calculate();
 
-//          update periode akuntansi
-         $ps->month = $next[0];
-         $ps->year = $next[1];
-         $ps->save();
-
-         $this->session->set_flashdata('message', "Monthly End Sucessed..!");
-         redirect('main');    
+        if ($status1 == TRUE && $status2 == TRUE){ 
+            
+            // update periode akuntansi
+            $ps->month = $next[0];
+            $ps->year = $next[1];
+            $ps->save();
+            $this->error = "Monthly End Sucessed..!..!"; 
+        }
+        else{ $this->error = "Pending Calculating..!"; $this->status = 401; } 
+      }else{ $this->reject_token(); }
+      $this->api->response(array('error' => $this->error, 'content' => $this->output), $this->status); 
     }
     
     private function next_period()
@@ -244,11 +214,16 @@ class Closing extends MX_Controller
     
     function annual()
     {
-       $ps = new Period();
-       $ps->get();
-       if ($ps->month == $ps->closing_month){ $this->annual_process(); }
-       else {$this->session->set_flashdata('message', "Annual Closing Rollback - Invalid Period..!");  } 
-       redirect('main');
+      if ($this->acl->otentikasi3($this->title) == TRUE){  
+        $ps = new Period();
+        $ps->get();
+        if ($ps->month == $ps->closing_month){ $status = $this->annual_process();
+          if ($status == TRUE){ $this->error = "Annual Closing Sucessed..!";
+          }else{ $this->error = "Annual Closing Failed.."; $this->status = 401; }
+        }
+        else { $this->error = "Annual Closing Rollback - Invalid Period..!"; $this->status = 401; } 
+      }else{ $this->reject_token(); }
+      $this->api->response(array('error' => $this->error, 'content' => $this->output), $this->status); 
     }
     
     private function annual_process()
@@ -262,6 +237,7 @@ class Closing extends MX_Controller
         $ps->get();
         
         $res = null;
+        $status1 = FALSE; $status2 = FALSE;
         foreach ($accounts as $account)
         {    
            if ($account->id == 21)
@@ -290,8 +266,7 @@ class Closing extends MX_Controller
               $bl->end        = 0;
               $bl->month      = $next[0];
               $bl->year       = $next[1];
-              
-              $this->balancelib->create(22, $next[0], $next[1], $res1, 0);
+              $status1 = $this->balancelib->create(22, $next[0], $next[1], $res1, 0);
               
               // menset nilai akun bulan depan menjadi 0
               $bl->clear();
@@ -302,9 +277,7 @@ class Closing extends MX_Controller
               $bl->end        = 0;
               $bl->month      = $next[0];
               $bl->year       = $next[1];
-              
-              $this->balancelib->create($account->id, $next[0], $next[1], 0, 0);
-              
+              $status2 = $this->balancelib->create($account->id, $next[0], $next[1], 0, 0);
            } 
            elseif ($account->id != 21 && $account->id != 22)
            {
@@ -319,7 +292,7 @@ class Closing extends MX_Controller
 //              $bl->end = $res;
 //              $bl->save();
               
-              $this->balancelib->create($account->id, $ps->month, $ps->year, $bl->beginning, $res); 
+              $status1 = $this->balancelib->create($account->id, $ps->month, $ps->year, $bl->beginning, $res); 
 
               // tambah nilai awal saldo bulan depan
               $bl->clear();
@@ -330,10 +303,8 @@ class Closing extends MX_Controller
               $bl->month      = $next[0];
               $bl->year       = $next[1];
 //              $bl->save();  
-              
-              $this->balancelib->create($account->id, $next[0], $next[1], $res, 0); 
-           }
-           
+              $status2 = $this->balancelib->create($account->id, $next[0], $next[1], $res, 0); 
+           } 
          }
 
           // closing jumlah siswa bulan ini
@@ -341,14 +312,14 @@ class Closing extends MX_Controller
          // update ledger stock
           $stock = new Stock_ledger_lib();
           $stock->closing();
-
-          // update periode akuntansi
-          $ps->month = $next[0];
-          $ps->year = $next[1];
-          $ps->save();
-
-          $this->session->set_flashdata('message', "Annual Closing Sucessed..!");
-          redirect('main');
+          
+          if ($status1 == TRUE && $status2 == TRUE){
+              // update periode akuntansi
+              $ps->month = $next[0];
+              $ps->year = $next[1];
+              $ps->save();
+              return TRUE;
+          }else{ return FALSE; }
     }
     
                 // ====================================== CLOSING ======================================

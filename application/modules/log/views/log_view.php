@@ -25,7 +25,7 @@
 	var sites_add  = "<?php echo site_url('log/add_process/');?>";
 	var sites_edit = "<?php echo site_url('log/update_process/');?>";
 	var sites_del  = "<?php echo site_url('log/delete/');?>";
-	var sites_get  = "<?php echo site_url('log/update/');?>";
+	var sites_invoice  = "<?php echo site_url('log/invoice/');?>";
 	var source = "<?php echo $source;?>";
 	
 </script>
@@ -36,7 +36,7 @@
               
               <!-- xtitle -->
               <div class="x_title">
-              
+                 <h2> Filter </h2>
                 <ul class="nav navbar-right panel_toolbox">
                   <li><a class="collapse-link"><i class="fa fa-chevron-up"></i></a> </li>
                   <li><a class="close-link"><i class="fa fa-close"></i></a> </li>
@@ -48,6 +48,48 @@
                 
                 <div class="x_content">
               
+           <!-- searching form -->
+           <form id="searchform" class="form-inline">
+              
+       <div class="form-group">
+           <label> Log-ID : </label> <br>
+          <input type="number" class="form-control" id="tlog_search" name="tlog" style="width:110px;" /> 
+       </div>   
+               
+               <div class="form-group">
+                <label> Username </label> <br>
+         <?php $js = "class='form-control select2_single' id='cuser_search' tabindex='-1' style='width:160px;' "; 
+         echo form_dropdown('cuser', $user, isset($default['']) ? $default[''] : '', $js); ?>
+              </div>  
+               
+               <div class="form-group">
+                <label> Activity </label> <br>
+         <?php $js = "class='form-control select2_single' id='cactivity_search' tabindex='-1' style='width:150px;' "; 
+         echo form_dropdown('cactivity', $activity, isset($default['']) ? $default[''] : '', $js); ?>
+              </div>  
+               
+               <div class="form-group">
+                <label> Component </label> <br>
+         <?php $js = "class='form-control select2_single' id='cmodul_search' tabindex='-1' style='width:150px;' "; 
+         echo form_dropdown('cmodul', $modul, isset($default['']) ? $default[''] : '', $js); ?>
+              </div>  
+                        
+               
+       <div class="form-group">
+           <label> Dates : </label> <br>
+          <input type="text" title="Date" class="form-control" id="ds1" name="tdates" style="width:100px;" /> 
+       </div>   
+              
+              <div class="btn-group"> <br>
+               <button type="submit" class="btn btn-primary button_inline"> Filter </button>
+               <button type="reset" onClick="" class="btn btn-success button_inline"> Clear </button>
+               <button type="button" onClick="load_data();" class="btn btn-danger button_inline"> Reset </button>
+              </div>
+          </form> <br>
+
+           
+        <!-- searching form -->
+                    
           <form class="form-inline" id="cekallform" method="post" action="<?php echo ! empty($form_action_del) ? $form_action_del : ''; ?>">
                   <!-- table -->
                   

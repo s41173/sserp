@@ -7,39 +7,36 @@ class Roles extends MX_Controller
         parent::__construct();
         
         $this->load->model('Role_model', 'model', TRUE);
-
         $this->properti = $this->property->get();
-        $this->acl->otentikasi();
 
         $this->modul = $this->components->get(strtolower(get_class($this)));
         $this->title = strtolower(get_class($this));
         $this->menu = new Adminmenu_lib();
-
+        
+        $this->api = new Api_lib();
+        $this->acl = new Acl();
+        
+        header('Access-Control-Allow-Origin: *');
+        header('Access-Control-Allow-Methods: GET, POST, PATCH, PUT, DELETE, OPTIONS');
+        header('Access-Control-Allow-Headers: Origin, Content-Type, X-Auth-Token');  
     }
 
-    private $properti, $modul, $title, $menu;
+    private $properti, $modul, $title, $menu, $api, $acl;
+    protected $error = null;
+    protected $status = 200;
+    protected $output = null;
 
-    function index(){ $this->get_last();  }
-     
-    public function getdatatable($search=null)
-    {
-        if(!$search){ $result = $this->model->get_last_role($this->modul['limit'])->result(); }
-	
-        $output = null;
-        if ($result){
-                
-         foreach($result as $res)
-	 {  
-	   $output[] = array ($res->id, $res->name, ucfirst($res->desc), self::get_rules($res->rules));
-	 } 
-         
-        $this->output
-         ->set_status_header(200)
-         ->set_content_type('application/json', 'utf-8')
-         ->set_output(json_encode($output))
-         ->_display();
-         exit;  
-        }
+    function index(){ 
+        
+        if ($this->acl->otentikasi_admin() == TRUE){
+
+           $result = $this->model->get_last_role($this->modul['limit'])->result();
+
+           foreach($result as $res){
+               $this->output[] = array ("id" => $res->id, "name" => $res->name, "desc" => $res->desc, "rules" => self::get_rules($res->rules));
+           }
+       }else{ $this->reject_token(); }
+       $this->api->response(array('error' => $this->error, 'content' => $this->output), $this->status);
     }
     
     private function get_rules($val)
@@ -62,50 +59,12 @@ class Roles extends MX_Controller
         }
         return $re;
     }
-
-    function get_last()
-    {
-        $this->acl->otentikasi1($this->title);
-
-        $data['title'] = $this->properti['name'].' | Administrator  '.ucwords($this->modul['title']);
-        $data['h2title'] = $this->modul['title'];
-        $data['main_view'] = 'role_view';
-	$data['form_action'] = site_url($this->title.'/add_process');
-        $data['form_action_update'] = site_url($this->title.'/update_process');
-        $data['form_action_del'] = site_url($this->title.'/delete_all');
-        $data['link'] = array('link_back' => anchor('main/','Back', array('class' => 'btn btn-danger')));
-
-        $data['array'] = array('','');
-        $data['options'] = $this->menu->combo_parent();
-	// ---------------------------------------- //
- 
-        $config['first_tag_open'] = $config['last_tag_open']= $config['next_tag_open']= $config['prev_tag_open'] = $config['num_tag_open'] = '<li>';
-        $config['first_tag_close'] = $config['last_tag_close']= $config['next_tag_close']= $config['prev_tag_close'] = $config['num_tag_close'] = '</li>';
-
-        $config['cur_tag_open'] = "<li><span><b>";
-        $config['cur_tag_close'] = "</b></span></li>";
-
-        // library HTML table untuk membuat template table class zebra
-        $tmpl = array('table_open' => '<table id="datatable-buttons" class="table table-striped table-bordered">');
-
-        $this->table->set_template($tmpl);
-        $this->table->set_empty("&nbsp;");
-
-        //Set heading untuk table
-        $this->table->set_heading('#','No', 'Name', 'Description', 'Rules', 'Action');
-
-        $data['table'] = $this->table->generate();
-        $data['source'] = site_url($this->title.'/getdatatable');
-            
-        // Load absen view dengan melewatkan var $data sbgai parameter
-	$this->load->view('template', $data);
-    }
     
     private function split_array($val){ return implode(",",$val); }
     
     function delete_all()
     {
-      if ($this->acl->otentikasi_admin($this->title,'ajax') == TRUE){
+      if ($this->acl->otentikasi_admin() == TRUE){
           
          $cek = $this->input->post('cek');
          $jumlah = count($cek);
@@ -120,42 +79,26 @@ class Roles extends MX_Controller
                  $x=$x+1;
               }
               $res = intval($jumlah-$x);
-              //$this->session->set_flashdata('message', "$res $this->title successfully removed &nbsp; - &nbsp; $x related to another component..!!");
               $mess = "$res $this->title successfully removed &nbsp; - &nbsp; $x related to another component..!!";
-              echo 'true|'.$mess;
+              $this->error = $mess;
             }
-            else
-            { //$this->session->set_flashdata('message', "No $this->title Selected..!!"); 
-              $mess = "No $this->title Selected..!!";
-              echo 'false|'.$mess;
-            }    
-      }
-      else{ echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
-      
+            else{ $mess = "No $this->title Selected..!!"; $this->error = $mess; $this->status = 401; }    
+      }else{ $this->reject_token(); }
+      $this->api->response(array('error' => $this->error), $this->status);
     }
 
     function delete($uid)
     {
-        if ($this->acl->otentikasi_admin($this->title,'ajax') == TRUE){
-        
+        if ($this->acl->otentikasi_admin() == TRUE){
             $this->model->delete($uid);
-            $this->session->set_flashdata('message', "1 $this->title successfully removed..!");
-           
-            echo "true|1 $this->title successfully removed..!";
-        }else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
-        
-       // redirect($this->title);
+            $this->error = "1 $this->title successfully removed..!";
+        }else{ $this->reject_token(); }
+        $this->api->response(array('error' => $this->error, 'content' => $this->output), $this->status);
     }
 
-    function add_process()
+    function add()
     {
-        if ($this->acl->otentikasi2($this->title,'ajax') == TRUE){
-
-            $data['title'] = $this->properti['name'].' | Administrator  '.ucwords($this->modul['title']);
-            $data['h2title'] = $this->modul['title'];
-            $data['main_view'] = 'role_view';
-            $data['form_action'] = site_url($this->title.'/add_process');
-            $data['link'] = array('link_back' => anchor('role/','<span>back</span>', array('class' => 'back')));
+        if ($this->acl->otentikasi_admin() == TRUE){
 
             // Form validation
             $this->form_validation->set_rules('tname', 'Role Name', 'required|maxlength[100]|callback_valid_roles');
@@ -169,26 +112,21 @@ class Roles extends MX_Controller
 
                 $this->model->add($roles);
                 $this->session->set_flashdata('message', "One $this->title data successfully saved!");
-                echo 'true|Data successfully saved..!';
+                $this->error = 'Data successfully saved..!';
             }
-            else
-            {
-    //            $this->load->view('template', $data);
-    //            echo validation_errors();
-                echo 'error|'.validation_errors();
-            }
+            else{ $this->error = validation_errors(); $this->status = 401; }
         }
-        else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
-
+        else { $this->reject_token(); }
+        $this->api->response(array('error' => $this->error), $this->status);
     }
 
     // Fungsi update untuk menset texfield dengan nilai dari database
-    function update($uid=null)
-    {        
-        $role = $this->model->get_by_id($uid)->row();
-               
-	$this->session->set_userdata('langid', $role->id);
-        echo $uid.'|'.$role->name.'|'.$role->desc.'|'.$role->rules.'|'.$role->granted_menu;
+    function get($uid=null)
+    {     
+        if ($this->acl->otentikasi_admin() == TRUE){
+            $role = $this->model->get_by_id($uid)->row();
+        }else { $this->reject_token(); }
+        $this->api->response(array('error' => $this->error, 'content' => $role), $this->status);
     }
 
 
@@ -202,9 +140,8 @@ class Roles extends MX_Controller
         else{  return TRUE; }
     }
 
-    function validating_roles($val)
+    function validating_roles($val,$id)
     {
-	$id = $this->session->userdata('langid');
 	if ($this->model->validating('name',$val,$id) == FALSE)
         {
             $this->form_validation->set_message('validating_roles', "This $this->title name is already registered!");
@@ -214,18 +151,12 @@ class Roles extends MX_Controller
     }
 
     // Fungsi update untuk mengupdate db
-    function update_process()
+    function update($uid)
     {
-        if ($this->acl->otentikasi2($this->title,'ajax') == TRUE){
-
-            $data['title'] = $this->properti['name'].' | Administrator  '.ucwords($this->modul['title']);
-            $data['h2title'] = $this->modul['title'];
-            $data['main_view'] = 'role_update';
-            $data['form_action'] = site_url($this->title.'/update_process');
-            $data['link'] = array('link_back' => anchor('role/','<span>back</span>', array('class' => 'back')));
+        if ($this->acl->otentikasi_admin() == TRUE){
 
             // Form validation
-            $this->form_validation->set_rules('tname', 'Role Name', 'required|maxlength[100]|callback_validating_roles');
+            $this->form_validation->set_rules('tname', 'Role Name', 'required|maxlength[100]|callback_validating_roles['.$uid.']');
             $this->form_validation->set_rules('tdesc', 'Role Description', 'required');
             $this->form_validation->set_rules('crules', 'Rules', 'required');
 
@@ -234,19 +165,15 @@ class Roles extends MX_Controller
                 $roles = array('name' => $this->input->post('tname'), 'desc' => $this->input->post('tdesc'), 'rules' => $this->input->post('crules'),
                                'granted_menu' => $this->split_array($this->input->post('cmenu')));
 
-                $this->model->update($this->session->userdata('langid'), $roles);
-                $this->session->set_flashdata('message', "One $this->title has successfully updated!");
-              //  $this->session->unset_userdata('langid');
-                echo "true|One $this->title has successfully updated..!";
+              $this->model->update($uid, $roles);
+              $this->error = "One $this->title has successfully updated..!";
 
             }
-            else{ echo 'error|'.validation_errors(); }
+            else{ $this->error = validation_errors(); $this->status = 401; }
         }
-        else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
+        else { $this->reject_token(); }
+        $this->api->response(array('error' => $this->error), $this->status);
     }
-    
-    // ====================================== CLOSING ======================================
-    function reset_process(){ $this->model->closing(); }
 
 }
 

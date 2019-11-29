@@ -9,7 +9,7 @@ class Account extends MX_Controller
         $this->load->model('Account_model', 'Model', TRUE);
         
         $this->properti = $this->property->get();
-        $this->acl->otentikasi();
+//        $this->acl->otentikasi();
 
         $this->modul = $this->components->get(strtolower(get_class($this)));
         $this->title = strtolower(get_class($this));
@@ -21,95 +21,67 @@ class Account extends MX_Controller
         $this->balance = new Balance_account_lib();
         $this->period = new Period_lib();
         $this->journal = new Journalgl_lib();
+        
+        $this->api = new Api_lib();
+        $this->acl = new Acl();
+        
+        header('Access-Control-Allow-Origin: *');
+        header('Access-Control-Allow-Methods: GET, POST, PATCH, PUT, DELETE, OPTIONS');
+        header('Access-Control-Allow-Headers: Origin, Content-Type, X-Auth-Token');  
     }
 
     private $properti, $modul, $title, $model, $account, $balance;
-    private $currency, $classification, $city, $period, $journal;
-
-    private  $atts = array('width'=> '400','height'=> '200',
-                      'scrollbars' => 'yes','status'=> 'yes',
-                      'resizable'=> 'yes','screenx'=> '0','screenx' => '\'+((parseInt(screen.width) - 400)/2)+\'',
-                      'screeny'=> '0','class'=> 'print','title'=> 'print', 'screeny' => '\'+((parseInt(screen.height) - 200)/2)+\'');
-
-    function index()
+    private $currency, $classification, $city, $period, $journal,$api,$acl;
+    protected $error = null;
+    protected $status = 200;
+    protected $output = null;
+     
+    public function index()
     {
-      $this->get_last();
-    }
+        if ($this->acl->otentikasi1($this->title) == TRUE){
+            
+            $datax = (array)json_decode(file_get_contents('php://input')); 
+            if (isset($datax['limit'])){ $this->limitx = $datax['limit']; }else{ $this->limitx = $this->modul['limit']; }
+            if (isset($datax['offset'])){ $this->offsetx = $datax['offset']; }
+            
+            if(!isset($datax['classification']) && !isset($datax['publish'])){ $result = $this->Model->get_last($this->limitx, $this->offsetx)->result(); }
+            else {$result = $this->Model->search($datax['classification'],$datax['publish'])->result(); }
         
-    public function getdatatable($search=null,$class='null',$publish='null')
+            foreach($result as $res)
+            {  
+               $this->output[] = array ("id" => $res->id, "classification" => $this->classification->get_name($res->classification_id),
+                                        "type" => $this->classification->get_type($res->classification_id), "currency" => $res->currency, "code" => $res->code, "name" => $res->name,
+                                        "alias" => $res->alias, "acc_no" => $res->acc_no,
+                                        "bank" => $res->bank, "status" => $res->status, "default" => $res->default,
+                                        "bank_status" => $res->bank_stts);
+            }
+            
+        }else{ $this->reject_token(); }
+        $this->response('c');
+    }    
+    
+    public function get_asset_acc()
     {
-        if(!$search){ $result = $this->Model->get_last($this->modul['limit'])->result(); }
-        else {$result = $this->Model->search($class,$publish)->result(); }
-        
-        if ($result){
-	foreach($result as $res)
-	{  
-	   $output[] = array ($res->id, $this->classification->get_name($res->classification_id), $this->classification->get_type($res->classification_id), $res->currency, $res->code, $res->name, $res->alias, $res->acc_no,
-                              $res->bank, $res->status, $res->default, $res->bank_stts);
-	}
-            $this->output
-            ->set_status_header(200)
-            ->set_content_type('application/json', 'utf-8')
-            ->set_output(json_encode($output))
-            ->_display();
-            exit; 
-        }
+        if ($this->acl->otentikasi1($this->title) == TRUE){
+            $result = $this->account->combo_asset();
+            foreach($result as $res)
+            {  
+               $this->output[] = array ("id" => $res->id, "code" => $res->code, "name" => $res->name);
+            }
+            
+        }else{ $this->reject_token(); }
+        $this->response('c');
     }    
     
     function publish($uid = null)
     {
-       if ($this->acl->otentikasi2($this->title,'ajax') == TRUE){ 
-       $val = $this->Model->get_by_id($uid)->row();
-       if ($val->status == 0){ $lng = array('status' => 1); }else { $lng = array('status' => 0); }
-       $this->Model->update($uid,$lng);
-       echo 'true|Status Changed...!';
-       }else{ echo "error|Sorry, you do not have the right to change publish status..!"; }
-    }
-        
-    function get_last()
-    {
-        $this->acl->otentikasi1($this->title);
-
-        $data['title'] = $this->properti['name'].' | Administrator  '.ucwords($this->modul['title']);
-        $data['h2title'] = $this->modul['title'];
-        $data['main_view'] = 'account_view';
-	$data['form_action'] = site_url($this->title.'/add_process');
-        $data['form_action_update'] = site_url($this->title.'/update_process');
-        $data['form_action_del'] = site_url($this->title.'/delete_all');
-        $data['link'] = array('link_back' => anchor('main/','Back', array('class' => 'btn btn-danger')));
-	// ---------------------------------------- //
-        
-        $data['classi'] = $this->classification->combo();
-        $data['currency'] = $this->currency->combo();
-        
-        $config['first_tag_open'] = $config['last_tag_open']= $config['next_tag_open']= $config['prev_tag_open'] = $config['num_tag_open'] = '<li>';
-        $config['first_tag_close'] = $config['last_tag_close']= $config['next_tag_close']= $config['prev_tag_close'] = $config['num_tag_close'] = '</li>';
-
-        $config['cur_tag_open'] = "<li><span><b>";
-        $config['cur_tag_close'] = "</b></span></li>";
-
-        // library HTML table untuk membuat template table class zebra
-        $tmpl = array('table_open' => '<table id="datatable-buttons" class="table table-striped table-bordered">');
-
-        $this->table->set_template($tmpl);
-        $this->table->set_empty("&nbsp;");
-
-        //Set heading untuk table
-        $this->table->set_heading('#','No', 'Cur', 'Code', 'Name', 'Sub Class', 'Classification', 'Action');
-
-        $data['table'] = $this->table->generate();
-        $data['source'] = site_url($this->title.'/getdatatable');
-            
-        // Load absen view dengan melewatkan var $data sbgai parameter
-	$this->load->view('template', $data);
-    }
-
-    private function get_search($code=null,$name=null,$class=null)
-    {
-        if ($code){ $this->model->where('code', $code); }
-        elseif ($name){ $this->model->where('name', $name); }
-        elseif ($class) { $this->model->where('classification_id', $class); }
-        return $this->model->get();
+       if ($this->acl->otentikasi3($this->title) == TRUE && isset($uid)){ 
+            $val = $this->Model->get_by_id($uid)->row();
+            if ($val->status == 0){ $lng = array('status' => 1); }else { $lng = array('status' => 0); }
+            $this->Model->update($uid,$lng);
+            $this->error = 'Status Changed...!';
+       }else{ $this->reject_token(); }
+       $this->response();
     }
     
     private function get_balance($acc=null)
@@ -130,7 +102,7 @@ class Account extends MX_Controller
     private function get_cost($acc=null,$month=0)
     {
         $ps = new Period();
-        $bl = new Balance();
+        $bl = new Balances();
         $ps->get();
         
         $bl->where('account_id', $acc);
@@ -158,85 +130,20 @@ class Account extends MX_Controller
         return $val;
     }
 
+    // blm d gunakan
     function cost($acc = null)
     {
-        $this->acl->otentikasi1($this->title);
-
-        $data['title'] = $this->properti['name'].' | Administrator Account Balance '.ucwords($this->modul['title']);
-        $data['h2title'] = 'Account Balance '.$this->modul['title'];
-        $data['main_view'] = 'account_balance';
-        $data['link'] = array('link_back' => anchor($this->title,'<span>back</span>', array('class' => 'back')));
-
-        $data['accname'] = $this->account->get_name($acc);
-        $data['acccur'] = $this->account->get_cur($acc);
-
-        $tmpl = array('table_open' => '<table cellpadding="2" cellspacing="1" class="tablemaster">');
-
-        $this->table->set_template($tmpl);
-        $this->table->set_empty("&nbsp;");
-
-        //Set heading untuk table
-        $this->table->set_heading('Month', 'Year', 'Budget');
-        
-        $account = null;
-        for ($x=1; $x<=12; $x++)
-        {
-           $account[$x] = $this->get_cost($acc,$x);
-           $this->table->add_row
-           (
-               $account[$x][0], $account[$x][1], number_format($account[$x][2])
-           );
-        }
-
-        $data['table'] = $this->table->generate();
-        $this->load->view('account_balance', $data);
+        if ($this->acl->otentikasi1($this->title) == true){
+            $account = null;
+            for ($x=1; $x<=12; $x++)
+            {
+               $account[$x] = $this->get_cost($acc,$x);
+               $this->output[] = array ("month" => $account[$x][0], "year" => $account[$x][1], "budget" => $account[$x][2]);
+            }        
+        }else{ $this->reject_token(); }
+        $this->response('c');
     }
 
-    function get_list($target='titem')
-    {
-        $this->acl->otentikasi1($this->title);
-
-        $data['title'] = $this->properti['name'].' | Administrator  '.ucwords($this->modul['title']);
-        $data['h2title'] = $this->modul['title'];
-        $data['form_action'] = site_url($this->title.'/get_list');
-        $data['main_view'] = 'vendor_list';
-        $data['currency'] = $this->currency->combo();
-        $data['link'] = array('link_back' => anchor($this->title.'/get_list','<span>back</span>', array('class' => 'back')));
-        $data['classi'] = $this->classification->combo();
-        
-        $class = $this->input->post('cclassification');
-
-        $accounts = $this->Model->get_list($class)->result();
-
-        $tmpl = array('table_open' => '<table id="myTable" class="acctable table table-hover">');
-
-        $this->table->set_template($tmpl);
-        $this->table->set_empty("&nbsp;");
-
-        //Set heading untuk table
-        $this->table->set_heading('No', 'Code', 'Name', 'Cur', 'Action');
-
-        $i = 0;
-        foreach ($accounts as $account)
-        {
-           $datax = array(
-                            'name' => 'button',
-                            'type' => 'button',
-                            'class' => 'btn btn-success',
-                            'content' => 'Select',
-                            'onclick' => 'setvalue(\''.$account->code.'\',\''.$target.'\')'
-                         );
-
-            $this->table->add_row
-            (
-                ++$i, $account->code, $account->name, $account->currency,
-                form_button($datax)
-            );
-        }
-
-        $data['table'] = $this->table->generate();
-        $this->load->view('account_list', $data);
-    }
     
     function delete_all()
     {
@@ -273,23 +180,24 @@ class Account extends MX_Controller
 
     function delete($uid)
     {
-        if ($this->acl->otentikasi_admin($this->title,'ajax') == TRUE){
+        if ($this->acl->otentikasi3($this->title) == TRUE && isset($uid)){
         
-        if ( $this->journal->valid_account_transaction($uid) == TRUE && $this->valid_default($uid) == TRUE )
-        {
-            // hapus balance
-            $this->balance->remove_balance($uid);
-            $this->Model->delete($uid);
-            echo "true|1 $this->title successfully soft removed..!";
-        }
-        else{ echo  "invalid|$this->title related to another component..!"; }
+            if ( $this->journal->valid_account_transaction($uid) == TRUE && $this->valid_default($uid) == TRUE )
+            {
+                // hapus balance
+                $this->balance->remove_balance($uid);
+                $this->Model->force_delete($uid);
+                $this->error = "$this->title successfully soft removed..!";
+            }
+            else{ $this->error = "$this->title related to another component..!"; $this->status = 403; }
         
-        }else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
+        }else{ $this->reject_token(); }
+        $this->response();
     }
 
-    function add_process()
+    function add()
     {
-        if ($this->acl->otentikasi2($this->title,'ajax') == TRUE){
+        if ($this->acl->otentikasi2($this->title) == TRUE){
 
 	// Form validation
         $this->form_validation->set_rules('tname', 'Name', 'required|callback_valid_name');
@@ -308,14 +216,14 @@ class Account extends MX_Controller
                              'alias' => $this->input->post('talias'), 'status' => $this->input->post('cactive'), 'bank_stts' => $bank,
                              'created' => date('Y-m-d H:i:s'));
             
-            $this->Model->add($account);
-            $this->create_balance($this->input->post('tno').'-'.$this->input->post('tcode'));
-
-            echo 'true|'.$this->title.' successfully saved..!';
+            if ($this->Model->add($account) == true){
+              $this->create_balance($this->input->post('tcode').'-'.$this->input->post('tno'));
+              $this->error = $this->title.' successfully saved..!';    
+            }else{ $this->error = 'Failure to save data'; $this->status = 401;  }
         }
-        else{ echo "error|".validation_errors(); }
-        }else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
-
+        else{ $this->error = validation_errors(); $this->status = 401; }
+        }else { $this->reject_token(); }
+        $this->response();
     }
     
     private function create_balance($code=null)
@@ -324,33 +232,26 @@ class Account extends MX_Controller
         $accid = $this->account->get_id_code($code);
         $this->balance->create($accid, $ps->month, $ps->year, 0, 0);
     }
-
-    function update($uid)
-    {
-        $acc = $this->Model->get_by_id($uid)->row();
-        $this->session->set_userdata('langid', $acc->id);
-        
-        $code = explode('-', $acc->code);
-        
-        echo $acc->id.'|'.$acc->classification_id.'|'.$acc->currency.'|'.$code[0].'|'.$code[1].'|'.$acc->name.'|'.
-             $acc->alias.'|'.$acc->status.'|'.$acc->bank_stts;
+    
+     // Fungsi update untuk menset texfield dengan nilai dari database
+    function get($uid=null,$type=null)
+    {     
+        if ($this->acl->otentikasi1($this->title) == TRUE){
+            if ($type == 'code'){ $this->output = $this->Model->get_by_code($uid)->row(); }
+            else{$this->output = $this->Model->get_by_id($uid)->row();  }
+        }else { $this->reject_token(); }
+        $this->response('c');
     }
 
     // Fungsi update untuk mengupdate db
-    function update_process()
+    function update($uid)
     {
-        if ($this->acl->otentikasi2($this->title,'ajax') == TRUE){
-
-        $data['title'] = $this->properti['name'].' | Administrator  '.ucwords($this->modul['title']);
-        $data['h2title'] = $this->modul['title'];
-        $data['main_view'] = 'account_update';
-	$data['form_action'] = site_url($this->title.'/update_process');
-	$data['link'] = array('link_back' => anchor('account/','<span>back</span>', array('class' => 'back')));
-        
+        if ($this->acl->otentikasi2($this->title) == TRUE && isset($uid)){
+            
 	// Form validation
-        $this->form_validation->set_rules('tname', 'Name', 'required|callback_validation_name');
+        $this->form_validation->set_rules('tname', 'Name', 'required|callback_validation_name['.$uid.']');
         $this->form_validation->set_rules('tno', 'No', 'required|numeric');
-        $this->form_validation->set_rules('tcode', 'Code', 'required|numeric|callback_validation_code');
+        $this->form_validation->set_rules('tcode', 'Code', 'required|numeric|callback_validation_code['.$uid.']');
         $this->form_validation->set_rules('ccurrency', 'Currency', 'required');
         $this->form_validation->set_rules('cclassification', 'Classification', 'required');
 
@@ -363,11 +264,13 @@ class Account extends MX_Controller
                              'code' => $this->input->post('tcode').'-'.$this->input->post('tno'), 'name' => $this->input->post('tname'),
                              'alias' => $this->input->post('talias'), 'status' => $this->input->post('cactive'), 'bank_stts' => $bank);
             
-            $this->Model->update($this->session->userdata('langid'), $account);
-            echo 'true|Data successfully saved..!';
+            if ($this->Model->update($uid, $account) == true){
+                $this->error = 'Data successfully saved..!';
+            }else{ $this->error = 'Failure to save data'; $this->status = 401; }
         }
-        else{ echo 'error|'.validation_errors(); }
-        }else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
+        else{ $this->error = validation_errors(); $this->status = 401; }
+        }else { $this->reject_token(); }
+        $this->response();
     }
 
     public function valid_name($name)
@@ -378,7 +281,6 @@ class Account extends MX_Controller
             return FALSE;
         }
         else{ return TRUE; }
-        
     }
     
     public function valid_default($uid=null)
@@ -391,9 +293,8 @@ class Account extends MX_Controller
         else{ return TRUE; }
     }
 
-    public function validation_name($name)
+    public function validation_name($name,$id)
     {   
-        $id = $this->session->userdata('langid');
 	if ($this->Model->validating('name',$name,$id) == FALSE)
         {
             $this->form_validation->set_message('validation_name', 'This '.$this->title.' is already registered!');
@@ -402,10 +303,9 @@ class Account extends MX_Controller
         else { return TRUE; }
     }
 
-    public function validation_code($no)
+    public function validation_code($no,$id)
     {
         $code = $this->input->post('tno').'-'.$no;
-        $id = $this->session->userdata('langid');
 	if ($this->Model->validating('name',$code,$id) == FALSE)
         {
             $this->form_validation->set_message('validation_code', 'This '.$this->title.' code is already registered!');

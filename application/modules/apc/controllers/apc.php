@@ -7,7 +7,6 @@ class Apc extends MX_Controller
         parent::__construct();
 
         $this->properti = $this->property->get();
-        $this->acl->otentikasi();
         
         $this->load->model('Apc_model', '', TRUE);
         $this->load->model('Apc_trans_model', '', TRUE);
@@ -25,177 +24,50 @@ class Apc extends MX_Controller
         $this->journalgl = new Journalgl_lib();
         $this->account = new Account_lib();
         $this->model = new Apcmodel();
-       
+        
+        $this->api = new Api_lib();
+        $this->acl = new Acl();
+        
+        header('Access-Control-Allow-Origin: *');
+        header('Access-Control-Allow-Methods: GET, POST, PATCH, PUT, DELETE, OPTIONS');
+        header('Access-Control-Allow-Headers: Origin, Content-Type, X-Auth-Token');  
     }
 
     private $properti, $modul, $title, $cost,$ps, $model, $ledger, $account;
-    private $user,$tax,$journal,$journalgl,$currency,$unit;
+    private $user,$tax,$journalgl,$currency,$unit,$api,$acl;
+    
+    protected $error = null;
+    protected $status = 200;
+    protected $output = null;
 
+    
     function index()
     {
-       $this->get_last();
-    }
-    
-    public function getdatatable($search=null,$dates='null')
-    {
-        if(!$search){ $result = $this->Apc_model->get_last($this->modul['limit'])->result(); }
-        else{ $result = $this->Apc_model->search($dates)->result(); }
+        if ($this->acl->otentikasi1($this->title) == TRUE){
+        $datax = (array)json_decode(file_get_contents('php://input')); 
+        if (isset($datax['limit'])){ $this->limitx = $datax['limit']; }else{ $this->limitx = $this->modul['limit']; }
+        if (isset($datax['offset'])){ $this->offsetx = $datax['offset']; }
         
-        if ($result){
+        $date = null;
+        if (isset($datax['date'])){ $date = $datax['date']; }
+        
+        if(!$date){ $result = $this->Apc_model->get_last($this->limitx, $this->offsetx)->result(); }
+        else{ $result = $this->Apc_model->search($dates)->result(); }
+        $resx = null;
 	foreach($result as $res)
 	{
-	   $output[] = array ($res->id, $res->no, strtoupper($res->currency), tglin($res->dates), $res->notes, $this->get_acc($res->account), idr_format($res->amount), $res->approved);
+           $resx[] = array ("id"=>$res->id, "no"=>$res->no, "notes"=>$res->notes, "dates"=>tglin($res->dates), "desc"=>$res->desc, 
+                            "currency"=>$res->currency, "account"=>$this->get_acc($res->account), 
+                            "posted"=>$res->approved, "amount"=>floatval($res->amount), "log"=> $this->decodedd->log);
 	}
-            $this->output
-            ->set_status_header(200)
-            ->set_content_type('application/json', 'utf-8')
-            ->set_output(json_encode($output))
-            ->_display();
-            exit; 
-        }
-    }
+        $data['result'] = $resx; $data['counter'] = $this->Apc_model->counter(); $data['asset'] = $this->account->combo_asset();
+        $this->output = $data;
+        }else{ $this->reject_token(); }
+        $this->response('content');
+    } 
     
     private function get_acc($acc){ return $this->account->get_code($acc).' : '.$this->account->get_name($acc); }
-    
-    function get_last()
-    {
-        $this->acl->otentikasi1($this->title);
-
-        $data['title'] = $this->properti['name'].' | Administrator  '.ucwords($this->modul['title']);
-        $data['h2title'] = $this->modul['title'];
-        $data['main_view'] = 'apc_view';
-	$data['form_action'] = site_url($this->title.'/add_process');
-        $data['form_action_update'] = site_url($this->title.'/update_process');
-        $data['form_action_del'] = site_url($this->title.'/delete_all');
-        $data['form_action_report'] = site_url($this->title.'/report_process');
-        $data['link'] = array('link_back' => anchor('main/','Back', array('class' => 'btn btn-danger')));
         
-        $data['currency'] = $this->currency->combo();
-	// ---------------------------------------- //
- 
-        $config['first_tag_open'] = $config['last_tag_open']= $config['next_tag_open']= $config['prev_tag_open'] = $config['num_tag_open'] = '<li>';
-        $config['first_tag_close'] = $config['last_tag_close']= $config['next_tag_close']= $config['prev_tag_close'] = $config['num_tag_close'] = '</li>';
-
-        $config['cur_tag_open'] = "<li><span><b>";
-        $config['cur_tag_close'] = "</b></span></li>";
-
-        // library HTML table untuk membuat template table class zebra
-        $tmpl = array('table_open' => '<table id="datatable-buttons" class="table table-striped table-bordered">');
-
-        $this->table->set_template($tmpl);
-        $this->table->set_empty("&nbsp;");
-
-        //Set heading untuk table
-        $this->table->set_heading('#','No', 'Code', 'Cur', 'Date', 'Notes', 'Acc', 'Balance', 'Action');
-
-        $data['table'] = $this->table->generate();
-        $data['source'] = site_url($this->title.'/getdatatable');
-            
-        // Load absen view dengan melewatkan var $data sbgai parameter
-	$this->load->view('template', $data);
-    }
-
-    public function chart($cur='IDR')
-    {
-        $fusion = $this->load->library('fusioncharts');
-        $chart  = base_url().'public/flash/Column3D.swf';
-        
-        $ps = new Period();
-        $ps->get();
-        $py = new Payment_status_lib();
-        
-        if ($this->input->post('ccurrency')){ $cur = $this->input->post('ccurrency'); }else { $cur = 'IDR'; }
-        if ($this->input->post('tyear')){ $year = $this->input->post('tyear'); }else { $year = $ps->year; }
-        
-        $arpData[0][1] = 'January';
-        $arpData[0][2] = $this->Apc_model->total_chart(1,$year,$cur);
-//
-        $arpData[1][1] = 'February';
-        $arpData[1][2] = $this->Apc_model->total_chart(2,$year,$cur);
-//
-        $arpData[2][1] = 'March';
-        $arpData[2][2] = $this->Apc_model->total_chart(3,$year,$cur);
-//
-        $arpData[3][1] = 'April';
-        $arpData[3][2] = $this->Apc_model->total_chart(4,$year,$cur);
-//
-        $arpData[4][1] = 'May';
-        $arpData[4][2] = $this->Apc_model->total_chart(5,$year,$cur);
-//
-        $arpData[5][1] = 'June';
-        $arpData[5][2] = $this->Apc_model->total_chart(6,$year,$cur);
-//
-        $arpData[6][1] = 'July';
-        $arpData[6][2] = $this->Apc_model->total_chart(7,$year,$cur);
-
-        $arpData[7][1] = 'August';
-        $arpData[7][2] = $this->Apc_model->total_chart(8,$year,$cur);
-        
-        $arpData[8][1] = 'September';
-        $arpData[8][2] = $this->Apc_model->total_chart(9,$year,$cur);
-//        
-        $arpData[9][1] = 'October';
-        $arpData[9][2] = $this->Apc_model->total_chart(10,$year,$cur);
-//        
-        $arpData[10][1] = 'November';
-        $arpData[10][2] = $this->Apc_model->total_chart(11,$year,$cur);
-//        
-        $arpData[11][1] = 'December';
-        $arpData[11][2] = $this->Apc_model->total_chart(12,$year,$cur);
-
-        $strXML1 = $fusion->setDataXML($arpData,'','') ;
-        $graph   = $fusion->renderChart($chart,'',$strXML1,"Tuition", "98%", 400, false, false) ;
-        return $graph;
-        
-    }
-    
-    private function get_search($no,$date)
-    {
-        if ($no){ $this->model->where('no', $no); }
-        elseif($date){ $this->model->where('dates', $date); }
-        return $this->model->get();
-    }
-    
-    function search()
-    {
-        $this->acl->otentikasi1($this->title);
-
-        $data['title'] = $this->properti['name'].' | Administrator Find '.ucwords($this->modul['title']);
-        $data['h2title'] = 'Find '.$this->modul['title'];
-        $data['main_view'] = 'ap_view';
-	$data['form_action'] = site_url($this->title.'/search');
-        $data['link'] = array('link_back' => anchor($this->title,'<span>back</span>', array('class' => 'back')));
-        $data['currency'] = $this->currency->combo();
-
-        $aps = $this->get_search($this->input->post('tno'), $this->input->post('tdate'));
-        
-        $tmpl = array('table_open' => '<table cellpadding="2" cellspacing="1" class="tablemaster">');
-
-        $this->table->set_template($tmpl);
-        $this->table->set_empty("&nbsp;");
-
-        //Set heading untuk table
-       $this->table->set_heading('No', 'Code', 'Cur', 'Date', 'Notes', 'Acc', 'Balance', '#', 'Action');
-
-        $i = 0;
-        foreach ($aps as $ap)
-        {
-//                $datax = array('name'=> 'cek[]','id'=> 'cek'.$i,'value'=> $ap->id,'checked'=> FALSE, 'style'=> 'margin:0px');
-
-            $this->table->add_row
-            (
-                ++$i, 'DJC-00'.$ap->no, $ap->currency, tglin($ap->dates), $ap->notes, ucfirst($ap->acc), number_format($ap->amount), $this->status($ap->status),
-                anchor($this->title.'/confirmation/'.$ap->id,'<span>update</span>',array('class' => $this->post_status($ap->approved), 'title' => 'edit / update')).' '.
-                anchor_popup($this->title.'/invoice/'.$ap->no,'<span>print</span>',$this->atts).' '.
-                anchor($this->title.'/add_trans/'.$ap->no,'<span>details</span>',array('class' => 'update', 'title' => '')).' '.
-                anchor($this->title.'/delete/'.$ap->id.'/'.$ap->no,'<span>delete</span>',array('class'=> 'delete', 'title' => 'delete' ,'onclick'=>"return confirm('Are you sure you will delete this data?')"))
-            );
-        }
-
-        $data['table'] = $this->table->generate();
-        $data['graph'] = $this->chart($this->input->post('ccurrency'),  $this->input->post('cyear'));
-        $this->load->view('template', $data);
-    }
 
     private function status($val=null)
     { switch ($val) { case 0: $val = 'D'; break; case 1: $val = 'S'; break; } return $val; }
@@ -210,22 +82,15 @@ class Apc extends MX_Controller
 
     function confirmation($pid)
     {
-        if ($this->acl->otentikasi3($this->title,'ajax') == TRUE){
+        if ($this->acl->otentikasi3($this->title) == TRUE && $this->Apc_model->valid_add_trans($pid, $this->title) == TRUE){
         $ap = $this->model->where('id',$pid)->get();
 
-        if ($ap->approved == 1)
-        {
-           echo "warning|$this->title already approved..!";
-        }
+        if ($ap->approved == 1){ $this->reject("transaction already approved..!"); }
+        if ($ap->amount == 0){ $this->reject("transaction has no value..!"); }
         else
         {
-//            $this->cek_journal($ap->dates,$ap->currency); // cek apakah journal sudah approved atau belum
             $total = $ap->amount;
-
-            if ($total == 0)
-            {
-              echo "error|$this->title has no value..!";
-            }
+            if ($total == 0){ $this->reject("transaction has no value..!"); }
             else
             {
                 $this->model->approved = 1;
@@ -238,12 +103,11 @@ class Apc extends MX_Controller
                 //  create journal gl
                 
                 $cm = new Control_model();
-
                 $account  = $ap1->account;                
                 
                 // create journal- GL
                 $this->journalgl->new_journal('0'.$ap1->no,$ap1->dates,'DJC',$ap1->currency,$ap1->notes,$ap1->amount, $this->session->userdata('log'));
-//                
+               
                 $transs = $this->Apc_trans_model->get_last_item($pid)->result(); 
                 $dpid = $this->journalgl->get_journal_id('DJC','0'.$ap1->no);
                 
@@ -254,19 +118,19 @@ class Apc extends MX_Controller
                 }
                 
                 $this->journalgl->add_trans($dpid,$account,0,$ap1->amount); // kas, bank, kas kecil
-                echo "true|DJC-00$ap1->no confirmed..!";
+                $this->error = "DJC-00$ap1->no confirmed..!";
             }
         }
-        }else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
-
+        }else { $this->reject_token(); }
+        $this->response();
     }
 
-//    ===================== approval ===========================================
+//    ================================== approval ===========================================
 
 
     function delete($uid)
     {
-        if ($this->acl->otentikasi_admin($this->title,'ajax') == TRUE){
+       if ($this->acl->otentikasi3($this->title) == TRUE && $this->Apc_model->valid_add_trans($uid, $this->title) == TRUE){ 
         $val = $this->Apc_model->get_by_id($uid)->row();
 
         if ($val->approved == 1){ $this->void($uid); }
@@ -277,10 +141,12 @@ class Apc extends MX_Controller
             
             $this->Apc_trans_model->delete_po($uid);
             $this->Apc_model->force_delete($uid);
-            echo "warning|1 $this->title successfully removed..!";
+            $this->error = "$this->title successfully removed..!";
         }
-        else{ echo "warning|1 $this->title can't removed, journal approved..!"; } 
-        }else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
+        elseif ( $this->valid_period($val->dates) != TRUE ){ $this->reject('Invalida Period'); }
+        else{ $this->reject("transaction can't removed, journal approved..!"); } 
+       }else { $this->reject_token(); }
+       $this->response();
     }
     
     private function void($uid)
@@ -293,119 +159,35 @@ class Apc extends MX_Controller
            $val->approved = 0;
            $val->status = 0;
            $val->save();
-           echo "warning|1 $this->title successfull voided..!";
+           $this->error = "transaction successfull voided..!";
        }
-       else { echo "error|Invalid Period..!";  }
+       else { $this->reject("Invalid Period..!");  }
     }
-    
+        
     function add()
     {
-        $this->acl->otentikasi2($this->title);
-
-        $data['title'] = $this->properti['name'].' | Administrator '.ucwords($this->modul['title']);
-        $data['h2title'] = 'Create New '.$this->modul['title'];
-	$data['form_action'] = site_url($this->title.'/add_process');
-        $data['form_action_item'] = site_url($this->title.'/add_item/');
-        
-        $data['currency'] = $this->currency->combo();
-        $data['code'] = $this->Apc_model->counter();
-        $data['id'] = $this->max_id();
-        $data['user'] = $this->session->userdata("username");
-        $data['account'] = $this->account->combo_asset();
-        $data['cost'] = $this->cost->combo();
-        
-        $data['main_view'] = 'apc_form';
-        $data['source'] = site_url($this->title.'/getdatatable');
-        $data['link'] = array('link_back' => anchor($this->title,'Back', array('class' => 'btn btn-danger')));
-        
-        $data['total'] = 0;
-        $data['items'] = null;
-        
-        $this->load->view('template', $data);
-    }
-    
-    function add_process()
-    {
-         if ($this->acl->otentikasi2($this->title,'ajax') == TRUE){
-
-        $data['title'] = $this->properti['name'].' | Administrator  '.ucwords($this->modul['title']);
-        $data['h2title'] = $this->modul['title'];
-        $data['main_view'] = 'cash_form';
-	$data['form_action'] = site_url($this->title.'/add_process');
-	$data['currency'] = $this->currency->combo();
-        $data['code'] = $this->Apc_model->counter();
-        $data['user'] = $this->session->userdata("username");
+       if ($this->acl->otentikasi2($this->title) == TRUE){
 
 	// Form validation
         $this->form_validation->set_rules('tno', 'DJ - No', 'required|numeric|callback_valid_no');
         $this->form_validation->set_rules('tdate', 'Invoice Date', 'required|callback_valid_period');
-        $this->form_validation->set_rules('ccurrency', 'Currency', 'required');
         $this->form_validation->set_rules('tnote', 'Note', 'required');
-        $this->form_validation->set_rules('tdocno', 'Doc NO', '');
+        $this->form_validation->set_rules('tdesc', 'Decsription', '');
+        $this->form_validation->set_rules('cacc', 'Account', 'required');
 
         if ($this->form_validation->run($this) == TRUE)
         {
            $trans = array('no' => $this->input->post('tno'), 'status' => 0,
-                           'dates' => $this->input->post('tdate'), 'account' => $this->input->post('cacc'), 
-                           'currency' => $this->input->post('ccurrency'), 'notes' => $this->input->post('tnote'), 
-                           'desc' => $this->input->post('tdesc'), 'user' => $this->user->get_id($this->input->post('tuser')),
-                           'log' => $this->session->userdata('log'), 'created' => date('Y-m-d H:i:s'));
+                          'dates' => $this->input->post('tdate'), 'account' => $this->input->post('cacc'), 
+                          'currency' => "IDR", 'notes' => $this->input->post('tnote'), 
+                          'desc' => $this->input->post('tdesc'), 'user' => $this->decodedd->userid,
+                          'log' => $this->decodedd->log, 'created' => date('Y-m-d H:i:s'));
             
-            $this->Apc_model->add($trans);
-            
-            $this->session->set_flashdata('message', "One $this->title data successfully saved!");
-            echo "true|One $this->title data successfully saved!|".$this->max_id();
+            if ($this->Apc_model->add($trans) == true){ $this->error = 'transaction successfully saved..!'; }else{ $this->reject(); }
         }
-        else{ echo "error|".validation_errors(); }
-        }else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
-
-    }
-    
-    private function max_id()
-    {
-        $res = 0;
-        if ( $this->model->count() > 0 )
-        {
-           $this->model->select_max('id')->get();
-           $res = intval($this->model->id);
-        }
-        else{ $res = 1; }
-        return $res;
-    }
-
-    function add_trans($uid=null)
-    {
-        $this->acl->otentikasi2($this->title);
-        $this->Apc_model->valid_add_trans($uid, $this->title);
-        
-        $ap = $this->model->where('id', $uid)->get();
-
-        $data['title'] = $this->properti['name'].' | Administrator '.ucwords($this->modul['title']);
-        $data['h2title'] = 'Create New '.$this->modul['title'];
-	$data['form_action'] = site_url($this->title.'/update_process/'.$ap->id);
-        $data['form_action_item'] = site_url($this->title.'/add_item/'.$ap->id);
-        $data['currency'] = $this->currency->combo();
-        $data['cost'] = $this->cost->combo();
-        $data['code'] = $ap->no;
-        $data['id'] = $ap->id;
-        $data['user'] = $this->session->userdata("username");
-        $data['account'] = $this->account->combo_asset();
-        
-        $data['default']['dates'] = $ap->dates;
-        $data['default']['currency'] = $ap->currency;
-        $data['default']['acc'] = $ap->acc;
-        $data['default']['note'] = $ap->notes;
-        $data['default']['desc'] = $ap->desc;
-        $data['default']['user'] = $this->user->get_username($ap->user);
-        $data['default']['account'] = $ap->account;        
-        $data['main_view'] = 'apc_form';
-        $data['source'] = site_url($this->title.'/getdatatable');
-        $data['link'] = array('link_back' => anchor($this->title,'Back', array('class' => 'btn btn-danger')));
-        
-        $data['total'] = $ap->amount;
-        $data['items'] = $this->Apc_trans_model->get_last_item($ap->id)->result();
-
-        $this->load->view('template', $data);
+        else{ $this->reject(validation_errors()); }
+        }else{ $this->reject_token(); }
+        $this->response();
     }
 
 
@@ -413,51 +195,49 @@ class Apc extends MX_Controller
 
     function add_item($pid=null)
     {   
-        $this->form_validation->set_rules('ccost', 'Cost Type', 'required');
-        $this->form_validation->set_rules('tstaff', 'Staff', 'required');
-        $this->form_validation->set_rules('tamount', 'Amount', 'required|numeric');
+        if ($this->acl->otentikasi2($this->title) == TRUE && $this->Apc_model->valid_add_trans($pid, $this->title) == TRUE){
+           
+            $this->form_validation->set_rules('ccost', 'Cost Type', 'required');
+            $this->form_validation->set_rules('tstaff', 'Staff', 'required');
+            $this->form_validation->set_rules('tamount', 'Amount', 'required|numeric');
 
-        if ($this->valid_transaction($pid) == TRUE && $this->form_validation->run($this) == TRUE && $this->valid_confirmation($pid) == TRUE)
-        {
-            $pitem = array('apc_id' => $pid, 'cost' => $this->input->post('ccost'),
-                           'notes' => $this->input->post('tnotes'),
-                           'staff' => $this->input->post('tstaff'),
-                           'amount' => $this->input->post('tamount'));
-            
-            $this->Apc_trans_model->add($pitem);
-            $this->update_trans($pid);
+            if ($this->valid_transaction($pid) == TRUE && $this->form_validation->run($this) == TRUE && $this->valid_confirmation($pid) == TRUE)
+            {
+                $pitem = array('apc_id' => $pid, 'cost' => $this->input->post('ccost'),
+                               'notes' => $this->input->post('tnotes'),
+                               'staff' => $this->input->post('tstaff'),
+                               'amount' => $this->input->post('tamount'));
 
-            echo 'true';
-        }
-        elseif ( $this->valid_confirmation($pid) != TRUE ){ echo "error|Can't change value - Journal approved..!"; }
-        elseif ( $this->valid_transaction($pid) != TRUE ){ echo "error|Can't change value - Transaction Not Created..!"; }
-        else{   echo validation_errors(); }
+                $this->Apc_trans_model->add($pitem);
+                $this->update_trans($pid);
+                $this->error = 'Transaction Posted';
+            }
+            elseif ( $this->valid_confirmation($pid) != TRUE ){ $this->reject("Can't change value - Journal approved..!"); }
+            elseif ( $this->valid_transaction($pid) != TRUE ){ $this->reject("Can't change value - Transaction Not Created..!"); }
+            else{ $this->reject(validation_errors()); }
+        }else{ $this->reject_token(); }
+        $this->response();
+    }
+    
+    function get_item($id)
+    {
+       if ($this->acl->otentikasi2($this->title) == TRUE && $this->Apc_trans_model->valid_add_trans($id, $this->title) == TRUE){
+         $this->output = $this->Apc_trans_model->get_by_id($id)->row();  
+       }else{ $this->reject_token(); }
+       $this->response('content');
     }
     
     function edit_item($id)
     {
-       $this->acl->otentikasi2($this->title); 
-       $val = $this->Apc_trans_model->get_by_id($id);  
-       $data['form_action_item'] = site_url($this->title.'/edit_item_process/'.$id.'/'.$val->apc_id); 
-       
-       $data['cost'] = $this->cost->combo();
-       
-       $data['default']['notes'] = $val->notes;
-       $data['default']['staff'] = $val->staff;
-       $data['default']['amount'] = $val->amount;       
-       $data['default']['cost'] = $val->cost;
+      if ($this->acl->otentikasi2($this->title) == TRUE && $this->Apc_trans_model->valid_add_trans($id, $this->title) == TRUE){
+        $ap = $this->Apc_trans_model->get_by_id($id)->row();
         
-       $this->load->view('apc_update_item', $data); 
-    }
-    
-    function edit_item_process($id,$apc)
-    {
-        $ap = $this->model->where('id', $apc)->get();
-        
+        $this->form_validation->set_rules('tnotes', 'Notes', 'required');
+        $this->form_validation->set_rules('ccost', 'Cost Type', 'required');
         $this->form_validation->set_rules('tstaff', 'Staff', 'required');
         $this->form_validation->set_rules('tamount', 'Amount', 'required|numeric');
 
-        if ($this->form_validation->run($this) == TRUE && $this->valid_confirmation($ap->no) == TRUE)
+        if ($this->form_validation->run($this) == TRUE && $this->valid_confirmation($ap->apc_id) == TRUE)
         {
             $pitem = array('notes' => $this->input->post('tnotes'), 
                            'cost' => $this->input->post('ccost'),
@@ -465,10 +245,11 @@ class Apc extends MX_Controller
                            'amount' => $this->input->post('tamount'));
             
             $this->Apc_trans_model->update($id,$pitem);
-            $this->update_trans($apc);
-        }
-        
-        redirect($this->title.'/edit_item/'.$id);
+            $this->update_trans($ap->apc_id);
+            $this->error = 'Transaction Posted';
+        }elseif ($this->valid_confirmation($ap->apc_id) != TRUE){ $this->reject("Can't change value - Journal approved..!"); }
+      }else{ $this->reject_token(); }
+      $this->response();
     }
 
     private function update_trans($pid)
@@ -482,67 +263,33 @@ class Apc extends MX_Controller
 
     function delete_item($id)
     {
-        $pid = $this->Apc_trans_model->get_by_id($id)->row();
-        if ($this->valid_confirmation($pid->apc_id) == TRUE &&  $this->acl->otentikasi_admin($this->title,'ajax') == TRUE){
-        
-        $val = $this->Apc_trans_model->get_by_id($id)->row();
-        
-        $this->Apc_trans_model->force_delete($id); // memanggil model untuk mendelete data
-        $this->update_trans($val->apc_id);
-        echo 'true|Transaction removed..!';
-        
-        }else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
-    }
-    
-    function print_item($id)
-    {
-//        $this->cek_confirmation($pid,'add_trans');
-        $this->acl->otentikasi1($this->title);
-        $terbilang = $this->load->library('terbilang');
-        
-        $value = $this->Apc_trans_model->get_by_id($id);
-        $ap = $this->model->where('id', $value->apc_id)->get();
-        
-        $data['pono'] = $ap->no;
-        $data['staff'] = $value->staff;
-        $data['currency'] = $ap->currency;
-        $data['notes'] = $value->notes;
-        $data['cost'] = $value->cost;
-        $data['amount'] = $value->amount;
-        $data['user'] = $this->user->get_username($ap->user);
-        
-        if ($ap->currency == 'IDR')
-        { $data['terbilang'] = ucwords($terbilang->baca($value->amount)).' Rupiah'; }
-        else { $data['terbilang'] = ucwords($terbilang->baca($value->amount)); }
-        
-        if ($ap->acc == 'pettycash'){ $this->load->view('apc_receipt', $data); }
-        else
-        {
-           if ($ap->approved == 1){ $this->load->view('apc_receipt', $data); }
-           else { $this->load->view('rejected', $data); } 
-        } 
+        if ($this->acl->otentikasi2($this->title) == TRUE && $this->Apc_trans_model->valid_add_trans($id, $this->title) == TRUE){
+            $pid = $this->Apc_trans_model->get_by_id($id)->row();
+            if ($this->valid_confirmation($pid->apc_id) == TRUE){
+
+            $val = $this->Apc_trans_model->get_by_id($id)->row();
+
+            $this->Apc_trans_model->force_delete($id); // memanggil model untuk mendelete data
+            $this->update_trans($val->apc_id);
+            $this->error = 'Transaction removed..!';
+
+            }else { $this->reject("Transaction posted, can't delete item"); }
+        }else { $this->reject_token(); }
+        $this->response();
     }
 //    ==========================================================================================
 
     // Fungsi update untuk mengupdate db
-    function update_process($pid=null)
+    function update($pid=null)
     {
-        if ($this->acl->otentikasi2($this->title,'ajax') == TRUE){
-
-        $data['title'] = $this->properti['name'].' | Administrator  '.ucwords($this->modul['title']);
-        $data['h2title'] = $this->modul['title'];
-	$data['form_action'] = site_url($this->title.'/update_process');
-	$data['link'] = array('link_back' => anchor('purchase/','<span>back</span>', array('class' => 'back')));
-
-	// Form validation
+        if ($this->acl->otentikasi2($this->title) == TRUE && $this->Apc_model->valid_add_trans($pid, $this->title) == TRUE){
         
-        $this->form_validation->set_rules('tid', 'ID', 'required|numeric|callback_valid_confirmation');
-        $this->form_validation->set_rules('tno', 'DJ - No', 'required|numeric');
         $this->form_validation->set_rules('tdate', 'Invoice Date', 'required|callback_valid_period');
         $this->form_validation->set_rules('tnote', 'Note', 'required');
-        $this->form_validation->set_rules('tdocno', 'Doc NO', '');
+        $this->form_validation->set_rules('tdesc', 'Description', '');
+        $this->form_validation->set_rules('cacc', 'Account', 'required');
 
-        if ($this->form_validation->run($this) == TRUE)
+        if ($this->form_validation->run($this) == TRUE && $this->valid_confirmation($pid) == TRUE)
         { 
             // cash ledger
             $val = $this->model->where('id',$pid)->get();
@@ -550,22 +297,23 @@ class Apc extends MX_Controller
             
             $this->model->where('id',$pid)->get();
             
-            $this->model->currency = $this->input->post('ccurrency');
             $this->model->dates    = $this->input->post('tdate');
             $this->model->account  = $this->input->post('cacc');
             $this->model->notes    = $this->input->post('tnote');
             $this->model->desc     = $this->input->post('tdesc');
-            $this->model->user     = $this->user->get_id($this->input->post('tuser'));
-            $this->model->log      = $this->session->userdata('log');
+            $this->model->user     = $this->decodedd->userid;
+            $this->model->log      = $this->decodedd->log;
             $this->model->updated  = date('Y-m-d H:i:s');
             
             $this->ledger->add($this->model->acc, "DJC-00".$this->model->no, $this->model->currency, $this->model->dates, 0, $this->model->amount);
             $this->model->save();
-
-            echo "true|One $this->title data successfully updated!|".$pid;
+            $this->update_trans($pid);
+            $this->error = "Transaction data successfully updated!";
         }
-        else{ echo validation_errors(); }
-        }else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
+        elseif ($this->valid_confirmation($pid) != TRUE){ $this->reject("Can't change value - Order approved..!"); }
+        else{ $this->reject(validation_errors()); }
+       }else{ $this->reject_token(); }
+       $this->response();
     }
 
     public function valid_period($date=null)
@@ -613,7 +361,7 @@ class Apc extends MX_Controller
             $this->form_validation->set_message('valid_confirmation', "Can't change value - Order approved..!.!");
             return FALSE;
         }
-        else {  return TRUE; }
+        else { return TRUE; }
     }
     
     public function valid_transaction($id)
@@ -625,7 +373,7 @@ class Apc extends MX_Controller
             $this->form_validation->set_message('valid_transaction', "Transaction Not Created...!");
             return FALSE;
         }
-        else {  return TRUE; }
+        else { return TRUE; }
     }
 
     public function valid_rate($rate)
@@ -641,26 +389,21 @@ class Apc extends MX_Controller
 // ===================================== PRINT ===========================================
     
 
-   function invoice($id=null)
+   function get($id=null)
    {
-       $this->acl->otentikasi2($this->title);
+       if ($this->acl->otentikasi1($this->title) == TRUE && $this->Apc_model->valid_add_trans($id, $this->title) == TRUE){
        $ap = $this->model->where('id', $id)->get();
 
-       $data['h2title'] = 'Print Invoice'.$this->modul['title'];
-
-       $data['pono'] = $ap->no;
-       $data['podate'] = tglin($ap->dates);
-       $data['vendor'] = "";
-       $data['venbank'] = "";
+       $data['code'] = $ap->no;
+       $data['date'] = tglin($ap->dates);
        $data['notes'] = $ap->notes;
-       $data['acc'] = ucfirst($ap->acc);
        $data['user'] = $this->user->get_username($ap->user);
        $data['currency'] = $ap->currency;
        $data['docno'] = $ap->docno;
-       $data['log'] = $this->session->userdata('log');
-       $data['account'] = $this->account->get_code($ap->account).' : '. $this->account->get_name($ap->account);
+       $data['log'] = $this->decodedd->log;
+       $data['account'] = $this->get_acc($ap->account);
 
-       $data['amount'] = $ap->amount;
+       $data['amount'] = floatval($ap->amount);
        $terbilang = $this->load->library('terbilang');
        if ($ap->currency == 'IDR')
        { $data['terbilang'] = ucwords($terbilang->baca($ap->amount)).' Rupiah'; }
@@ -668,55 +411,17 @@ class Apc extends MX_Controller
        
        if($ap->approved == 1){ $stts = 'A'; }else{ $stts = 'NA'; }
        $data['stts'] = $stts;
-
-       $data['items'] = $this->Apc_trans_model->get_last_item($ap->id)->result();
-       
        $data['accounting'] = $this->properti['accounting'];
        $data['manager'] = $this->properti['manager'];
 
-//       if ($ap->approved != 1){ $this->load->view('rejected', $data); }
-//       else { $this->load->view('apc_invoice', $data); }
-       $this->load->view('apc_invoice', $data);
-
-   }
-
-   function invoice_po($no=null)
-   {
-       $this->acl->otentikasi2($this->title);
-       $ap = $this->model->where('no', $no)->get();
-
-       $data['h2title'] = 'Print Invoice'.$this->modul['title'];
-
-       $data['pono'] = $ap->no;
-       $data['podate'] = tglin($ap->dates);
-       $data['vendor'] = "";
-       $data['venbank'] = "";
-       $data['notes'] = $ap->notes;
-       $data['acc'] = ucfirst($ap->acc);
-       $data['user'] = $this->user->get_username($ap->user);
-       $data['currency'] = $ap->currency;
-       $data['docno'] = $ap->docno;
-       $data['log'] = $this->session->userdata('log');
-       $data['account'] = $this->account->get_code($ap->account).' : '. $this->account->get_name($ap->account);
-
-       $data['amount'] = $ap->amount;
-       $terbilang = $this->load->library('terbilang');
-       if ($ap->currency == 'IDR')
-       { $data['terbilang'] = ucwords($terbilang->baca($ap->amount)).' Rupiah'; }
-       else { $data['terbilang'] = ucwords($terbilang->baca($ap->amount)); }
+       $items = null;
+       foreach ($this->Apc_trans_model->get_last_item($ap->id)->result() as $res) {
+            $items[] = array ("id"=>$res->id, "note"=>$res->notes, "account"=> $this->account->get_code($this->cost->get_acc($res->cost)), "amount"=>floatval($res->amount));    
+       }
+       $data['items'] = $items;  $this->output = $data;
        
-       if($ap->approved == 1){ $stts = 'A'; }else{ $stts = 'NA'; }
-       $data['stts'] = $stts;
-
-       $data['items'] = $this->Apc_trans_model->get_last_item($ap->id)->result();
-       
-       $data['accounting'] = $this->properti['accounting'];
-       $data['manager'] = $this->properti['manager'];
-
-//       if ($ap->approved != 1){ $this->load->view('rejected', $data); }
-//       else { $this->load->view('apc_invoice', $data); }
-       $this->load->view('apc_invoice', $data);
-
+       }else{ $this->reject_token(); }
+       $this->response('content');
    }
    
 // ===================================== PRINT ===========================================
@@ -725,96 +430,49 @@ class Apc extends MX_Controller
 
     function report()
     {
-        $this->acl->otentikasi2($this->title);
-
-        $data['title'] = $this->properti['name'].' | Administrator Report '.ucwords($this->modul['title']);
-        $data['h2title'] = 'Report '.$this->modul['title'];
-	$data['form_action'] = site_url($this->title.'/report_process');
-        $data['link'] = array('link_back' => anchor('purchase/','<span>back</span>', array('class' => 'back')));
-
-        $data['currency'] = $this->currency->combo();
-        $data['category'] = $this->category->combo_all();
-        
-        $this->load->view('apc_report_panel', $data);
-    }
-
-    function report_process()
-    {
-        $this->acl->otentikasi2($this->title);
-        $data['title'] = $this->properti['name'].' | Report '.ucwords($this->modul['title']);
-
-        
-        $cur = $this->input->post('ccurrency');
+        if ($this->acl->otentikasi1($this->title) == TRUE){ 
+       
+        $cur = 'IDR';
         $type = $this->input->post('ctype');
         $acc = $this->account->get_id_code($this->input->post('titem'));
         
-        $period = $this->input->post('reservation');  
-        $start = picker_between_split($period, 0);
-        $end = picker_between_split($period, 1);
+        $start = $this->input->post('start');
+        $end = $this->input->post('end');
 
         $data['currency'] = strtoupper($cur);
-        $data['start'] = $start;
-        $data['end'] = $end;
+        $data['start'] = tglin($start);
+        $data['end'] = tglin($end);
         $data['rundate'] = tgleng(date('Y-m-d'));
-        $data['log'] = $this->session->userdata('log');
+        $data['log'] = $this->decodedd->log;
 
 //        Property Details
         $data['company'] = $this->properti['name'];
-
-        if ($type == 0){ $data['aps'] = $this->Apc_model->report($acc,$cur,$start,$end)->result(); $page = 'apc_report'; }
-        elseif ($type == 1){ $data['aps'] = $this->Apc_model->report($acc,$cur,$start,$end)->result(); $page = 'apc_report_details'; }
-        elseif ($type == 2) { $data['aps'] = $this->Apc_model->report_category($acc,$cur,$start,$end)->result(); $page = 'apc_report_category'; }
-        elseif ($type == 3) { $data['aps'] = $this->Apc_model->report_category($acc,$cur,$start,$end)->result(); $page = 'apc_pivot'; }
+        $report = $this->Apc_model->report($acc,$cur,$start,$end)->result();
+        $report_cat = $this->Apc_model->report_category($acc,$cur,$start,$end)->result();
+        $items = null;
         
-        $this->load->view($page, $data);
+        if ($this->input->post('ctype') == 0){
+            
+            foreach ($report as $res) {
+              $items[] = array ("id"=>$res->id, "no"=> $res->no, "code"=>'DJC-00'.$res->no, "notes"=>$res->notes, "dates"=>tglin($res->dates), "desc"=>$res->desc,
+                                "currency"=>$res->currency, "account"=>$this->get_acc($res->account), 
+                                "posted"=>$res->approved, "amount"=>floatval($res->amount), "log"=> $this->decodedd->log);
+            }
+        }elseif($this->input->post('ctype') == 1 ){
+            foreach ($report_cat as $res) {
+              $items[] = array ("id"=>$res->id, "no"=> $res->no, "code"=>'DJC-00'.$res->no, "dates"=>tglin($res->dates), "desc"=>$res->desc, 
+                                "currency"=>$res->currency, "account"=>$this->get_acc($res->account), 
+                                "posted"=>$res->approved, "notes"=>$res->notes, "staff"=>$res->staff, "amount"=>floatval($res->amount), "log"=> $this->decodedd->log);   
+            }
+        }
+        $data['items'] = $items; $this->output =$data;
         
+        }else { $this->reject_token(); }
+        $this->response('content');
     }
 
 
 // ====================================== REPORT =========================================
-
-// ====================================== CASH LEDGER ====================================
-   
-    function cash_ledger()
-    {
-        $this->acl->otentikasi2($this->title);
-
-        $data['title'] = $this->properti['name'].' | Administrator Report '.ucwords($this->modul['title']);
-        $data['h2title'] = 'Report '.$this->modul['title'];
-	$data['form_action'] = site_url($this->title.'/cash_ledger_process');
-        $data['link'] = array('link_back' => anchor('purchase/','<span>back</span>', array('class' => 'back')));
-
-        $data['currency'] = $this->currency->combo();
-        
-        $this->load->view('cash_ledger_report_panel', $data);
-    }
-    
-    function cash_ledger_process()
-    {
-        $this->acl->otentikasi2($this->title);
-        $data['title'] = $this->properti['name'].' | Report '.ucwords($this->modul['title']);
-
-        $cur   = $this->input->post('ccurrency');
-        $start = $this->input->post('tstart');
-        $end   = $this->input->post('tend');
-        $acc   = $this->input->post('cacc');
-
-        $data['currency'] = $cur;
-        $data['start'] = tglin($start);
-        $data['end'] = tglin($end);
-        $data['account'] = ucfirst($acc);
-        $data['rundate'] = tgleng(date('Y-m-d'));
-        $data['log'] = $this->session->userdata('log');
-
-//        Property Details
-        $data['company'] = $this->properti['name'];
-
-        $data['opening'] = $this->ledger->get_sum_transaction_open_balance($acc, $cur, $start);
-        $data['trans'] = $this->ledger->get_transaction($acc, $cur, $start, $end)->result();
-        $data['endbalance'] = $this->ledger->get_sum_transaction_balance($acc, $cur, $start, $end);
-        
-        $this->load->view('cash_ledger_invoice', $data);
-    }
     
     // ====================================== CLOSING ======================================
     function reset_process(){ $this->Apc_model->closing(); $this->Apc_trans_model->closing(); $this->Apc_trans_model->closing_trans(); }

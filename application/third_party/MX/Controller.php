@@ -2,6 +2,7 @@
 
 /** load the CI class for Modular Extensions **/
 require dirname(__FILE__).'/Base.php';
+require_once(APPPATH.'core/Custom_Model.php');
 
 /**
  * Modular Extensions - HMVC
@@ -17,7 +18,7 @@ require dirname(__FILE__).'/Base.php';
  *
  * @copyright	Copyright (c) 2011 Wiredesignz
  * @version 	5.4
- * 
+ 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
@@ -52,9 +53,57 @@ class MX_Controller
 		
 		/* autoload module items */
 		$this->load->_autoloader($this->autoload);
+                $this->modelx = new Custom_Model();
+                $this->apix = new Api_lib();
+                $this->aclx = new Acl();
+                $this->decodedd = $this->apix->otentikasi('otentikasi');
 	}
-	
-	public function __get($class) {
-		return CI::$APP->$class;
+        
+        protected $modelx,$apix,$aclx;
+        public $decodedd;
+        public $limitx,$offsetx;
+
+        public $error = null;
+        public $status = 200, $status404=TRUE;
+        public $output = null, $resx = null, $count = 0;
+
+        public function __get($class) {
+	  return CI::$APP->$class;
 	}
+        
+        function get_deleted(){
+            $result = $this->model->get_deleted()->result(); 
+            $output = null;
+            $error = null;
+            $status = 200;
+            $this->apix->response(array('error' => $error, 'content' => $result), $status);
+        }
+        
+        function restore($uid=null){
+            $error = 'Success Restored';
+            $status = 200;
+            if ($this->model->restore($uid) != true){ $error = 'Failed to restore'; $status = 401;}
+            $this->apix->response(array('error' => $error, 'content' => $result), $status);
+        }
+                
+        function response($type=null){
+           if ($this->status != 200){
+              if ($type){ $this->apix->response(array('error' => $this->error, 'content' => $this->output), $this->status);  }
+              else{ $this->apix->response(array('error' => $this->error), $this->status);  } 
+           }else{
+              if ($type){ $this->apix->response(array('content' => $this->output), $this->status);  }
+              else{ $this->apix->response(array('content' => $this->error), $this->status);  }
+           } 
+        }
+        
+        function valid_404($val=TRUE){ if ($val == FALSE){ $this->status404 = FALSE; }}
+        function reject($mess='Failed to posted',$status=403){ $this->error = $mess; $this->status = $status; }
+        private function reject_404(){ $this->error = 'ID not found'; $this->status = 404; }
+        function reject_token($mess='Invalid Token or Expired..!',$status=401){
+            if ($this->status404 == FALSE){ $this->reject_404(); }else{ $this->error = $mess; $this->status = $status; }
+        }
+        
+        
+//        function reject($mess='Failed to posted',$status=401){$this->error = $mess; $this->status = $status; }
+//        function reject_token($mess='Invalid Token or Expired..!',$status=400){$this->error = $mess; $this->status = $status; }
 }

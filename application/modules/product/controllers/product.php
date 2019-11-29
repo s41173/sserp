@@ -1,5 +1,5 @@
 <?php if (!defined('BASEPATH')) exit('No direct script access allowed');
-
+include_once 'definer.php';
 class Product extends MX_Controller
 {
     function __construct()
@@ -9,7 +9,6 @@ class Product extends MX_Controller
         $this->load->model('Product_model', 'model', TRUE);
 
         $this->properti = $this->property->get();
-        $this->acl->otentikasi();
 
         $this->modul = $this->components->get(strtolower(get_class($this)));
         $this->title = strtolower(get_class($this));
@@ -28,197 +27,127 @@ class Product extends MX_Controller
         $this->period = $this->period->get();
         $this->stockledger = new Stock_ledger_lib();
         $this->stock = new Stock_lib();
+        
+        $this->api = new Api_lib();
+        $this->acl = new Acl();
+        
+        header('Access-Control-Allow-Origin: *');
+        header('Access-Control-Allow-Methods: GET, POST, PATCH, PUT, DELETE, OPTIONS');
+        header('Access-Control-Allow-Headers: Origin, Content-Type, X-Auth-Token'); 
     }
 
     private $properti, $modul, $title, $product, $wt, $branch, $conversi, $period, $stockledger, $stock;
-    private $role, $category, $manufacture, $attribute, $attribute_product, $attribute_list, $currency;
-
+    private $role, $category, $manufacture, $attribute, $attribute_product, $attribute_list, $currency, $api, $acl;
+    
+    protected $error = null;
+    protected $status = 200;
+    protected $output = null;
+    
+    function search(){
+      if ($this->acl->otentikasi1($this->title) == TRUE){  
+          
+        $datax = (array)json_decode(file_get_contents('php://input')); 
+        $name = null;
+        if (isset($datax['filter'])){ $name = $datax['filter']; }
+        if (isset($datax['limit'])){ $this->limitx = $datax['limit']; }else{ $this->limitx = $this->modul['limit']; }
+        if (isset($datax['offset'])){ $this->offsetx = $datax['offset']; }
+        if ($name != null){ $result = $this->model->search_name($name, $this->limitx, $this->offsetx)->result();
+        
+            $resx = null;
+            foreach($result as $res)
+            {
+               if ($res->image){$img = $this->properti['image_url'].'product/'.$res->image;}else{ $img = null; }
+               $qty = $this->stockledger->get_qty($res->id, $this->branch->get_branch(), $this->period->month, $this->period->year);  
+               $resx[] = array ("id"=>$res->id, "category"=>$this->category->get_name($res->category), "brand"=>$this->manufacture->get_name($res->manufacture),
+                                "image"=> $img, "sku"=>$res->sku, "name"=>$res->name, "model"=>$res->model, 
+                                "price"=>floatval($res->price), "net_price"=>floatval($res->price-$res->discount), "qty"=>$qty,
+                                "color"=>$res->color, "size"=> $res->size, "log"=> $this->decodedd->log, "branch"=> $this->branch->get_name($this->branch->get_branch()),
+                                "publish"=>$res->publish
+                               );
+            }
+            $data['result'] = $resx; $this->output = $data;
+        }
+        
+      }else{ $this->reject_token(); }
+      $this->response('content'); 
+    }
     
     function index()
     {
-       $this->session->unset_userdata('start'); 
-       $this->session->unset_userdata('end');
-       $this->get_last(); 
+        if ($this->acl->otentikasi1($this->title) == TRUE){
+        $datax = (array)json_decode(file_get_contents('php://input')); 
+        if (isset($datax['offset'])){ $this->offsetx = $datax['offset']; }
         
-//       $first_day_this_month = date('m-01-Y'); // hard-coded '01' for first day
-//       $last_day_this_month  = date('m-t-Y');
-       
-//       $last_day_april_2010 = date('m-t-Y', strtotime('April 21, 2010'));
-//       echo $last_day_april_2010;
-    }
-    
-    // ajax
-    function set_param(){
+        $branch = null; $cat=null; $col=null; $size=null; $publish=null; $sku=null; $brand=null; $limit=100;
+        if (isset($datax['branch'])){ $branch = $datax['branch']; }
+        if (isset($datax['category'])){ $cat = $datax['category']; }
+        if (isset($datax['color'])){ $col = $datax['color']; }
+        if (isset($datax['size'])){ $size = $datax['size']; }
+        if (isset($datax['publish'])){ $publish = $datax['publish']; }
+        if (isset($datax['sku'])){ $sku = $datax['sku']; }
+        if (isset($datax['brand'])){ $brand = $datax['brand']; }
+        if (isset($datax['limit'])){ $this->limitx = $datax['limit']; $limit = $datax['limit']; }
+        else{ $this->limitx = $this->modul['limit']; }
         
-        $this->session->set_userdata('category', $this->input->post('category'));
-        $this->session->set_userdata('size', $this->input->post('size'));
-        $this->session->set_userdata('color', $this->input->post('color'));
-        $this->session->set_userdata('publish', $this->input->post('publish'));
-        
-        echo 'true|Parameter Set...!!';
-    }
-     
-    public function getdatatable($search=null,$branch='null',$cat='null',$col='null',$size='null',$publish='null',$sku='null')
-    {
-        if ($branch == 'null'){ $branch = $this->branch->get_branch(); }
-        if(!$search){ $result = $this->model->get_last($this->modul['limit'])->result(); }
-        else {
-            if ($sku != 'null'){ $result = $this->model->search_sku($sku)->result();  }
-            else{ $result = $this->model->search($cat,$col,$size,$publish)->result();  } 
+        if($branch == null && $cat == null && $col == null && $size == null && $publish == null && $sku == null){ 
+            $branch = $this->branch->get_branch();
+            $result = $this->model->get_last($this->limitx, $this->offsetx)->result();   
         }
-	
-        $output = null;
-        if ($result){
-          
-         foreach($result as $res)
-	 { 
+        else{ 
+            if ($sku != null){ $result = $this->model->search_sku($sku)->result();   }
+            else{ $result = $this->model->search($cat,$col,$size,$brand,$publish,$limit)->result();  }       
+        }
+        
+        $resx = null;
+	foreach($result as $res)
+	{
+           if ($res->image){$img = $this->properti['image_url'].'product/'.$res->image;}else{ $img = null; }
            $qty = $this->stockledger->get_qty($res->id, $branch, $this->period->month, $this->period->year);  
-	   $output[] = array ($res->id, $this->category->get_name($res->category), base_url().'images/product/'.$res->image, $res->sku, $res->name, $res->model,
-                              idr_format($res->price), $qty, $res->publish, $res->category, idr_format($res->price-$res->discount), $res->color, $res->size, $this->branch->get_name($branch)
-                             );
-	 } 
-         
-        $this->output
-         ->set_status_header(200)
-         ->set_content_type('application/json', 'utf-8')
-         ->set_output(json_encode($output))
-         ->_display();
-         exit;  
-        }
-    }
-
-    function get_last()
-    {
-        $this->acl->otentikasi1($this->title);
-
-        $data['title'] = $this->properti['name'].' | Administrator  '.ucwords('Product Manager');
-        $data['h2title'] = 'Product Manager';
-        $data['main_view'] = 'product_view';
-	$data['form_action'] = site_url($this->title.'/add_process');
-        $data['form_action_update'] = site_url($this->title.'/update_process');
-        $data['form_action_del'] = site_url($this->title.'/delete_all');
-        $data['form_action_report'] = site_url($this->title.'/report_process');
-        $data['form_action_import'] = site_url($this->title.'/import');
-        $data['link'] = array('link_back' => anchor('main/','Back', array('class' => 'btn btn-danger')));
-
-        $data['category'] = $this->category->combo_code();
-        $data['manufacture'] = $this->manufacture->combo_all();
-        $data['color'] = $this->attribute->combo_color();
-        $data['size'] = $this->attribute->combo_size();
-        $data['currency'] = $this->currency->combo();
-        $data['branch'] = $this->branch->combo();
-        $data['branch_all'] = $this->branch->combo_all();
-        $data['array'] = array('','');
-        $data['month'] = combo_month();
-        $data['default']['month'] = $this->period->month;
-        
-	// ---------------------------------------- //
- 
-        $config['first_tag_open'] = $config['last_tag_open']= $config['next_tag_open']= $config['prev_tag_open'] = $config['num_tag_open'] = '<li>';
-        $config['first_tag_close'] = $config['last_tag_close']= $config['next_tag_close']= $config['prev_tag_close'] = $config['num_tag_close'] = '</li>';
-
-        $config['cur_tag_open'] = "<li><span><b>";
-        $config['cur_tag_close'] = "</b></span></li>";
-
-        // library HTML table untuk membuat template table class zebra
-        $tmpl = array('table_open' => '<table id="datatable-buttons" class="table table-striped table-bordered">');
-
-        $this->table->set_template($tmpl);
-        $this->table->set_empty("&nbsp;");
-
-        //Set heading untuk table
-        $this->table->set_heading('#','No', 'Branch', 'Category', 'SKU', 'Name', 'Model', 'C - S', 'Qty', 'Action');
-
-        $data['table'] = $this->table->generate();
-        $data['source'] = site_url($this->title.'/getdatatable');
-        $data['graph'] = site_url()."/product/chart/";
-            
-        // Load absen view dengan melewatkan var $data sbgai parameter
-	$this->load->view('template', $data);
-    }
+           $resx[] = array ("id"=>$res->id, "category"=>$this->category->get_name($res->category), "brand"=>$this->manufacture->get_name($res->manufacture),
+                            "image"=> $img, "sku"=>$res->sku, "name"=>$res->name, "model"=>$res->model, 
+                            "price"=>floatval($res->price), "net_price"=>floatval($res->price-$res->discount), "qty"=>$qty,
+                            "color"=>$res->color, "size"=> $res->size, "log"=> $this->decodedd->log, "branch"=> $this->branch->get_name($branch),
+                            "publish"=>$res->publish, 
+                           );
+	}
+        $data['result'] = $resx; $data['chart'] = $this->chart(); $this->output = $data;
+        }else{ $this->reject_token(); }
+        $this->response('content');
+    } 
     
-    function chart()
+    private function chart()
     {
         $data = $this->category->get();
         $datax = array();
-        $branch = $this->branch->get_branch_session();
+        $branch = $this->decodedd->branch;
         
         foreach ($data as $res) 
         {  
            $point = array("label" => $res->name , "y" => $this->product->get_product_based_category($res->id, $branch, $this->period->month, $this->period->year));
            array_push($datax, $point);      
         }
-        echo json_encode($datax, JSON_NUMERIC_CHECK);
-    }
-    
-    function get_list($target='titem',$branchid=null)
-    {
-        $this->acl->otentikasi1($this->title);
-
-        $data['title'] = $this->properti['name'].' | Administrator  '.ucwords($this->modul['title']);
-        $data['h2title'] = $this->modul['title'];
-        $data['main_view'] = 'product_list';
-        $data['form_action'] = site_url($this->title.'/get_list');
-        $data['category'] = $this->category->combo_all();
-        $data['manufacture'] = $this->manufacture->combo_all();
-        $data['branch'] = $this->branch->combo();
-
-        if ($branchid){ $branch = $branchid; }
-        elseif (!$this->input->post('cbranch')){ $branch = $this->branch->get_branch_session(); }
-        else{ $branch = $this->input->post('cbranch'); }
-        $currency = $this->input->post('ccurrency');
-        $brand = $this->input->post('cmanufacture');
-        $category = $this->input->post('ccategory');
-        
-        if ($category){
-          $products = $this->model->search_list($category,$brand,$currency)->result();              
-        }else{ $products = null; }
-        
-        $qty = 0;
-
-        $tmpl = array('table_open' => '<table id="example" width="100%" cellspacing="0" class="table table-striped table-bordered">');
-
-            $this->table->set_template($tmpl);
-            $this->table->set_empty("&nbsp;");
-
-            //Set heading untuk table
-            $this->table->set_heading('No', 'Code', 'Category', 'Manufacture', 'Name', 'Model', 'Size', 'Color', 'Qty', 'Action');
-
-            $i = 0;
-            if ($products){
-
-                foreach ($products as $product)
-                {
-                   $datax = array('name' => 'button', 'type' => 'button', 'class' => 'btn btn-primary', 'content' => 'Select', 'onclick' => 'setvalue(\''.$product->sku.'\',\''.$target.'\')');
-                   $qty = $this->stockledger->get_qty($product->id, $branch, $this->period->month, $this->period->year);
-
-                    $this->table->add_row
-                    (
-                        ++$i, strtoupper($product->sku), $this->category->get_name($product->category), 
-                                         $this->manufacture->get_name($product->manufacture), $product->name, $product->model, $product->size,
-                                         $product->color, $qty.' '.$product->unit,
-                        form_button($datax)
-                    );
-                }            
-            }
-
-            $data['table'] = $this->table->generate();
-            $this->load->view('product_list', $data);
+        return $datax;
     }
     
     function publish($uid = null)
     {
-       if ($this->acl->otentikasi2($this->title,'ajax') == TRUE){ 
+       if ($this->acl->otentikasi2($this->title) == TRUE && $this->model->valid_add_trans($uid, $this->title) == TRUE){ 
        $val = $this->model->get_by_id($uid)->row();
        if ($val->publish == 0){ $lng = array('publish' => 1); }else { $lng = array('publish' => 0); }
-       $this->model->update($uid,$lng);
-       echo 'true|Status Changed...!';
-       }else{ echo "error|Sorry, you do not have the right to change publish status..!"; }
+       if ($this->model->update($uid,$lng) == true){ $this->error = 'Status Changed...!'; }else{ $this->reject(); }
+       }else { $this->reject_token('Invalid Token or Expired..!'); }
+       $this->response();
     }
     
     function update_all(){
         
-       if ($this->acl->otentikasi2($this->title,'ajax') == TRUE){ 
+       if ($this->acl->otentikasi2($this->title) == TRUE){ 
+           
+        $category = $this->input->post('category');
+        $size = $this->input->post('size');
+        $color = $this->input->post('color');
+        $publish = $this->input->post('publish');
+        
         $cek = $this->input->post('cek');
         $jumlah = count($cek);
         
@@ -227,33 +156,25 @@ class Product extends MX_Controller
           $jumlah = count($cek);
           for ($i=0; $i<$jumlah; $i++)
           {      
-            $product = array('category' => $this->session->userdata('category'),
-                             'size' => $this->session->userdata('size'),
-                             'color' => $this->session->userdata('color'), 
-                             'publish' => $this->session->userdata('publish')); 
-                
+            $product = array('category' => $category, 'size' => $size, 'color' => $color, 'publish' => $publish);    
             $this->model->update($cek[$i], $product);
           }
-          
-          $this->session->unset_userdata('category');
-          $this->session->unset_userdata('size');
-          $this->session->unset_userdata('color');
-          $this->session->unset_userdata('publish');
             
           $mess = intval($jumlah)." ".$this->title."successfully updated..!!";
-          echo 'true|'.$mess;
+          $this->error = $mess;
         }
         else
         { 
           $mess = "No $this->title Selected..!!";
-          echo 'false|'.$mess;
+          $this->reject($mess);
         }
-        }else{ echo "error|Sorry, you do not have the right to change product attribute..!"; }
+       }else { $this->reject_token('Invalid Token or Expired..!'); }
+       $this->response();
     }
     
     function delete_all($type='soft')
     {
-      if ($this->acl->otentikasi_admin($this->title,'ajax') == TRUE){
+      if ($this->acl->otentikasi3($this->title) == TRUE){
       
         $cek = $this->input->post('cek');
         $jumlah = count($cek);
@@ -273,61 +194,35 @@ class Product extends MX_Controller
              }
           }
           $res = intval($jumlah-$x);
-          //$this->session->set_flashdata('message', "$res $this->title successfully removed &nbsp; - &nbsp; $x related to another component..!!");
           $mess = "$res $this->title successfully removed &nbsp; - &nbsp; $x related to another component..!!";
-          echo 'true|'.$mess;
+          $this->error = $mess;
         }
         else
-        { //$this->session->set_flashdata('message', "No $this->title Selected..!!"); 
+        { 
           $mess = "No $this->title Selected..!!";
-          echo 'false|'.$mess;
+          $this->reject($mess);
         }
-      }else{ echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
+      }else { $this->reject_token('Invalid Token or Expired..!'); }
+      $this->response();
       
     }
 
     function delete($uid)
     {
-        if ($this->acl->otentikasi_admin($this->title,'ajax') == TRUE){
+        if ($this->acl->otentikasi3($this->title) == TRUE && $this->model->valid_add_trans($uid, $this->title) == TRUE){ 
                 
             if ($this->valid_qty($uid) == TRUE){
-               $this->model->delete($uid);
-               $this->session->set_flashdata('message', "1 $this->title successfully removed..!");
-               echo "true|1 $this->title successfully removed..!"; 
+               $this->remove_img($uid); 
+               if ($this->model->delete($uid) == true){ $this->error = $this->title.'successfully removed..!'; }else{ $this->reject(); }
             }
-            else{ echo "error|Invalid Product Qty...!!"; }    
-        }
-        else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
+            else{ $this->reject("Invalid Product Qty...!"); }    
+        }else { $this->reject_token('Invalid Token or Expired..!'); }
+        $this->response();
     }
-    
+
     function add()
     {
-        $data['title'] = $this->properti['name'].' | Administrator  '.ucwords($this->modul['title']);
-        $data['h2title'] = 'Create New '.$this->modul['title'];
-        $data['main_view'] = 'article_form';
-	$data['form_action'] = site_url($this->title.'/add_process');
-        $data['link'] = array('link_back' => anchor($this->title,'Back', array('class' => 'btn btn-danger')));
-
-        $data['language'] = $this->language->combo();
-        $data['category'] = $this->category->combo();
-        $data['currency'] = $this->currency->combo();
-        $data['source'] = site_url($this->title.'/getdatatable');
-        
-        $this->load->helper('editor');
-        editor();
-
-        $this->load->view('template', $data);
-    }
-
-    function add_process()
-    {
-        if ($this->acl->otentikasi2($this->title,'ajax') == TRUE){
-
-        $data['title'] = $this->properti['name'].' | Administrator  '.ucwords($this->modul['title']);
-        $data['h2title'] = $this->modul['title'];
-        $data['main_view'] = 'category_view';
-	$data['form_action'] = site_url($this->title.'/add_process');
-	$data['link'] = array('link_back' => anchor('category/','<span>back</span>', array('class' => 'back')));
+        if ($this->acl->otentikasi2($this->title) == TRUE){ 
 
 	// Form validation
         $this->form_validation->set_rules('tsku', 'SKU', 'callback_valid_sku');
@@ -339,7 +234,7 @@ class Product extends MX_Controller
 
         if ($this->form_validation->run($this) == TRUE)
         {
-            $config['upload_path'] = './images/product/';
+            $config['upload_path'] = $this->properti['url_upload'].'/images/product/';
             $config['file_name'] = split_space($this->input->post('tname'));
             $config['allowed_types'] = 'jpg|gif|png|jpeg';
             $config['overwrite'] = true;
@@ -347,7 +242,7 @@ class Product extends MX_Controller
             $config['max_width']  = '30000';
             $config['max_height']  = '30000';
             $config['remove_spaces'] = TRUE;
-
+    
             $this->load->library('upload', $config);
             
             if (!$this->input->post('tsku')){ $sku = $this->category->get_code($this->input->post('ccategory')).'-0'.$this->model->counter();
@@ -375,17 +270,12 @@ class Product extends MX_Controller
                                   'image' => $info['file_name'], 'created' => date('Y-m-d H:i:s'));
             }
 
-            $this->model->add($product);
-            $this->stockledger->create($this->model->max_id(), $this->branch->get_branch(), $this->period->month, $this->period->year);
-            $this->session->set_flashdata('message', "One $this->title data successfully saved!");
-//            redirect($this->title);
-            
-            if ($this->upload->display_errors()){ echo "warning|".$this->upload->display_errors(); }
-            else { echo 'true|'.$this->title.' successfully saved..!|'.base_url().'images/product/'.$info['file_name']; }
+            if ($this->model->add($product) != true && $this->upload->display_errors()){ $this->error = $this->upload->display_errors(); $this->status = 401;
+            }else{ $this->error = $this->title.' successfully saved..!'; }            
         }
-        else{ echo "error|".validation_errors(); }
-        }else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
-
+        else{ $this->reject(validation_errors()); }
+        }else { $this->reject_token('Invalid Token or Expired..!'); }
+        $this->response('c');
     }
     
     private function cek_tick($val)
@@ -397,128 +287,90 @@ class Product extends MX_Controller
     private function split_array($val)
     { return implode(",",$val); }
     
-    function remove_img($id,$type='primary')
+    function remove_img($id)
     {
         $img = $this->model->get_by_id($id)->row();
-        
-        if ($type == 'primary'){
-            $img = $img->image;
-            if ($img){ $img = "./images/product/".$img; @unlink("$img"); }
-        }else{
-            $image = "./images/product/".$img->image; @unlink("$image");
-            $img1 = "./images/product/".$img->url1; @unlink("$img1"); 
-            $img2 = "./images/product/".$img->url2; @unlink("$img2");
-            $img3 = "./images/product/".$img->url3; @unlink("$img3");
-            $img4 = "./images/product/".$img->url4; @unlink("$img4");
-            $img5 = "./images/product/".$img->url5; @unlink("$img5");
-        }
+        $img = $img->image;
+        if ($img){ $img = $this->properti['image_url'].'product/'.$img; @unlink("$img");}
     }
     
     function details($uid=null)
-    {        
+    {    
+       if ($this->acl->otentikasi1($this->title) == TRUE && $this->model->valid_add_trans($uid, $this->title) == TRUE){ 
         $product = $this->model->get_by_id($uid)->row();
-        if (!$product){ redirect($this->title); }
-	$this->session->set_userdata('langid', $product->id);
         
-        echo $product->sku.'|'. $this->category->get_name($product->category).'|'. $this->manufacture->get_name($product->manufacture).'|'.$product->name.'|'.$product->model.'|'.$product->currency.'|'.
-             idr_format($product->pricelow).' - '.idr_format($product->price).'|'.$product->qty.'|'.base_url().'images/product/'.$product->image.'|'.
-             $product->dimension_class.'|'.$product->weight.'|'.$product->dimension.'|'.$product->color.'|'.$product->size.'|'.
-             $product->dimension.'|'. $this->conversi->calculate($this->stock->unit_cost($uid)).'|'. $this->conversi->calculate($this->stock->get_last_stock_price($uid));
+        $this->output = array("sku"=>$product->sku,"category"=>$this->category->get_name($product->category),"brand"=>$this->manufacture->get_name($product->manufacture),"name"=>$product->name,"model"=>$product->model,"currency"=>$product->currency,
+                              "price"=>idr_format($product->pricelow).' - '.idr_format($product->price),"qty"=>$product->qty, "image"=> $this->properti['image_url'].'product/'.$product->image,
+                              "dimension_class"=>$product->dimension_class, "weight"=>$product->weight, "dimension"=>$product->dimension, "color"=>$product->color, "size"=>$product->size,
+                              "unit_cost"=>$this->conversi->calculate($this->stock->unit_cost($uid)), "last_cost"=>$this->conversi->calculate($this->stock->get_last_stock_price($uid)));
+                
+       }else{ $this->reject_token('Invalid Token or Expired..!'); }
+       $this->response('content');
     }
     
-    // Fungsi update untuk menset texfield dengan nilai dari database
-    function update($uid=null)
+    function get($uid=null)
     {        
-        $this->model->valid_add_trans($uid, $this->title);
-        
-        $data['title'] = $this->properti['name'].' | Administrator  '.ucwords($this->modul['title']);
-        $data['h2title'] = 'Edit '.$this->modul['title'];
-        $data['main_view'] = 'product_update';
-	$data['form_action'] = site_url($this->title.'/update_process');
-        $data['link'] = array('link_back' => anchor($this->title,'Back', array('class' => 'btn btn-danger')));
-
-        $data['manufacture'] = $this->manufacture->combo();
-        $data['category'] = $this->category->combo_code();
-        $data['currency'] = $this->currency->combo();
-        $data['source'] = site_url($this->title.'/getdatatable');
-        $data['related'] = $this->product->combo_publish($uid);
-        $data['array'] = array('','');
-        $data['graph'] = site_url()."/product/chart/";
-        
-        $data['color'] = $this->attribute->combo_color();
-        $data['size'] = $this->attribute->combo_size();
+        if ($this->acl->otentikasi1($this->title) == TRUE && $this->model->valid_add_trans($uid, $this->title) == TRUE){
         
         $product = $this->model->get_by_id($uid)->row();
-	$this->session->set_userdata('langid', $product->id);
+        if ($product->image != null){ $img = $this->properti['image_url'].'product/'.$product->image; }else{ $img = null; }
         
-        $data['default']['sku'] = $product->sku;
-        $data['default']['category'] = $product->category;
-        $data['default']['manufacture'] = $product->manufacture;
-        $data['default']['name'] = $product->name;
-        $data['default']['model'] = $product->model;
-        $data['default']['permalink'] = $product->permalink;
-        $data['default']['currency'] = $product->currency;
-        $data['default']['description'] = $product->description;
-        $data['default']['sdesc'] = $product->shortdesc;
-        $data['default']['spec'] = $product->spesification;
-        $data['default']['metatitle'] = $product->meta_title;
-        $data['default']['metadesc'] = $product->meta_desc;
-        $data['default']['metakeywords'] = $product->meta_keywords;
-        $data['default']['price'] = $product->price;
-        $data['default']['lowprice'] = $product->pricelow;
-        $data['default']['discount'] = $product->discount;
-        $data['default']['qty'] = $product->qty;
-        $data['default']['min'] = $product->min_order;
-        $data['default']['image'] = base_url().'images/product/'.$product->image;
-        $data['default']['dclass'] = $product->dimension_class;
-        $data['default']['weight'] = $product->weight;
-        $data['default']['disc_p'] = @intval($product->discount/$product->price*100);
-        $data['default']['dimension'] = $product->dimension;
-        $data['default']['color'] = $product->color;
-        $data['default']['size'] = $product->size;
+        $data['sku'] = $product->sku;
+        $data['category'] = $product->category;
+        $data['manufacture'] = $product->manufacture;
+        $data['name'] = $product->name;
+        $data['model'] = $product->model;
+        $data['permalink'] = $product->permalink;
+        $data['currency'] = $product->currency;
+        $data['description'] = $product->description;
+        $data['sdesc'] = $product->shortdesc;
+        $data['spec'] = $product->spesification;
+        $data['metatitle'] = $product->meta_title;
+        $data['metadesc'] = $product->meta_desc;
+        $data['metakeywords'] = $product->meta_keywords;
+        $data['price'] = $product->price;
+        $data['lowprice'] = $product->pricelow;
+        $data['discount'] = $product->discount;
+        $data['qty'] = $product->qty;
+        $data['min'] = $product->min_order;
+        $data['image'] = $img;
+        $data['dclass'] = $product->dimension_class;
+        $data['weight'] = $product->weight;
+        $data['disc_p'] = @intval($product->discount/$product->price*100);
+        $data['dimension'] = $product->dimension;
+        $data['color'] = $product->color;
+        $data['size'] = $product->size;
+        $data['convertion_unit_cost'] = $this->conversi->calculate($this->stock->unit_cost($uid));
+        $data['convertion_last_cost'] = $this->conversi->calculate($this->stock->get_last_stock_price($uid));
+        
         
         if ($product->dimension)
         {
             $dimension = explode('x', $product->dimension);
-            $data['default']['length'] = $dimension[0];
-            $data['default']['width'] = $dimension[1];
-            $data['default']['height'] = $dimension[2];
+            $data['length'] = $dimension[0];
+            $data['width'] = $dimension[1];
+            $data['height'] = $dimension[2];
         }
         else{
-            $data['default']['length'] = '';
-            $data['default']['width'] = '';
-            $data['default']['height'] = '';
+            $data['length'] = '';
+            $data['width'] = '';
+            $data['height'] = '';
         }
 
         if ($product->related){
             $related = explode(',', $product->related);
-            $data['default']['related'] = $related;
+            $data['related'] = $related;
         }
-         
-        $this->load->helper('editor');
-        editor();
-        $this->load->view('template', $data);
+        $this->output = $data;
+        }else{ $this->reject_token('Invalid Token or Expired..!'); }
+        $this->response('content');
     }
     
     function image_gallery($pid=null)
     {        
-        $data['title'] = $this->properti['name'].' | Administrator  '.ucwords($this->modul['title']);
-        $data['h2title'] = 'Edit '.$this->modul['title'];
-        $data['main_view'] = 'article_form';
-	$data['form_action'] = site_url($this->title.'/add_image/'.$pid);
-        $data['link'] = array('link_back' => anchor($this->title,'Back', array('class' => 'btn btn-danger')));
-
+       if ($this->acl->otentikasi1($this->title) == TRUE && $this->model->valid_add_trans($pid, $this->title) == TRUE){
+        
         $result = $this->model->get_by_id($pid)->row();
-        
-        // library HTML table untuk membuat template table class zebra
-        $tmpl = array('table_open' => '<table id="" class="table table-striped table-bordered">');
-
-        $this->table->set_template($tmpl);
-        $this->table->set_empty("&nbsp;");
-
-        //Set heading untuk table
-        $this->table->set_heading('No', 'Name', 'Image');
-        
         for ($i=1; $i<=5; $i++)
         {   
             switch ($i) {
@@ -528,19 +380,11 @@ class Product extends MX_Controller
                 case 4:$url = $result->url4; break;
                 case 5:$url = $result->url5; break;
             }
-            
-            if ($url){ if ($result->url_upload == 1){ $url = base_url().'images/product/'.$url; } }
-            
-            $image_properties = array('src' => $url, 'alt' => 'Image'.$i, 'class' => 'img_product', 'width' => '60', 'title' => 'Image'.$i,);
-            $this->table->add_row
-            (
-               $i, 'Image'.$i, !empty($url) ? img($image_properties) : ''
-            );
+            $this->output[] = array("name"=>'Image'.$i, "image"=>$url);
         }
-
-        $data['table'] = $this->table->generate();
         
-        $this->load->view('product_image', $data);
+      }else{ $this->reject_token('Invalid Token or Expired..!'); }
+      $this->response('content');
     }
     
     function valid_image($val)
@@ -554,136 +398,21 @@ class Product extends MX_Controller
     
     function add_image($pid)
     {
-        if ($this->acl->otentikasi2($this->title) == TRUE){
+        if ($this->acl->otentikasi2($this->title) == TRUE && $this->model->valid_add_trans($pid, $this->title) == TRUE){
 
-            $data['title'] = $this->properti['name'].' | Administrator  '.ucwords('Product Manager');
-            $data['h2title'] = 'Product Manager';
-            $data['link'] = array('link_back' => anchor('admin/','<span>back</span>', array('class' => 'back')));
-
-            // Form validation
-            
+            // Form validation            
             $this->form_validation->set_rules('cname', 'Image Attribute', 'required|');
-            $this->form_validation->set_rules('userfile', 'Image Value', '');
+            $this->form_validation->set_rules('turl', 'Image Url', 'required');
 
             if ($this->form_validation->run($this) == TRUE)
             {  
-                $result = $this->model->get_by_id($pid)->row();
-                if ($result->url_upload == 1)               
-                {
-                    switch ($this->input->post('cname')) {
-                    case 1:$img = "./images/product/".$result->url1; break;
-                    case 2:$img = "./images/product/".$result->url2; break;
-                    case 3:$img = "./images/product/".$result->url3; break;
-                    case 4:$img = "./images/product/".$result->url4; break;
-                    case 5:$img = "./images/product/".$result->url5; break;
-                  }
-                  @unlink("$img"); 
-                }
-                
-                    $config['upload_path'] = './images/product/';
-                    $config['file_name'] = split_space($result->name.'_'.$this->input->post('cname'));
-                    $config['allowed_types'] = 'jpg|gif|png';
-                    $config['overwrite']  = true;
-                    $config['max_size']   = '50000';
-                    $config['max_width']  = '30000';
-                    $config['max_height'] = '30000';
-                    $config['remove_spaces'] = TRUE;
-
-                    $this->load->library('upload', $config);
-                    
-                    if ( !$this->upload->do_upload("userfile")) // if upload failure
-                    {
-                        $attr = array('url'.$this->input->post('cname') => null, 'url_upload' => 1);
-                    }
-                    else {$info = $this->upload->data();
-                         $attr = array('url'.$this->input->post('cname') => $info['file_name'], 'url_upload' => 1); 
-                    } 
-                
+                $attr = array('url'.$this->input->post('cname') => $this->input->post('turl'));
                 $this->model->update($pid, $attr);
-                $this->session->set_flashdata('message', "One $this->title data successfully saved!");
-                
-                echo 'true|Data successfully saved..!'; 
+                $this->error = 'Image posted'; 
             }
-            else
-            {
-    //            echo validation_errors();
-                echo 'error|'.validation_errors();
-            }
-        }
-        else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
-    }
-    
-    function attribute($pid=null,$category=null)
-    {        
-        $data['title'] = $this->properti['name'].' | Administrator  '.ucwords($this->modul['title']);
-        $data['h2title'] = 'Edit '.$this->modul['title'];
-        $data['main_view'] = 'article_form';
-	$data['form_action'] = site_url($this->title.'/add_attribute/'.$pid);
-        $data['link'] = array('link_back' => anchor($this->title,'Back', array('class' => 'btn btn-danger')));
-
-        $data['attributes'] = $this->attribute->combo($category);  
-        $result = $this->attribute_product->get_list($pid)->result();
-        
-        // library HTML table untuk membuat template table class zebra
-        $tmpl = array('table_open' => '<table id="" class="table table-striped table-bordered">');
-
-        $this->table->set_template($tmpl);
-        $this->table->set_empty("&nbsp;");
-
-        //Set heading untuk table
-        $this->table->set_heading('No','Attribute', 'Value', '#');
-        
-        $i = 0;
-        foreach ($result as $res)
-        {
-            $this->table->add_row
-            (
-                ++$i, $this->attribute_list->get_name($res->attribute_id), $res->value,
-                anchor('#','<span>delete</span>',array('class'=> 'btn btn-danger btn-sm text-danger', 'id' => $res->id, 'title' => 'delete'))
-            );
-        }
-
-        $data['table'] = $this->table->generate();
-        
-        $this->load->view('product_attribute', $data);
-    }
-    
-    function add_attribute($pid)
-    {
-        if ($this->acl->otentikasi2($this->title) == TRUE){
-
-            $data['title'] = $this->properti['name'].' | Administrator  '.ucwords('Product Manager');
-            $data['h2title'] = 'Product Manager';
-            $data['link'] = array('link_back' => anchor('admin/','<span>back</span>', array('class' => 'back')));
-
-            // Form validation
-            
-            $this->form_validation->set_rules('cattribute', 'Attribute List', 'required|maxlength[100]|callback_valid_attribute['.$pid.']');
-            $this->form_validation->set_rules('tvalue', 'Attribute Value', 'required');
-
-            if ($this->form_validation->run($this) == TRUE)
-            {  
-                $attr = array('product_id' => $pid, 'attribute_id' => $this->input->post('cattribute'), 'value' => $this->input->post('tvalue'));
-                $this->attribute_product->add($attr);
-                $this->session->set_flashdata('message', "One $this->title data successfully saved!");
-                
-                echo 'true|Data successfully saved..!'; 
-            }
-            else
-            {
-    //            echo validation_errors();
-                echo 'error|'.validation_errors();
-            }
-        }
-        else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
-    }
-    
-    function delete_attribute($id)
-    {
-        if ($this->acl->otentikasi2($this->title) == TRUE){
-        $this->attribute_product->force_delete($id);
-        echo 'true|Attribute Deleted..!';
-        }else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
+            else{ $this->reject(validation_errors()); }
+        }else{ $this->reject_token('Invalid Token or Expired..!'); }
+        $this->response();
     }
     
     function valid_qty($pid)
@@ -732,16 +461,14 @@ class Product extends MX_Controller
         else{ return TRUE; }
     }
     
-    function valid_deleted(){
-      $id = $this->session->userdata('langid');
+    function valid_deleted($val,$id){
       $val = $this->model->get_by_id($id)->row();
       if ($val->deleted != NULL){ $this->form_validation->set_message('valid_deleted', "Product Already Deleted!"); return FALSE; }
       else{ return TRUE; }
     }
    
-    function validating_sku($val)
+    function validating_sku($val,$id)
     {
-	$id = $this->session->userdata('langid');
 	if ($this->model->validating('sku',$val,$id) == FALSE)
         {
             $this->form_validation->set_message('validating_sku', "SKU registered!");
@@ -760,9 +487,8 @@ class Product extends MX_Controller
         else{ return TRUE; }
     }
 
-    function validating_name($val)
+    function validating_name($val,$id)
     {
-	$id = $this->session->userdata('langid');
 	if ($this->model->validating('name',$val,$id) == FALSE)
         {
             $this->form_validation->set_message('validating_name', "Name registered!");
@@ -781,9 +507,8 @@ class Product extends MX_Controller
         else{ return TRUE; }
     }
 
-    function validating_model($val)
+    function validating_model($val,$id)
     {
-	$id = $this->session->userdata('langid');
 	if ($this->model->validating('model',$val,$id) == FALSE)
         {
             $this->form_validation->set_message('validating_model', "Model registered!");
@@ -805,32 +530,26 @@ class Product extends MX_Controller
     }
 
     // Fungsi update untuk mengupdate db
-    function update_process($param=0)
+    function update($uid,$param=0)
     {
-        if ($this->acl->otentikasi_admin($this->title) == TRUE){
-
-        $data['title'] = $this->properti['name'].' | Productistrator  '.ucwords($this->modul['title']);
-        $data['h2title'] = $this->modul['title'];
-        $data['main_view'] = 'product_update';
-	$data['form_action'] = site_url($this->title.'/update_process');
-	$data['link'] = array('link_back' => anchor('admin/','<span>back</span>', array('class' => 'back')));
+        if ($this->acl->otentikasi2($this->title) == TRUE && $this->model->valid_add_trans($uid, $this->title) == TRUE){
 
 	// Form validation
         if ($param == 1)
         {
-            $this->form_validation->set_rules('tsku', 'SKU', 'required|callback_validating_sku|callback_valid_deleted');
+            $this->form_validation->set_rules('tsku', 'SKU', 'required|callback_validating_sku['.$uid.']|callback_valid_deleted['.$uid.']');
             $this->form_validation->set_rules('ccategory', 'Category', 'required');
             $this->form_validation->set_rules('cmanufacture', 'Manufacture', 'required');
-            $this->form_validation->set_rules('tname', 'Product Name', 'required|callback_validating_name');
-            $this->form_validation->set_rules('tmodel', 'Product Model', 'required|callback_validating_model');
-            $this->form_validation->set_rules('ccurrency', 'Currency', 'required');
+            $this->form_validation->set_rules('tname', 'Product Name', 'required|callback_validating_name['.$uid.']');
+            $this->form_validation->set_rules('tmodel', 'Product Model', 'required|callback_validating_model['.$uid.']');
+            $this->form_validation->set_rules('ccur', 'Currency', 'required');
             $this->form_validation->set_rules('tdesc', 'Description', '');
             $this->form_validation->set_rules('tshortdesc', 'Short Description', '');
             
             if ($this->form_validation->run($this) == TRUE)
             {
                 // start update 1
-                $config['upload_path'] = './images/product/';
+                $config['upload_path'] = $this->properti['url_upload'].'/images/product/';
                 $config['file_name'] = split_space($this->input->post('tname'));
                 $config['allowed_types'] = 'jpg|gif|png';
                 $config['overwrite'] = true;
@@ -848,7 +567,7 @@ class Product extends MX_Controller
                     $data['error'] = $this->upload->display_errors();
                     $product = array('name' => strtolower($this->input->post('tname')), 'permalink' => split_space($this->input->post('tname')),
                                      'sku' => $this->input->post('tsku'), 'model' => $this->input->post('tmodel'), 
-                                     'currency' => $this->input->post('ccurrency'), 'category' => $this->input->post('ccategory'),
+                                     'currency' => $this->input->post('ccur'), 'category' => $this->input->post('ccategory'),
                                      'manufacture' => $this->input->post('cmanufacture'), 'shortdesc' => $this->input->post('tshortdesc'),
                                      'description' => $this->input->post('tdesc'));
                 }
@@ -859,31 +578,24 @@ class Product extends MX_Controller
                     
                     $product = array('name' => strtolower($this->input->post('tname')), 'permalink' => split_space($this->input->post('tname')),
                                       'sku' => $this->input->post('tsku'), 'model' => $this->input->post('tmodel'), 
-                                      'currency' => $this->input->post('ccurrency'), 'category' => $this->input->post('ccategory'),
+                                      'currency' => $this->input->post('ccur'), 'category' => $this->input->post('ccategory'),
                                       'manufacture' => $this->input->post('cmanufacture'), 'shortdesc' => $this->input->post('tshortdesc'),
                                       'description' => $this->input->post('tdesc'),
                                       'image' => $info['file_name']);
                 }
                 
-                $this->model->update($this->session->userdata('langid'), $product);
-                $this->session->set_flashdata('message', "One $this->title has successfully updated!");
-                echo $data['error'];
-                redirect($this->title.'/update/'.$this->session->userdata('langid'));
-                
+                if ($this->model->update($uid, $product) != true && $this->upload->display_errors()){ $this->reject($this->upload->display_errors());}else{ $this->error = 'Transaction Posted'; }
                 // end update 1
             }
-            else{ $this->session->set_flashdata('message', validation_errors());
-                  redirect($this->title.'/update/'.$this->session->userdata('langid'));
-                }
+            else{ $this->reject(validation_errors()); }
         }
         elseif ($param == 2)
         {
             $product = array('meta_title' => $this->input->post('tmetatitle'), 'meta_desc' => $this->input->post('tmetadesc'),
                              'meta_keywords' => $this->input->post('tmetakeywords'), 'spesification' => $this->input->post('tspec')
                              );
-            $this->model->update($this->session->userdata('langid'), $product);
-            $this->session->set_flashdata('message', "One $this->title has successfully updated!");
-            redirect($this->title.'/update/'.$this->session->userdata('langid'));
+            $this->model->update($uid, $product);
+            $this->error = 'Transaction posted';
         }
         elseif ($param == 3)
         {
@@ -895,16 +607,15 @@ class Product extends MX_Controller
             
             if ($this->form_validation->run($this) == TRUE){
                
-                $this->edit_qty($this->session->userdata('langid'), $this->input->post('tqty'));
+                $this->edit_qty($uid, $this->input->post('tqty'));
                 $product = array('price' => $this->input->post('tprice'), 'pricelow' => $this->input->post('tlowprice'),
                                  'discount' => $this->input->post('tdiscount'),
-                                 'min_order' => $this->input->post('tmin'), 'qty' => $this->input->post('tqty')
+                                 'min_order' => $this->input->post('tmin')
                                  );
-                $this->model->update($this->session->userdata('langid'), $product);
-                echo 'true|One '.$this->title.' price and qty has successfully updated!'; 
-            }else{ echo 'error|'.validation_errors(); }
-            
-
+                
+              $this->model->update($uid, $product);
+              $this->error = 'Transaction price and qty has successfully updated!';
+            }else{ $this->reject(validation_errors()); }
         }
         elseif ($param == 4)
         {
@@ -921,12 +632,13 @@ class Product extends MX_Controller
                              'weight' => $this->input->post('tweight'), 'color' => $this->input->post('ccolor'), 
                              'size' => $this->input->post('csize'), 'related' => !empty($this->input->post('crelated')) ? split_array($this->input->post('crelated')) : null
                              );
-            $this->model->update($this->session->userdata('langid'), $product);
-            echo 'true|One '.$this->title.' dimension has successfully updated!';
+            
+            $this->model->update($uid, $product);
+            $this->error = 'Transaction dimension has successfully updated!';
         }
 
-        
-        }else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
+        }else{ $this->reject_token('Invalid Token or Expired..!'); }
+        $this->response('c');
     }
     
     private function edit_qty($pid,$eqty)
@@ -934,21 +646,20 @@ class Product extends MX_Controller
         $res = $this->model->get_by_id($pid)->row();
         $begin = $res->qty;
         if ($begin > $eqty){ // pengurangan
-            $this->wt->add(date('Y-m-d H:i:s'), '', $res->currency, $pid, 0, intval($begin-$eqty), 0, 0, $this->session->userdata('log')); 
+            $this->wt->add(date('Y-m-d H:i:s'), '', $res->currency, $pid, 0, intval($begin-$eqty), 0, 0, $this->decodedd->log); 
         }
         elseif ($begin < $eqty) // penambahan
         {
-           $this->wt->add(date('Y-m-d H:i:s'), '', $res->currency, $pid, intval($eqty-$begin), 0, 0, 0, $this->session->userdata('log')); 
+           $this->wt->add(date('Y-m-d H:i:s'), '', $res->currency, $pid, intval($eqty-$begin), 0, 0, 0, $this->decodedd->log); 
         }
     }
     
-    function report_process()
+    function report()
     {
-        $this->acl->otentikasi2($this->title);
-        $data['title'] = $this->properti['name'].' | Report '.ucwords($this->modul['title']);
+        if ($this->acl->otentikasi2($this->title) == TRUE){ 
 
         $data['rundate'] = tglin(date('Y-m-d'));
-        $data['log'] = $this->session->userdata('log');
+//        $data['log'] = $this->decoded->log;
         $data['category'] = $this->category->get_name($this->input->post('ccategory'));
         $data['manufacture'] = $this->manufacture->get_name($this->input->post('cmanufacture'));
         $data['year'] = $this->input->post('tyear');
@@ -961,14 +672,28 @@ class Product extends MX_Controller
 
 //        Property Details
         $data['company'] = $this->properti['name'];
-        $data['reports'] = $this->model->report($this->input->post('ccategory'), $this->input->post('cmanufacture'))->result();
+//        $data['reports'] = $this->model->report($this->input->post('ccategory'), $this->input->post('cmanufacture'))->result();
         
-        if ($this->input->post('ctype') == 0){ $this->load->view('product_report', $data); }
-        else { $this->load->view('product_pivot', $data); }
+        $items = null;
+        foreach($this->model->report($this->input->post('ccategory'), $this->input->post('cmanufacture'))->result() as $res)
+	{
+           $qty = $this->stockledger->get_qty($res->id, $this->input->post('cbranch'), $this->input->post('cmonth'), $this->input->post('tyear'));  
+           $items[] = array ("id"=>$res->id, "category"=>$this->category->get_name($res->category), "brand"=>$this->manufacture->get_name($res->manufacture),
+                            "image"=> $this->properti['image_url'].'product/'.$res->image, "sku"=>$res->sku, "name"=>$res->name, "model"=>$res->model, 
+                            "price"=>floatval($res->price), "net_price"=>floatval($res->price-$res->discount), "qty"=>$qty,
+                            "color"=>$res->color, "size"=> $res->size, "branch"=> $this->branch->get_name($this->input->post('cbranch')),
+                            "publish"=>$res->publish, 
+                           );
+	}
+        $data['items'] = $items; $this->output = $data;
+        
+        }else { $this->reject_token('Invalid Token or Expired..!'); }
+        $this->response('c');
     }
     
     function export_csv(){
         
+      if ($this->acl->otentikasi2($this->title) == TRUE){  
         $stts = 'true';
         $error = null;
         $sku = $this->input->post('tsku');
@@ -996,53 +721,39 @@ class Product extends MX_Controller
             }
             fclose($fp);
             exit();
-            $error = "CSV Exported...!!";
+            $this->error = "CSV Exported...!!";
             
-        }else{ $stts = 'false'; $error = 'SKU Not Available..!'; }
+        }else{ $this->reject('SKU Not Available..!'); }
         
-        $this->session->set_flashdata('message', $error);
-        redirect($this->title);
+      }else { $this->reject_token('Invalid Token or Expired..!'); }
+      $this->response();
     }
     
     function import()
     {
-        $data['title'] = $this->properti['name'].' | Administrator  '.ucwords($this->modul['title']);
-        $data['h2title'] = $this->modul['title'];
-        $data['main_view'] = 'attendance_import';
-	$data['form_action_import'] = site_url($this->title.'/import');
-        $data['error'] = null;
-	
-//        $this->form_validation->set_rules('userfile', 'Import File', '');
-        
-             // ==================== upload ========================
-            
-            $config['upload_path']   = './uploads/';
-            $config['file_name']     = 'product';
-            $config['allowed_types'] = '*';
+      if ($this->acl->otentikasi2($this->title) == TRUE){  
+       $data['error'] = null;
+        // ==================== upload ========================
+
+       $config['upload_path']   = './uploads/';
+       $config['file_name']     = 'product';
+       $config['allowed_types'] = '*';
 //            $config['allowed_types'] = 'csv';
-            $config['overwrite']     = TRUE;
-            $config['max_size']	     = '10000';
-            $config['remove_spaces'] = TRUE;
-            $this->load->library('upload', $config);
-            
-            if ( !$this->upload->do_upload("userfile"))
-            { 
-               $data['error'] = $this->upload->display_errors(); 
-               $this->session->set_flashdata('message', "Error imported!");
-               echo 'error|'.$this->upload->display_errors(); 
-            }
-            else
-            { 
-               // success page 
-              $status = $this->import_product($config['file_name'].'.csv');
-              $info = $this->upload->data(); 
-              $this->session->set_flashdata('message', "One $this->title data successfully imported!");
-              if ($status == false){ echo "error|Import Failed..!"; }else{ echo 'true|CSV Successful Uploaded'; }
-              
-            }                
-        
-       // redirect($this->title);
-        
+       $config['overwrite']     = TRUE;
+       $config['max_size']	     = '10000';
+       $config['remove_spaces'] = TRUE;
+       $this->load->library('upload', $config);
+
+       if ( !$this->upload->do_upload("userfile")){ $this->reject($this->upload->display_errors()); }
+       else
+       { 
+          // success page 
+         $status = $this->import_product($config['file_name'].'.csv');
+         $info = $this->upload->data(); 
+         if ($status == false){ $this->reject('Import Failed..!'); }else{ $this->error = 'CSV Successful Uploaded'; }
+       }   
+       }else { $this->reject_token('Invalid Token or Expired..!'); }
+      $this->response();
     }
     
     private function import_product($filename)
@@ -1092,23 +803,11 @@ class Product extends MX_Controller
     
     function stock_card($pid)
     {
-        $this->acl->otentikasi1($this->title);
-
-        $data['title'] = $this->properti['name'].' | Administrator  '.ucwords($this->modul['title']);
-        $data['h2title'] = $this->modul['title'];
-        $data['main_view'] = 'product_card';
-        
-        $data['log']     = $this->session->userdata('log');
-        $data['company'] = $this->properti['name'];
-        $data['address'] = $this->properti['address'];
-        $data['phone1']  = $this->properti['phone1'];
-        $data['phone2']  = $this->properti['phone2'];
-        $data['fax']     = $this->properti['fax'];
-        $data['website'] = $this->properti['sitename'];
-        $data['email']   = $this->properti['email'];
+        if ($this->acl->otentikasi1($this->title) == TRUE && $this->model->valid_add_trans($pid, $this->title) == TRUE){
 
         $product = $this->model->get_by_id($pid)->row();
-
+        
+        $data['log'] = $this->decodedd->log;
         $data['code'] = $product->sku;
         $data['brand'] = $this->manufacture->get_name($product->manufacture);
         $data['category'] = $this->category->get_name($product->category);
@@ -1120,139 +819,51 @@ class Product extends MX_Controller
         $branch = $this->branch->get_branch_session();
         $data['open'] = $this->stockledger->get_trans($pid,$branch, $this->period->month, $this->period->year,'openqty');
         $data['trans'] = $this->wt->get_monthly($pid, $branch, $this->period->month, $this->period->year)->result();
-        $data['page'] = $this->title.'/stock_card/'.$pid;
-        $this->load->view('product_card', $data);
-    }
-    
-    function stock_card_report($pid,$branch=null)
-    {
-        $this->acl->otentikasi1($this->title);
-
-        $data['title'] = $this->properti['name'].' | Administrator  '.ucwords($this->modul['title']);
-        $data['h2title'] = $this->modul['title'];
-        $data['main_view'] = 'product_card';
         
-        $data['log']     = $this->session->userdata('log');
-        $data['company'] = $this->properti['name'];
-        $data['address'] = $this->properti['address'];
-        $data['phone1']  = $this->properti['phone1'];
-        $data['phone2']  = $this->properti['phone2'];
-        $data['fax']     = $this->properti['fax'];
-        $data['website'] = $this->properti['sitename'];
-        $data['email']   = $this->properti['email'];
-
-        $product = $this->model->get_by_id($pid)->row();
-
-        $data['code'] = $product->sku;
-        $data['brand'] = $this->manufacture->get_name($product->manufacture);
-        $data['category'] = $this->category->get_name($product->category);
-        $data['name'] = $product->name;
-        $data['currency'] = $product->currency;
-        $data['qty'] = $product->qty;
-        $data['unit'] = $product->unit;
-        
-        $data['open'] = $this->stockledger->get_trans($pid,$branch, $this->period->month, $this->period->year,'openqty');
-        $data['trans'] = $this->wt->get_transaction($pid, $branch, $this->session->userdata('start'), $this->session->userdata('end'))->result();
-        
-        $data['page'] = $this->title.'/ledger';
-        $this->load->view('product_card', $data);
+        $this->output = $data;
+        }else{ $this->reject_token('Invalid Token or Expired..!'); }
+        $this->response('content');
     }
     
 //    ================================= ledger ==================================
     
     function ledger($pid=null)
     {
-        $this->acl->otentikasi1($this->title);
+        if ($this->acl->otentikasi2($this->title) == TRUE){
         
-        $data['branch'] = $this->branch->combo_all();
-        if ($pid == null){ $pid = $this->input->post('cproduct'); }
+        if ($pid == null){ $pid = $this->product->get_id_by_sku($this->input->post('titem')); }
         if ($pid){ $product = $this->model->get_by_id($pid)->row(); $pname = ': '.$product->name;}
         else { $pname = null;}
         
-        $period = $this->input->post('reservation');  
-        
-        if (!$period)
-        {
-            $start = date('Y-m-01');  $end = date('Y-m-t');
+        $start = $this->input->post('start'); $end = $this->input->post('end');
+        if (!$start && !$end){ $start = date('Y-m-01');  $end = date('Y-m-t'); }
+                
+        $items = null;
+        foreach ($this->wt->get_transaction($pid, $this->input->post('cbranch'), $start, $end)->result() as $res) {
+            $items[] = array("id"=>$res->id, "code"=>$res->code, "branch"=>$this->branch->get_name($res->branch_id), "date"=>tglin($res->dates), "debit"=>floatval($res->debit), "credit"=> floatval($res->credit), "log"=>$res->log);
         }
-        else { 
-            $start = picker_between_split($period, 0);
-            $end = picker_between_split($period, 1);
-        }
+        $data['items'] = $items;
         
-        $this->session->set_userdata('start',$start);
-        $this->session->set_userdata('end',$end);
+        $data['begin'] = $this->stockledger->get_prev_balance($pid, $this->input->post('cbranch'), $start, $this->period->month, $this->period->year);
+        $data['debit'] = $this->wt->get_sum_qty($pid, $this->input->post('cbranch'), $start, $end, 0);
+        $data['credit'] = $this->wt->get_sum_qty($pid, $this->input->post('cbranch'), $start, $end, 1);
+        $data['mutation'] = $data['debit']-$data['credit'];
+        $data['end'] = floatval($data['begin']+$data['mutation']);
         
-        $pid = $this->product->get_id_by_sku($this->input->post('titem'));
-//        
-        $data['source'] = site_url($this->title.'/getledger/'.$pid.'/'.$this->input->post('cbranch'));
-        $data['graph'] = site_url($this->title."/chart_ledger/".$pid.'/'.$this->input->post('cbranch'));
-//        
-//        
-        $data['title'] = $this->properti['name'].' | Administrator Product Ledger'.strtoupper($pname);
-        $data['h2title'] = 'Product Manager'.strtoupper($pname);
-        $data['main_view'] = 'product_ledger';
-	$data['form_action'] = site_url($this->title.'/ledger');
-        $data['link'] = array('link_back' => anchor('product/','Back', array('class' => 'btn btn-danger')));
-//
-        $data['product'] = $this->product->combo();
-        $data['array'] = array('','');
-        
-	// ---------------------------------------- //
- 
-        $config['first_tag_open'] = $config['last_tag_open']= $config['next_tag_open']= $config['prev_tag_open'] = $config['num_tag_open'] = '<li>';
-        $config['first_tag_close'] = $config['last_tag_close']= $config['next_tag_close']= $config['prev_tag_close'] = $config['num_tag_close'] = '</li>';
-
-        $config['cur_tag_open'] = "<li><span><b>";
-        $config['cur_tag_close'] = "</b></span></li>";
-
-        // library HTML table untuk membuat template table class zebra
-        $tmpl = array('table_open' => '<table id="datatable-buttons" class="table table-striped table-bordered">');
-
-        $this->table->set_template($tmpl);
-        $this->table->set_empty("&nbsp;");
-
-        //Set heading untuk table
-        $this->table->set_heading('#','No', 'Code', 'Branch', 'Date', 'Debit', 'Credit');
-
-        $data['table'] = $this->table->generate();
-            
-//        // Load absen view dengan melewatkan var $data sbgai parameter
-        if ($this->input->post('bsubmit') == 'card'){
-            redirect($this->title.'/stock_card_report/'.$pid.'/'.$this->input->post('cbranch'));
-        }else{ $this->load->view('template', $data); }
+        $data['graph'] = $this->chart_ledger($pid, $this->input->post('cbranch'), $start, $end);
+        $this->output = $data;
+        }else{ $this->reject_token('Invalid Token or Expired..!'); }
+        $this->response('content');
     }
     
-    public function getledger($pid=null,$branch=null)
-    {   
-        if ($pid){ $result = $this->wt->get_transaction($pid, $branch, $this->session->userdata('start'), $this->session->userdata('end'))->result(); 
-        
-            $output = null;
-            if ($result){
-
-             foreach($result as $res)
-             {   
-               $output[] = array ($res->id, $res->code, $this->branch->get_name($res->branch_id), tglin($res->dates), $res->debit, $res->credit, $res->log);
-             } 
-
-            $this->output
-             ->set_status_header(200)
-             ->set_content_type('application/json', 'utf-8')
-             ->set_output(json_encode($output, JSON_PRETTY_PRINT))
-             ->_display();
-             exit;  
-            }
-        }
-        
-    }
-    
-    function chart_ledger($pid=null,$branch=null)
+    private function chart_ledger($pid=null,$branch=null,$start=null,$end=null)
     {   
         if ($pid){
             
-        $opening = $this->stockledger->get_trans($pid, $branch, $this->period->month, $this->period->year, 'openqty');
+        $opening = $this->stockledger->get_prev_balance($pid, $branch, $start, $this->period->month, $this->period->year);    
+//        $opening = $this->stockledger->get_trans($pid, $branch, $this->period->month, $this->period->year, 'openqty');
         $rest = 0;
-        $data = $this->wt->get_transaction($pid, $branch, $this->session->userdata('start'), $this->session->userdata('end'))->result();
+        $data = $this->wt->get_transaction($pid, $branch, $start, $end)->result();
         $datax = array();
         foreach ($data as $res) 
         {  
@@ -1261,12 +872,16 @@ class Product extends MX_Controller
            $point = array("label" => tglin($res->dates) , "y" => intval($opening+$rest));
            array_push($datax, $point);      
         }
-        echo json_encode($datax, JSON_NUMERIC_CHECK);
+//        echo json_encode($datax, JSON_NUMERIC_CHECK);
+        return $datax;
         }
     }
     
-    function calculate_balance(){ 
-       if ($this->stockledger->closing() == TRUE){ redirect('product/ledger'); } 
+    function calculate_balance(){  
+      if ($this->acl->otentikasi2($this->title) == TRUE){ 
+        if ( $this->stockledger->closing() == TRUE){ $this->error = 'Calculate Processed'; }else{ $this->reject('Failure Calculating'); }
+      }else{ $this->reject('Invalid Token or Expired..!'); }
+      $this->response();
     }
    
     // ====================================== CLOSING ======================================

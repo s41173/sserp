@@ -14,7 +14,7 @@
 | path to your installation.
 |
 */
-$config['base_url'] = "http://".$_SERVER["SERVER_NAME"]."/ssadministrator/";
+$config['base_url'] = "http://".$_SERVER["SERVER_NAME"]."/bulkingstoragebe/";
 
 /*
 |--------------------------------------------------------------------------
@@ -69,7 +69,7 @@ $config['url_suffix'] = '';
 | than english.
 |
 */
-$config['language']	= 'english';
+$config['language'] = 'english';
 
 /*
 |--------------------------------------------------------------------------

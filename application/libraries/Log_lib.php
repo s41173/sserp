@@ -14,13 +14,13 @@ class Log_lib extends Main_model {
         $this->db->select_max('id');
         $val = $this->db->get($this->tableName)->row_array();
         $val = $val['id'];
-        return $val;
+        return intval($val);
     }
 
-    public function insert($userid=null, $date=null, $time=null, $activity=null, $com=0, $desc='')
+    public function insert($userid=null, $date=null, $time=null, $activity=null, $com=0, $field=null, $desc=null, $prev=null)
     {
         $logs = array('userid' => $userid, 'date' => $date, 'time' => $time, 'activity' => $activity, 'component_id' => $com,
-                      'description' => $desc);
+                      'field' => $field, 'description' => $desc, 'prev_val' => $prev);
         $this->db->insert($this->tableName, $logs);
     }
 }

@@ -161,14 +161,14 @@ class City_lib extends Main_model {
     {
        $this->db->where('id', $city);
        $val = $this->db->get($this->tableName)->row(); 
-       if ($type == 'id'){ return $val->id_prov; }
+       if ($val){ if ($type == 'id'){ return $val->id_prov; } }else{ return 0; }
     }
     
     function get_name($id)
     {
       $this->db->where('id', $id);
       $val = $this->db->get($this->tableName)->row();   
-      return $val->nama;
+      if ($val){ return $val->nama; }else{ return ''; }
     }
     
     function import()

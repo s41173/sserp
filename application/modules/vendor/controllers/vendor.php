@@ -6,104 +6,70 @@ class Vendor extends MX_Controller
     {
         parent::__construct();
         
-        $this->load->model('Vendor_model', '', TRUE);
+        $this->load->model('Vendor_model', 'model', TRUE);
 
         $this->properti = $this->property->get();
-        $this->acl->otentikasi();
+//        $this->acl->otentikasi();
 
         $this->modul = $this->components->get(strtolower(get_class($this)));
         $this->title = strtolower(get_class($this));
         $this->role = new Role_lib();
         $this->city = new City_lib();
         $this->disctrict = new District_lib();
+        
+        $this->api = new Api_lib();
+        $this->acl = new Acl();
+        
+        header('Access-Control-Allow-Origin: *');
+        header('Access-Control-Allow-Methods: GET, POST, PATCH, PUT, DELETE, OPTIONS');
+        header('Access-Control-Allow-Headers: Origin, Content-Type, X-Auth-Token');  
     }
 
-    private $properti, $modul, $title, $customer, $city, $disctrict;
-    private $role;
-
+    private $properti, $modul, $title, $city, $disctrict, $role,$api,$acl;
+    protected $error = null;
+    protected $status = 200;
+    protected $output = null;
+    
     function index()
     {
-       $this->get_last(); 
-    }
-     
-    public function getdatatable($search=null,$cat='null',$publish='null')
-    {
-        if(!$search){ $result = $this->Vendor_model->get_last($this->modul['limit'])->result(); }
-        else {$result = $this->Vendor_model->search($cat,$publish)->result(); }
-	
-        $output = null;
-        if ($result){
-                
-         foreach($result as $res)
-	 {   
-	   $output[] = array ($res->id, $res->prefix.' '.$res->name, $res->type, $res->address, $res->shipping_address, 
-                              $res->phone1, $res->phone2, $res->fax, $res->email, $res->website, $res->city,
-                              $res->zip, $res->notes, $res->status
-                             );
-	 } 
-         
-        $this->output
-         ->set_status_header(200)
-         ->set_content_type('application/json', 'utf-8')
-         ->set_output(json_encode($output))
-         ->_display();
-         exit;  
-        }
-    }
-
-    function get_last()
-    {
-        $this->acl->otentikasi1($this->title);
-
-        $data['title'] = $this->properti['name'].' | Administrator  '.ucwords('Customer Manager');
-        $data['h2title'] = 'Supplier Manager';
-        $data['main_view'] = 'vendor_view';
-	$data['form_action'] = site_url($this->title.'/add_process');
-        $data['form_action_update'] = site_url($this->title.'/update_process');
-        $data['form_action_del'] = site_url($this->title.'/delete_all');
-        $data['form_action_report'] = site_url($this->title.'/report_process');
-        $data['link'] = array('link_back' => anchor('main/','Back', array('class' => 'btn btn-danger')));
-
-        $data['city'] = $this->city->combo_city_db();
-        $data['array'] = array('','');
+        if ($this->acl->otentikasi1($this->title) == TRUE){
         
-	// ---------------------------------------- //
- 
-        $config['first_tag_open'] = $config['last_tag_open']= $config['next_tag_open']= $config['prev_tag_open'] = $config['num_tag_open'] = '<li>';
-        $config['first_tag_close'] = $config['last_tag_close']= $config['next_tag_close']= $config['prev_tag_close'] = $config['num_tag_close'] = '</li>';
-
-        $config['cur_tag_open'] = "<li><span><b>";
-        $config['cur_tag_close'] = "</b></span></li>";
-
-        // library HTML table untuk membuat template table class zebra
-        $tmpl = array('table_open' => '<table id="datatable-buttons" class="table table-striped table-bordered">');
-
-        $this->table->set_template($tmpl);
-        $this->table->set_empty("&nbsp;");
-
-        //Set heading untuk table
-        $this->table->set_heading('#','No', 'Type', 'Name', 'Phone', 'Email', 'City', 'Action');
-
-        $data['table'] = $this->table->generate();
-        $data['source'] = site_url($this->title.'/getdatatable');
+            $datax = (array)json_decode(file_get_contents('php://input')); 
+            if (isset($datax['limit'])){ $this->limitx = $datax['limit']; }else{ $this->limitx = $this->modul['limit']; }
+            if (isset($datax['offset'])){ $this->offsetx = $datax['offset']; }
             
-        // Load absen view dengan melewatkan var $data sbgai parameter
-	$this->load->view('template', $data);
+            $city = null; $publlish = null; $limit=null; $offset=null;
+            if (isset($datax['city'])){ $city = $datax['city']; }
+            if (isset($datax['publish'])){ $publlish = $datax['publish']; }
+            
+            if($city == null & $publlish == null){ $result = $this->model->get_last($this->limitx, $this->offsetx)->result(); }
+            else {$result = $this->model->search($city,$publlish)->result(); }    
+
+            foreach($result as $res)
+            {   
+               $this->output[] = array ("id" => $res->id, "name" => $res->prefix.' '.$res->name, "type" => $res->type, "address" => $res->address, "ship_address" => $res->shipping_address, 
+                                        "phone1" => $res->phone1, "phone2" => $res->phone2, "fax" => $res->fax, "email" => $res->email, "website" => $res->website, "city" => $res->city,
+                                        "zip" => $res->zip, "notes" => $res->notes, "status" => $res->status
+                                       );
+            }  
+        
+        }else{ $this->reject_token(); }
+        $this->response('c');
     }
     
     function publish($uid = null)
     {
-       if ($this->acl->otentikasi2($this->title,'ajax') == TRUE){ 
-       $val = $this->Vendor_model->get_by_id($uid)->row();
-       if ($val->status == 0){ $lng = array('status' => 1); }else { $lng = array('status' => 0); }
-       $this->Vendor_model->update($uid,$lng);
-       echo 'true|Status Changed...!';
-       }else{ echo "error|Sorry, you do not have the right to change publish status..!"; }
+       if ($this->acl->otentikasi2($this->title) == TRUE){ 
+          $val = $this->model->get_by_id($uid)->row();
+          if ($val->status == 0){ $lng = array('status' => 1); }else { $lng = array('status' => 0); }
+           if ($this->model->update($uid,$lng) == true){ $this->error = 'Status Changed...!'; }else{ $this->error = 'Failed Changed..!';  $this->status = 401;}
+       }else{ $this->reject_token(); }
+       $this->response();
     }
     
     function delete_all($type='soft')
     {
-      if ($this->acl->otentikasi_admin($this->title,'ajax') == TRUE){
+      if ($this->acl->otentikasi_admin($this->title) == TRUE){
       
         $cek = $this->input->post('cek');
         $jumlah = count($cek);
@@ -114,104 +80,67 @@ class Vendor extends MX_Controller
           $x = 0;
           for ($i=0; $i<$jumlah; $i++)
           {
-             if ($type == 'soft') { $this->Vendor_model->delete($cek[$i]); }
+             if ($type == 'soft') { $this->model->delete($cek[$i]); }
              else { $this->remove_img($cek[$i],'force');
                     $this->attribute_customer->force_delete_by_customer($cek[$i]);
-                    $this->Vendor_model->force_delete($cek[$i]);  }
+                    $this->model->force_delete($cek[$i]);  }
              $x=$x+1;
           }
           $res = intval($jumlah-$x);
-          //$this->session->set_flashdata('message', "$res $this->title successfully removed &nbsp; - &nbsp; $x related to another component..!!");
           $mess = "$res $this->title successfully removed &nbsp; - &nbsp; $x related to another component..!!";
-          echo 'true|'.$mess;
+          $this->error = $mess;
         }
         else
-        { //$this->session->set_flashdata('message', "No $this->title Selected..!!"); 
-          $mess = "No $this->title Selected..!!";
-          echo 'false|'.$mess;
-        }
-      }else{ echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
-      
+        { $mess = "No $this->title Selected..!!";  $this->error = $mess; $this->status = 401; }
+      }else{ $this->reject_token(); }
+      $this->response();
     }
 
     function delete($uid)
     {
-        if ($this->acl->otentikasi_admin($this->title,'ajax') == TRUE){
-            $this->Vendor_model->delete($uid);
-            
-            $this->session->set_flashdata('message', "1 $this->title successfully removed..!");
-
-            echo "true|1 $this->title successfully removed..!";
-        }else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
-        
+        if ($this->acl->otentikasi3($this->title) == TRUE && isset($uid)){
+            if ($this->model->delete($uid) == true){ $this->error = "1 $this->title successfully removed..!";    
+            }else{ $this->error = 'Failure Saved..'; $this->status = 401; }
+        }else{ $this->reject_token(); }
+        $this->response();
     }
-    
+
     function add()
     {
+        if ($this->acl->otentikasi2($this->title) == TRUE){
+   
+            // Form validation
+            $this->form_validation->set_rules('tname', 'SKU', 'required|callback_valid_vendor');
+            $this->form_validation->set_rules('tcp', 'Name', 'required');
+            $this->form_validation->set_rules('ctype', 'Vendor Type', 'required');
+            $this->form_validation->set_rules('tphone', 'Phone 1', 'required');
+            $this->form_validation->set_rules('tmobile', 'Mobile', 'required');
+            $this->form_validation->set_rules('temail', 'Email', 'required|valid_email|callback_valid_email');
+            $this->form_validation->set_rules('tnpwp', 'Npwp', '');
+            $this->form_validation->set_rules('tfax', 'Fax', '');
+            $this->form_validation->set_rules('taddress', 'Address', 'required');
+            $this->form_validation->set_rules('ccity', 'City', 'required');
+            $this->form_validation->set_rules('tzip', 'Zip', '');
+            $this->form_validation->set_rules('twebsite', 'Website', '');
+            $this->form_validation->set_rules('taccname', 'Account Name', '');
+            $this->form_validation->set_rules('taccno', 'Account No', '');
+            $this->form_validation->set_rules('tbank', 'Bank', '');   
 
-        $data['title'] = $this->properti['name'].' | Administrator  '.ucwords($this->modul['title']);
-        $data['h2title'] = 'Create New '.$this->modul['title'];
-        $data['main_view'] = 'article_form';
-	$data['form_action'] = site_url($this->title.'/add_process');
-        $data['link'] = array('link_back' => anchor($this->title,'Back', array('class' => 'btn btn-danger')));
+            if ($this->form_validation->run($this) == TRUE)
+            {
+                $customer = array('name' => strtoupper($this->input->post('tname')), 'type' => $this->input->post('ctype'),
+                      'cp1' => strtoupper($this->input->post('tcp')), 'npwp' => $this->input->post('tnpwp'),
+                      'address' => $this->input->post('taddress'), 'shipping_address' => $this->input->post('taddress'), 'phone1' => $this->input->post('tphone'), 
+                      'fax' => $this->input->post('tfax'), 'hp' => $this->input->post('tmobile'), 'email' => $this->input->post('temail'),
+                      'website' => $this->input->post('twebsite'), 'city' => $this->input->post('ccity'), 'zip' => $this->input->post('tzip'),
+                      'acc_name' => $this->input->post('taccname'), 'acc_no' => $this->input->post('taccno'),
+                      'bank' => $this->input->post('tbank'), 'created' => date('Y-m-d H:i:s'));
 
-        $data['language'] = $this->language->combo();
-        $data['category'] = $this->category->combo();
-        $data['currency'] = $this->currency->combo();
-        $data['source'] = site_url($this->title.'/getdatatable');
-        
-        $this->load->helper('editor');
-        editor();
-
-        $this->load->view('template', $data);
-    }
-
-    function add_process()
-    {
-        if ($this->acl->otentikasi2($this->title,'ajax') == TRUE){
-
-        $data['title'] = $this->properti['name'].' | Administrator  '.ucwords($this->modul['title']);
-        $data['h2title'] = $this->modul['title'];
-        $data['main_view'] = 'category_view';
-	$data['form_action'] = site_url($this->title.'/add_process');
-	$data['link'] = array('link_back' => anchor('category/','<span>back</span>', array('class' => 'back')));
-
-	// Form validation
-        $this->form_validation->set_rules('tname', 'SKU', 'required|callback_valid_vendor');
-        $this->form_validation->set_rules('tcp', 'Name', 'required');
-        $this->form_validation->set_rules('ctype', 'Vendor Type', 'required');
-        $this->form_validation->set_rules('tphone', 'Phone 1', 'required');
-        $this->form_validation->set_rules('tmobile', 'Mobile', 'required');
-        $this->form_validation->set_rules('temail', 'Email', 'required|valid_email|callback_valid_email');
-        $this->form_validation->set_rules('tnpwp', 'Npwp', '');
-        $this->form_validation->set_rules('tfax', 'Fax', '');
-        $this->form_validation->set_rules('taddress', 'Address', 'required');
-        $this->form_validation->set_rules('ccity', 'City', 'required');
-        $this->form_validation->set_rules('tzip', 'Zip', '');
-        $this->form_validation->set_rules('twebsite', 'Website', '');
-        $this->form_validation->set_rules('taccname', 'Account Name', '');
-        $this->form_validation->set_rules('taccno', 'Account No', '');
-        $this->form_validation->set_rules('tbank', 'Bank', '');   
-        
-
-        if ($this->form_validation->run($this) == TRUE)
-        {
-            $customer = array('name' => strtoupper($this->input->post('tname')), 'type' => $this->input->post('ctype'),
-                  'cp1' => strtoupper($this->input->post('tcp')), 'npwp' => $this->input->post('tnpwp'),
-                  'address' => $this->input->post('taddress'), 'shipping_address' => $this->input->post('taddress'), 'phone1' => $this->input->post('tphone'), 
-                  'fax' => $this->input->post('tfax'), 'hp' => $this->input->post('tmobile'), 'email' => $this->input->post('temail'),
-                  'website' => $this->input->post('twebsite'), 'city' => $this->input->post('ccity'), 'zip' => $this->input->post('tzip'),
-                  'acc_name' => $this->input->post('taccname'), 'acc_no' => $this->input->post('taccno'),
-                  'bank' => $this->input->post('tbank'), 'created' => date('Y-m-d H:i:s'));
-
-            $this->Vendor_model->add($customer);
-            $this->session->set_flashdata('message', "One $this->title data successfully saved!");
-            
-            echo 'true|'.$this->title.' successfully saved..!';
-        }
-        else{ echo "error|".validation_errors(); }
-        }else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
-
+                if ($this->model->add($customer) == true){ $this->error = $this->title.' successfully saved..!'; }else{ $this->error = 'Failure Saved..'; $this->status = 401; }
+            }
+            else{  $this->reject(validation_errors()); }
+        }else { $this->reject_token(); }
+        $this->response();
     }
     
     private function cek_tick($val)
@@ -220,24 +149,20 @@ class Vendor extends MX_Controller
         { return 0;} else { return 1; }
     }
     
-    private function split_array($val)
-    { return implode(",",$val); }
-   
+    private function split_array($val){ return implode(",",$val); }
 
     // Fungsi update untuk menset texfield dengan nilai dari database
-    function update($uid=null)
+    function get($uid=null)
     {        
-        $vendor = $this->Vendor_model->get_by_id($uid)->row();
-	$this->session->set_userdata('langid', $vendor->id);
-        
-        echo $vendor->id.'|'.$vendor->prefix.'|'.$vendor->name.'|'.$vendor->type.'|'.$vendor->cp1.'|'.$vendor->npwp.'|'.
-             $vendor->address.'|'.$vendor->shipping_address.'|'.$vendor->phone1.'|'.$vendor->fax.'|'.$vendor->hp.'|'.$vendor->email.'|'.
-             $vendor->website.'|'.$vendor->city.'|'.$vendor->zip.'|'.$vendor->acc_name.'|'.$vendor->acc_no.'|'.$vendor->bank;
+       if ($this->acl->otentikasi1($this->title) == TRUE && $this->model->valid_add_trans($uid, $this->title) == TRUE){  
+           $this->output = $this->model->get_by_id($uid)->row();
+       }else { $this->reject_token(); }
+       $this->response('c');
     }
    
     public function valid_vendor($name)
     {
-        if ($this->Vendor_model->valid('name',$name) == FALSE)
+        if ($this->model->valid('name',$name) == FALSE)
         {
             $this->form_validation->set_message('valid_vendor', "This $this->title is already registered.!");
             return FALSE;
@@ -247,7 +172,7 @@ class Vendor extends MX_Controller
     
     function valid_email($val)
     {
-        if ($this->Vendor_model->valid('email',$val) == FALSE)
+        if ($this->model->valid('email',$val) == FALSE)
         {
             $this->form_validation->set_message('valid_email','Email registered..!');
             return FALSE;
@@ -255,10 +180,9 @@ class Vendor extends MX_Controller
         else{ return TRUE; }
     }
 
-    function validating_email($val)
+    function validating_email($val,$id)
     {
-	$id = $this->session->userdata('langid');
-	if ($this->Vendor_model->validating('email',$val,$id) == FALSE)
+	if ($this->model->validating('email',$val,$id) == FALSE)
         {
             $this->form_validation->set_message('validating_email', "Email registered!");
             return FALSE;
@@ -267,15 +191,9 @@ class Vendor extends MX_Controller
     }
     
     // Fungsi update untuk mengupdate db
-    function update_process($param=0)
+    function update($param=0)
     {
-        if ($this->acl->otentikasi_admin($this->title) == TRUE){
-
-        $data['title'] = $this->properti['name'].' | Customeristrator  '.ucwords($this->modul['title']);
-        $data['h2title'] = $this->modul['title'];
-        $data['main_view'] = 'customer_update';
-	$data['form_action'] = site_url($this->title.'/update_process');
-	$data['link'] = array('link_back' => anchor('admin/','<span>back</span>', array('class' => 'back')));
+        if ($this->acl->otentikasi2($this->title) == TRUE && isset($param)){
 
 	// Form validation
         $this->form_validation->set_rules('tname', 'SKU', 'required');
@@ -283,7 +201,7 @@ class Vendor extends MX_Controller
         $this->form_validation->set_rules('ctype', 'Vendor Type', 'required');
         $this->form_validation->set_rules('tphone', 'Phone 1', 'required');
         $this->form_validation->set_rules('tmobile', 'Mobile', 'required');
-        $this->form_validation->set_rules('temail', 'Email', 'required|valid_email|callback_validating_email');
+        $this->form_validation->set_rules('temail', 'Email', 'required|callback_validating_email['.$param.']');
         $this->form_validation->set_rules('tnpwp', 'Npwp', '');
         $this->form_validation->set_rules('tfax', 'Fax', '');
         $this->form_validation->set_rules('taddress', 'Address', 'required');
@@ -304,26 +222,12 @@ class Vendor extends MX_Controller
                   'acc_name' => $this->input->post('taccname'), 'acc_no' => $this->input->post('taccno'),
                   'bank' => $this->input->post('tbank'));
 
-            $this->Vendor_model->update($this->session->userdata('langid'), $customer);
-            echo "true|One $this->title has successfully updated!";
+            if ($this->model->update($param, $customer) == true){ $this->error = $this->title.' successfully saved..!'; }else{ $this->error = 'Failure Saved..'; $this->status = 401; }
         }
-        else{ echo 'error|'.validation_errors(); }
-        }else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
-    }
-    
-    function ajaxcombo_district()
-    {
-        $cityid = $this->input->post('value');
-        if ($cityid != null){
-            $district = $this->disctrict->combo_district_db($cityid);
-            $js = "class='select2_single form-control' id='cdistrict' tabindex='-1' style='width:100%;' "; 
-            echo form_dropdown('cdistrict', $district, isset($default['district']) ? $default['district'] : '', $js);
-        }
-    }
-    
-    // ====================================== CLOSING ======================================
-   function reset_process(){ $this->Vendor_model->closing(); }
-   
+        else{ $this->error = validation_errors(); $this->status = 401; }
+        }else { $this->reject_token(); $this->status = 401; }
+        $this->response();
+    } 
 
 }
 

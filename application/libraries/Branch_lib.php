@@ -6,9 +6,11 @@ class Branch_lib extends Main_model {
     {
         $this->deleted = $deleted;
         $this->tableName = 'branch';
+        $this->api = new Api_lib();
+        $this->api = $this->api->otentikasi('decoded');
     }
 
-    private $ci;
+    private $ci, $api;
     
     protected $field = array('id', 'code', 'name', 'address', 'phone', 'mobile', 'email', 'city', 'zip', 'image', 'publish',
                              'defaults', 'sales_account', 'stock_account', 'unit_cost_account', 'ar_account',
@@ -61,7 +63,7 @@ class Branch_lib extends Main_model {
        $this->db->select($this->field); 
        $this->db->where('defaults', 1);
        $val = $this->db->get($this->tableName)->row();
-       if (!$this->session->userdata('branch')){ return $val->id; }else{ return $this->session->userdata('branch'); }
+       if (!$this->api->branch){ return $val->id; }else{ return $this->api->branch; }
     }
     
     function get_default_acc_branch()
@@ -74,18 +76,18 @@ class Branch_lib extends Main_model {
     
     function get_branch_session()
     {
-       if (!$this->session->userdata('branch')){ return null; }else{ return $this->session->userdata('branch'); }
+       if (!$this->api->branch){ return null; }else{ return $this->api->branch; }
     }
     
     function get_branch_default()
     {
-       if (!$this->session->userdata('branch')){ 
+       if (!$this->api->branch){ 
            $this->db->select($this->field); 
            $this->db->where('defaults', 1);
            $val = $this->db->get($this->tableName)->row();
            return $val->id;
        }
-       else{ return $this->session->userdata('branch'); }
+       else{ return $this->api->branch; }
     }
     
     function get_acc($val,$type='stock')

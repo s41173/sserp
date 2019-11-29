@@ -25,6 +25,13 @@ class Payment_trans_model extends CI_Model
        $this->db->where('id', $id);
        return $this->db->get();  
     }
+    
+    function valid_trans($id){
+       $this->db->from($this->tableName);
+       $this->db->where('id', $id);
+       $num = $this->db->get()->num_rows();  
+       if ($num>0){ return TRUE; }else{ return FALSE; } 
+    }
 
     function get_last_trans($po,$code)
     {

@@ -7,53 +7,50 @@ class Component extends MX_Controller
         parent::__construct();
         
         $this->load->model('Component_model', '', TRUE);
-
         $this->properti = $this->property->get();
-        $this->acl->otentikasi();
 
-//        $this->modul = $this->components->get(strtolower(get_class($this)));
         $this->title = strtolower(get_class($this));
         $this->role = new Role_lib();
         $this->component = new Components();
+        $this->api = new Api_lib();
+        $this->acl = new Acl();
+        
+        header('Access-Control-Allow-Origin: *');
+        header('Access-Control-Allow-Methods: GET, POST, PATCH, PUT, DELETE, OPTIONS');
+        header('Access-Control-Allow-Headers: Origin, Content-Type, X-Auth-Token');  
     }
 
-    private $properti, $modul, $title;
-    private $role, $component;
+    private $properti, $modul, $title, $acl;
+    private $role, $component, $api;
     var $limit = 1000;
+    protected $error = null;
+    protected $status = 200;
+    protected $output = null;
 
     function index()
     {
-       $this->get_last(); 
+        if ($this->acl->otentikasi_admin() == TRUE){
+           
+            $datax = (array)json_decode(file_get_contents('php://input')); 
+            
+            if (!isset($datax['publish']) && !isset($datax['status']) && !isset($datax['active'])){
+                $result = $this->Component_model->get_last($this->limit)->result();
+            }else{ $result = $this->Component_model->search($datax['publish'],$datax['status'],$datax['active'])->result(); }
+            
+            foreach($result as $res){
+
+                $this->output[] = array ("id" => $res->id, "name" => $res->name, "title" => $res->title, "publish" => $res->publish, "status" => $res->status, "active" => $res->aktif,
+                                   "limit" => $res->limit, "role" => $res->role, "icon" => $res->icon, "order" => $res->order, "closing" => $res->closing,
+                                   "created" => $res->created, "updated" => $res->updated, "deleted" => $res->deleted
+                                  );
+            }
+        }else{ $this->reject_token(); }
+        $this->api->response(array('error' => $this->error, 'content' => $this->output), $this->status);
     }
-     
-    public function getdatatable($search=null,$publish=null,$status=null,$active=null)
-    {
-        if(!$search){ $result = $this->Component_model->get_last($this->limit)->result(); }
-        else {$result = $this->Component_model->search($publish,$status,$active)->result(); }
-	
-        $output = null;
-        if ($result){
-                
-         foreach($result as $res)
-	 {
-	   $output[] = array ($res->id, $res->name, $res->title, $res->publish, $res->status, $res->aktif,
-                              $res->limit, $res->role, $res->icon, $res->order, $res->closing,
-                              $res->created, $res->updated, $res->deleted
-                             );
-	 } 
          
-        $this->output
-         ->set_status_header(200)
-         ->set_content_type('application/json', 'utf-8')
-         ->set_output(json_encode($output))
-         ->_display();
-         exit;  
-        }
-    }
-    
     function reset()
     {
-       if ($this->acl->otentikasi_admin($this->title,'ajax') == TRUE){  
+       if ($this->acl->otentikasi_admin() == TRUE){
            
             // start transaction 
            $this->db->trans_start();
@@ -63,10 +60,11 @@ class Component extends MX_Controller
                $this->truncate($res->table_name);
            }
            
-           if ($this->db->trans_status() === FALSE){ echo "error|reset function error..!";  }
-           else { echo "true|reset confirmed..!"; }
+           if ($this->db->trans_status() === FALSE){ $this->error = "error|reset function error..!"; $this->status = 401;  }
+           else { $this->error = "true|reset confirmed..!"; }
            
-       }else{ echo "error|Sorry, you do not have the right to change publish status..!"; }
+       }else{ $this->reject_token(); }
+       $this->api->response(array('error' => $this->error, 'content' => $this->output), $this->status);
     }
     
     private function truncate($val=null)
@@ -79,58 +77,18 @@ class Component extends MX_Controller
     
     function closing($uid = null)
     {
-       if ($this->acl->otentikasi_admin($this->title,'ajax') == TRUE){ 
-       $val = $this->Component_model->get_by_id($uid)->row();
-       if ($val->closing == 0){ $lng = array('closing' => 1); }else { $lng = array('closing' => 0); }
-       $this->Component_model->update($uid,$lng);
-       echo 'true|Status Changed...!';
-       }else{ echo "error|Sorry, you do not have the right to change publish status..!"; }
-    }
-
-    function get_last()
-    {
-        $this->acl->otentikasi_admin($this->title);
-
-        $data['title'] = $this->properti['name'].' | Administrator  '.ucwords('Component Manager');
-        $data['h2title'] = 'Component Manager';
-        $data['main_view'] = 'component_view';
-	$data['form_action'] = site_url($this->title.'/add_process');
-        $data['form_action_update'] = site_url($this->title.'/update_process');
-        $data['form_action_del'] = site_url($this->title.'/delete_all');
-        $data['link'] = array('link_back' => anchor('main/','Back', array('class' => 'btn btn-danger')));
-
-        $data['options'] = $this->role->combo();
-        $data['array'] = array('','');
-        
-        $data['tables'] = $this->component->combo_table();
-        $data['arrayx'] = array('','');
-	// ---------------------------------------- //
- 
-        $config['first_tag_open'] = $config['last_tag_open']= $config['next_tag_open']= $config['prev_tag_open'] = $config['num_tag_open'] = '<li>';
-        $config['first_tag_close'] = $config['last_tag_close']= $config['next_tag_close']= $config['prev_tag_close'] = $config['num_tag_close'] = '</li>';
-
-        $config['cur_tag_open'] = "<li><span><b>";
-        $config['cur_tag_close'] = "</b></span></li>";
-
-        // library HTML table untuk membuat template table class zebra
-        $tmpl = array('table_open' => '<table id="datatable-buttons" class="table table-striped table-bordered">');
-
-        $this->table->set_template($tmpl);
-        $this->table->set_empty("&nbsp;");
-
-        //Set heading untuk table
-        $this->table->set_heading('#','No', 'Name', 'Pbl', 'Status', 'Act', 'Limit', 'Role', 'Action');
-
-        $data['table'] = $this->table->generate();
-        $data['source'] = site_url($this->title.'/getdatatable');
-            
-        // Load absen view dengan melewatkan var $data sbgai parameter
-	$this->load->view('template', $data);
+       if ($this->acl->otentikasi_admin() == TRUE){
+        $val = $this->Component_model->get_by_id($uid)->row();
+        if ($val->closing == 0){ $lng = array('closing' => 1); }else { $lng = array('closing' => 0); }
+         $this->Component_model->update($uid,$lng);
+         $this->error = 'true|Status Changed...!';
+        }else{ $this->reject_token(); }
+       $this->api->response(array('error' => $this->error), $this->status);
     }
     
     function delete_all()
     {
-      if ($this->acl->otentikasi_admin($this->title,'ajax') == TRUE){
+      if ($this->acl->otentikasi_admin() == TRUE){
       
         $cek = $this->input->post('cek');
         $jumlah = count($cek);
@@ -147,37 +105,29 @@ class Component extends MX_Controller
           $res = intval($jumlah-$x);
           //$this->session->set_flashdata('message', "$res $this->title successfully removed &nbsp; - &nbsp; $x related to another component..!!");
           $mess = "$res $this->title successfully removed &nbsp; - &nbsp; $x related to another component..!!";
-          echo 'true|'.$mess;
+          $this->error = $mess;
         }
         else
         { //$this->session->set_flashdata('message', "No $this->title Selected..!!"); 
           $mess = "No $this->title Selected..!!";
-          echo 'false|'.$mess;
+          $this->error = $mess; $this->status = 401;
         }
-      }else{ echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
-      
+      }else{ $this->reject_token(); }
+      $this->api->response(array('error' => $this->error), $this->status);
     }
 
     function delete($uid)
     {
-        if ($this->acl->otentikasi_admin($this->title,'ajax') == TRUE){
+        if ($this->acl->otentikasi_admin() == TRUE){
             $this->Component_model->force_delete($uid);
-            
-            $this->session->set_flashdata('message', "1 $this->title successfully removed..!");
-
-            echo "true|1 $this->title successfully removed..!";
-        }else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
-        
+            $this->error = $this->title." successfully removed..!";
+        }else{ $this->reject_token(); }
+        $this->api->response(array('error' => $this->error, 'content' => $this->output), $this->status);
     }
 
-    function add_process()
+    function add()
     {
-        if ($this->acl->otentikasi_admin($this->title,'ajax') == TRUE){
-
-            $data['title'] = $this->properti['name'].' | Administrator  '.ucwords('Component Manager');
-            $data['h2title'] = 'Component Manager';
-            $data['form_action'] = site_url($this->title.'/add_process');
-            $data['link'] = array('link_back' => anchor('admin/','<span>back</span>', array('class' => 'back')));
+        if ($this->acl->otentikasi_admin() == TRUE){
 
             // Form validation
             $this->form_validation->set_rules('tname', 'Modul Name', 'required|maxlength[50]|callback_valid_modul');
@@ -224,19 +174,13 @@ class Component extends MX_Controller
             }
 
                 $this->Component_model->add($component);
-                $this->session->set_flashdata('message', "One $this->title data successfully saved!");
-                if ($this->upload->display_errors()){ echo "warning|".$this->upload->display_errors(); }
-                else { echo 'true|Data successfully saved..!|'.base_url().'images/component/'.$info['file_name']; }
+                if ($this->upload->display_errors()){ $this->error = $this->upload->display_errors(); }
+                else { $this->error = 'Data successfully saved..!|'.base_url().'images/component/'.$info['file_name']; $this->status = 401; }
             }
-            else
-            {
-    //            $this->load->view('template', $data);
-    //            echo validation_errors();
-                echo 'error|'.validation_errors();
-            }
+            else{ $this->error = validation_errors(); $this->status = 401; }
         }
-        else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
-
+        else { $this->reject_token(); }
+        $this->api->response(array('error' => $this->error), $this->status);
     }
     
     private function split_array($val)
@@ -249,14 +193,24 @@ class Component extends MX_Controller
         if ($img){ $img = "./images/component/".$img; unlink("$img"); }
     }
 
-    // Fungsi update untuk menset texfield dengan nilai dari database
-    function update($uid=null)
-    {        
-        $admin = $this->Component_model->get_by_id($uid)->row();
-	$this->session->set_userdata('langid', $admin->id);
-        
-        echo $uid.'|'.$admin->name.'|'.$admin->title.'|'.$admin->publish.'|'.$admin->status.
-             '|'.$admin->aktif.'|'.$admin->limit.'|'.$admin->role.'|'.$admin->icon.'|'.$admin->order.'|'.$admin->table_name;
+    function get($uid=null)
+    {  
+       if ($this->api->otentikasi() == TRUE){ 
+        if ($uid){
+           $admin = $this->Component_model->get_by_id($uid)->row_array();    
+        }else{ $this->error = 'Parameter Required'; $this->status = 401; }
+       }else { $this->reject_token(); }
+       $this->api->response(array('error' => $this->error, 'content' => $admin), $this->status);
+    }
+    
+    function get_by_name($name=null)
+    {  
+       if ($this->api->otentikasi() == TRUE){ 
+        if ($name){
+           $admin = $this->Component_model->get_by_name($name)->row_array();    
+        }else{ $this->error = 'Parameter Required'; $this->status = 401; }
+       }else { $this->reject_token(); }
+       $this->api->response(array('error' => $this->error, 'content' => $admin), $this->status);
     }
 
     function valid_role($val)
@@ -289,9 +243,8 @@ class Component extends MX_Controller
         else {  return TRUE; }
     }
 
-    function validating_component($val)
+    function validating_component($val,$id)
     {
-	$id = $this->session->userdata('langid');
 	if ($this->Component_model->validating('name',$val,$id) == FALSE)
         {
             $this->form_validation->set_message('validating_component', "This $this->title name is already registered!");
@@ -301,18 +254,12 @@ class Component extends MX_Controller
     }
 
     // Fungsi update untuk mengupdate db
-    function update_process()
+    function update($uid=null)
     {
-        if ($this->acl->otentikasi_admin($this->title,'ajax') == TRUE){
-
-        $data['title'] = $this->properti['name'].' | Componentistrator  '.ucwords($this->modul['title']);
-        $data['h2title'] = $this->modul['title'];
-        $data['main_view'] = 'admin_update';
-	$data['form_action'] = site_url($this->title.'/update_process');
-	$data['link'] = array('link_back' => anchor('admin/','<span>back</span>', array('class' => 'back')));
+        if ($this->acl->otentikasi_admin() == TRUE){
 
 	// Form validation
-        $this->form_validation->set_rules('tname', 'Modul Name', 'required|maxlength[50]|callback_validating_component');
+        $this->form_validation->set_rules('tname', 'Modul Name', 'required|maxlength[50]|callback_validating_component['.$uid.']');
         $this->form_validation->set_rules('ttitle', 'Modul Title', 'required|maxlength[50]');
         $this->form_validation->set_rules('rpublish', 'Publish', 'required');
         $this->form_validation->set_rules('cstatus', 'Status', 'required');
@@ -322,7 +269,7 @@ class Component extends MX_Controller
         $this->form_validation->set_rules('crole', 'Active', 'required|callback_valid_role');
         $this->form_validation->set_rules('ctable', 'Table', 'required|callback_valid_table');
 
-        if ($this->form_validation->run($this) == TRUE)
+        if ($this->form_validation->run($this) == TRUE && isset($uid))
         {
             $config['upload_path']   = './images/component/';
             $config['file_name']     = $this->input->post('tname');
@@ -355,15 +302,14 @@ class Component extends MX_Controller
                                    'icon' => $info['file_name']);
             }
 
-	    $this->Component_model->update($this->session->userdata('langid'), $component);
-            $this->session->set_flashdata('message', "One $this->title has successfully updated!");
-          //  $this->session->unset_userdata('langid');
-             if ($this->upload->display_errors()){ echo "warning|".$this->upload->display_errors(); }
-             else { echo 'true|Data successfully saved..!|'.base_url().'images/component/'.$info['file_name']; }
+	    $this->Component_model->update($uid, $component);
+            if ($this->upload->display_errors()){ $this->error = $this->upload->display_errors(); }
+            else { $this->error = 'true|Data successfully saved..!|'.base_url().'images/component/'.$info['file_name']; }
 
         }
-        else{ echo 'error|'.validation_errors(); }
-        }else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
+        else{ $this->error = validation_errors().' & param Required'; $this->status = 401; }
+        }else { $this->reject_token(); }
+        $this->api->response(array('error' => $this->error), $this->status);
     }
 
 }

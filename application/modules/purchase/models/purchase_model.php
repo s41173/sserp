@@ -17,12 +17,12 @@ class Purchase_model extends Custom_Model
                              'status', 'tax', 'costs', 'p1', 'p2', 'total', 'discount', 'ap_over', 'over_amount',
                              'notes', 'desc', 'shipping_date', 'stock_in_stts', 'approved');
     
-    function get_last_purchase($limit)
+    function get_last_purchase($limit,$offset=null)
     {
         $this->db->select($this->field);
         $this->db->from($this->tableName);
         $this->db->order_by('id', 'desc');
-        $this->db->limit($limit);
+        $this->db->limit($limit, $offset);
         return $this->db->get(); 
     }
 
@@ -30,8 +30,8 @@ class Purchase_model extends Custom_Model
     {
         $this->db->select($this->field);
         $this->db->from($this->tableName);
-        $this->cek_null_string($vendor,"vendor");
-        $this->cek_null_string($date,"dates");
+        $this->cek_null($vendor,"vendor");
+        $this->cek_null($date,"dates");
         return $this->db->get();
     }
 
@@ -41,7 +41,7 @@ class Purchase_model extends Custom_Model
         $this->db->from($this->tableName);
         $this->cek_null($currency,"purchase.currency");
         $this->cek_null($vendor,"purchase.vendor");
-        $this->cek_null($st,"purchase.status");
+        $this->cek_nol($st,"purchase.status");
         $this->db->where('purchase.approved', 1);
         $this->db->order_by('purchase.dates', 'asc');
         return $this->db->get();

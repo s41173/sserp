@@ -57,14 +57,14 @@ class Stock_lib extends Custom_Model {
                $this->stockvalue = $this->stockvalue + intval($res->qty*$res->amount);
                $this->stocktemp->add_stock($pid, $res->qty, $res->amount, $res->dates, $trans_type, $sid, $itemid); // pindhkan stock ke table temporary
                $this->increase_stock($pid, $res->dates, $res->qty); // kurangkan stock di tabel stock
-               $this->min_stock($pid, intval($req - $res->qty),$sid,'SA',$itemid); 
+               $this->min_stock($pid, intval($req - $res->qty),$sid, $trans_type,$itemid); 
            }
            else 
            { 
                $this->stockvalue = $this->stockvalue + intval($req*$res->amount);
                $this->stocktemp->add_stock($pid,$req,$res->amount, $res->dates, $trans_type, $sid, $itemid);
                $this->increase_stock($pid, $res->dates, $req); // kurangkan stock di tabel stock
-               $this->min_stock($pid, 0,$sid, 'SA', $itemid); 
+               $this->min_stock($pid, 0,$sid, $trans_type, $itemid); 
            } 
         }
         else{ $this->min_stock($pid, 0, $sid); }  

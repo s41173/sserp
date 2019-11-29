@@ -9,10 +9,10 @@ class Apc_model extends Custom_Model
         $this->com = new Components();
         $this->com = $this->com->get_id('apc');
         $this->tableName = 'apc';
+        $this->field = $this->db->list_fields($this->tableName);
     }
     
-    protected $field = array('apc.id', 'apc.no', 'apc.currency', 'apc.dates', 'apc.acc', 'apc.account', 'apc.user', 'apc.status',
-                             'apc.amount', 'apc.notes', 'apc.approved');
+    protected $field;  
     
     function count_all_num_rows()
     {
@@ -20,13 +20,13 @@ class Apc_model extends Custom_Model
         return $this->db->count_all($this->tableName);
     }
     
-    function get_last($limit)
+    function get_last($limit,$offset=null)
     {
         $this->db->select($this->field);
         $this->db->where('deleted', $this->deleted);
         $this->db->from($this->tableName);
         $this->db->order_by('apc.id', 'desc');
-        $this->db->limit($limit);
+        $this->db->limit($limit,$offset);
         return $this->db->get(); 
     }
     
@@ -50,7 +50,7 @@ class Apc_model extends Custom_Model
     
     function report($acc=null,$cur=null,$start=null,$end)
     {
-        $this->db->select('apc.id, apc.no, apc.dates, apc.currency, apc.notes, apc.account, apc.amount, apc.approved');
+        $this->db->select('apc.id, apc.no, apc.dates, apc.currency, apc.notes, apc.desc, apc.account, apc.amount, apc.approved');
         $this->db->where('deleted', $this->deleted);
         $this->db->from($this->tableName);
         $this->db->where('apc.currency', $cur);
@@ -63,7 +63,7 @@ class Apc_model extends Custom_Model
     
     function report_category($acc=null,$cur=null,$start=null,$end=null)
     {
-       $this->db->select('apc.id, apc.no, apc.dates, apc.currency, apc.account, apc.approved,
+       $this->db->select('apc.id, apc.no, apc.dates, apc.currency, apc.account, apc.approved, apc.desc,
                           costs.name as cost, costs.account_id as account, apc_trans.notes, apc_trans.staff, 
                           apc_trans.amount,');
         

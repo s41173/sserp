@@ -49,7 +49,10 @@ class Purchase_item_lib {
         $this->ci->db->select('product');
         $this->ci->db->where('purchase_id', $no);
         $val = $this->ci->db->get('purchase_item')->result();
-        foreach($val as $row){$data['options'][$row->product] = $this->pro->get_sku($row->product).' - '.$this->pro->get_name($row->product);}
+        $data = null;
+        foreach($val as $row){ 
+            $data[] = array("product_id"=>$row->product, "sku"=>$this->pro->get_sku($row->product), "name"=>$this->pro->get_name($row->product));
+        }
         return $data;
     }
     

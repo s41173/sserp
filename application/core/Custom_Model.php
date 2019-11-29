@@ -113,20 +113,40 @@ class Custom_Model extends CI_Model {
      *
      * @access public
      */
-	public function __construct($options = array()){
-		parent::__construct();
-		$this->attr($options);
-		$this->className = get_class($this);
-	}
+    public function __construct($options = array()){
+            parent::__construct();
+            $this->attr($options);
+            $this->className = get_class($this);
+            $this->apix = new Api_lib();
+            $this->decodedx = $this->apix->otentikasi('otentikasi');
+    }
         
     protected $softDeletes = TRUE;
     protected $deleted = NULL;
     protected $updated = NULL;
+    protected $apix,$decodedx;
     
     function closing(){
         $this->db->truncate($this->tableName); 
     }
     
+    function get_deleted($limit=1000){
+        
+        $this->db->select($this->field);
+        $this->db->from($this->tableName); 
+        $this->db->where('deleted is NOT NULL');
+        $this->db->order_by('id', 'desc'); 
+        $this->db->limit($limit);
+        return $this->db->get(); 
+    }
+    
+    function restore($uid=0){
+        $val = array('deleted' => null);
+        $this->db->where('id', $uid);
+        return $this->db->update($this->tableName, $val);
+    }
+    
+
     protected function between($field, $start=null,$end=null)
     {
         if ($start != null && $end != null)
@@ -161,17 +181,24 @@ class Custom_Model extends CI_Model {
         return $this->db->count_all($this->tableName);
     }
     
+    function cek_count($val=0,$limit,$offset){if ($val == 0){ $this->db->limit($limit, $offset); }}
+    
     function counter($field='id')
     {
         $this->db->select_max($field);
         return $this->db->get($this->tableName);
     }
     
+    function get_latest(){
+        $uid = $this->counter()->row_array();
+        return $this->get_by_id($uid['id'])->row();
+    }
+    
     function valid_add_trans($pid,$title='main')
     {
-        if (!$pid){ redirect($title); }
+        if (!$pid){ return FALSE; }
         $trans = $this->get_by_id($pid)->row();
-        if (!$trans){ redirect($title); }
+        if (!$trans){ return FALSE; }else{ return TRUE; }
     }
     
     function valid($field,$val)
@@ -181,6 +208,12 @@ class Custom_Model extends CI_Model {
 
         if($query > 0){ return FALSE; }
         else{ return TRUE; }
+    }
+    
+    function cek_trans($field,$val){
+        $this->db->where($field, $val);
+        $query = $this->db->get($this->tableName)->num_rows();
+        if($query > 0){ return TRUE; }else{ return FALSE; }
     }
 
     function validating($field,$val,$id)
@@ -193,39 +226,49 @@ class Custom_Model extends CI_Model {
         else{ return TRUE;}
     }  
     
-    function update($uid, $users)
+    function update($uid, $users, $field=null)
     {
-        $this->db->where('id', $uid);
-        $this->db->update($this->tableName, $users);
+        // get previous 
+        $prev = json_encode($this->get_by_id($uid)->row());
+        $next = json_encode($users);
+        if (!$field){ $field = $uid; }
+        
+        $this->logs->insert($this->session->userdata('userid'), date('Y-m-d'), waktuindo(), 'update', $this->com, $field, $next, $prev);
         
         $val = array('updated' => date('Y-m-d H:i:s'));
         $this->db->where('id', $uid);
         $this->db->update($this->tableName, $val);
         
-        $this->logs->insert($this->session->userdata('userid'), date('Y-m-d'), waktuindo(), 'update', $this->com);
+        $this->db->where('id', $uid);
+        return $this->db->update($this->tableName, $users);
     }
     
-    function delete($uid)
+    function delete($uid,$field=null)
     {
+        if (!$field){ $field = $uid; }
+        $prev = json_encode($this->get_by_id($uid)->row());
+        
+        $this->logs->insert($this->session->userdata('userid'), date('Y-m-d'), waktuindo(), 'delete', $this->com, $field, $prev);
+        
         $val = array('deleted' => date('Y-m-d H:i:s'));
         $this->db->where('id', $uid);
-        $this->db->update($this->tableName, $val);
-        
-        $this->logs->insert($this->session->userdata('userid'), date('Y-m-d'), waktuindo(), 'delete', $this->com);
+        return $this->db->update($this->tableName, $val);   
     }
     
-    function force_delete($uid)
+    function force_delete($uid,$field=null)
     {
-        $this->db->where('id', $uid);
-        $this->db->delete($this->tableName);
+        if (!$field){ $field = $uid; }
+        $prev = json_encode($this->get_by_id($uid)->row());
+        $this->logs->insert($this->session->userdata('userid'), date('Y-m-d'), waktuindo(), 'forced_delete', $this->com, $field, $prev);
         
-        $this->logs->insert($this->session->userdata('userid'), date('Y-m-d'), waktuindo(), 'forced_delete', $this->com);
+        $this->db->where('id', $uid);
+        return $this->db->delete($this->tableName);
     }
     
     function add($users)
     {
-        $this->db->insert($this->tableName, $users);
-        $this->logs->insert($this->session->userdata('userid'), date('Y-m-d'), waktuindo(), 'create', $this->com);
+        $this->logs->insert($this->session->userdata('userid'), date('Y-m-d'), waktuindo(), 'create', $this->com, null, json_encode($users));
+        return $this->db->insert($this->tableName, $users);        
     }
     
     function get_by_id($uid)
@@ -233,6 +276,19 @@ class Custom_Model extends CI_Model {
         $this->db->select($this->field);
         $this->db->where('id', $uid);
         return $this->db->get($this->tableName);
+    }
+    
+    function log($type=null,$uid=null,$prev=null){
+      if ($type == 'create'){ 
+          $this->logs->insert($this->decodedx->userid, date('Y-m-d'), waktuindo(), 'create', $this->com, null, json_encode($this->get_latest())); 
+      }
+      elseif ($type=='update'){
+          $next = json_encode($this->get_by_id($uid)->row());
+          $this->logs->insert($this->decodedx->userid, date('Y-m-d'), waktuindo(), 'update', $this->com, $uid, $next, $prev);
+      }
+      elseif ($type='delete'){
+        $this->logs->insert($this->decodedx->userid, date('Y-m-d'), waktuindo(), 'delete', $this->com, $uid, $prev);
+      }
     }
         
     // =================================== batas fungsi custom ===================================
@@ -551,7 +607,7 @@ class Custom_Model extends CI_Model {
      *
      * @access public
      */
-	public function restore($where = NULL){
+	public function xrestore($where = NULL){
 		if($where){
 			if(is_numeric($where)){
 				$this->db->where(array($this->primary => $where));

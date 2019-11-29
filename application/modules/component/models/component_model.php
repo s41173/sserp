@@ -11,12 +11,12 @@ class Component_model extends Custom_Model
         $this->com = new Components();
         $this->com = 0;
         $this->tableName = 'modul';
+        
     }
     
     protected $field = array('id', 'name', 'title', 'publish', 'status', 'aktif', 'limit', 'role', 'icon', 'order', 'closing',
                               'table_name', 'created', 'updated', 'deleted');
-    protected $com;
-            
+    protected $com;   
 
     function get_last($limit, $offset=null)
     {
@@ -48,6 +48,13 @@ class Component_model extends Custom_Model
         $this->db->where('closing', 1);
         $this->db->order_by('name', 'asc'); 
         return $this->db->get(); 
+    }
+    
+    function get_by_name($name)
+    {
+        $this->db->select($this->field);
+        $this->db->where('name', $name);
+        return $this->db->get($this->tableName);
     }
    
 }

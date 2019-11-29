@@ -16,12 +16,12 @@ class Purchase_return_model extends Custom_Model
     protected $field = array('id', 'no', 'purchase', 'dates', 'currency', 'acc', 'docno', 'vendor', 'user', 'log',
                              'status', 'tax', 'costs', 'total', 'balance', 'notes', 'cash', 'approved');
             
-    function get_last($limit)
+    function get_last($limit,$offset=null)
     {
         $this->db->select($this->field);
         $this->db->from($this->tableName);
         $this->db->order_by('id', 'desc');
-        $this->db->limit($limit);
+        $this->db->limit($limit,$offset);
         return $this->db->get(); 
     }
 

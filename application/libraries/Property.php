@@ -19,10 +19,12 @@ class Property {
     {
 //        $this->db->select('id,name,address,phone1,phone2,email,billing_email,technical_email, cc_email, zip,account_name,account_no,bank,city,site_name,meta_description,meta_keyword');
         $res = $this->ci->db->get($this->table)->row();
+        if (!$res->url_upload){ $urlupload = './'; }else{ $urlupload = $res->url_upload; }
+        if (!$res->image_url){ $imageurl = base_url().'images/'; }else{ $imageurl = $res->image_url; }
         $val = array('name' => $res->name, 'address' => $res->address, 'phone1' => $res->phone1, 'phone2' => $res->phone2, 'fax' => $res->fax,
                      'email' => $res->email, 'email_link' => $res->email_link, 'billing_email' => $res->billing_email, 'technical_email' => $res->technical_email, 'cc_email' => $res->cc_email,
                      'zip' => $res->zip, 'city' => $res->city, 'account' => $res->account_name, 'acc_no' => $res->account_no, 'bank' => $res->bank, 'manager' => $res->manager, 'accounting' => $res->accounting,
-                     'sitename' => $res->site_name, 'logo' => base_url("images/property/").'/'.$res->logo, 'meta_desc' => $res->meta_description, 'meta_key' => $res->meta_keyword
+                     'sitename' => $res->site_name, 'logo' => $res->logo, 'url_upload'=>$urlupload, 'image_url'=>$imageurl, 'meta_desc' => $res->meta_description, 'meta_key' => $res->meta_keyword
                     );
         return $val;
     }

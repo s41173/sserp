@@ -9,11 +9,12 @@ class Role_model extends Custom_Model
         parent::__construct();
         $this->logs = new Log_lib();
         $this->com = new Components();
+        $this->tableName = $this->com->get_table($this->com->get_id('roles'));
         $this->com = $this->com->get_id('roles');
-        $this->tableName = 'role';
+        $this->field = $this->db->list_fields($this->tableName);
     }
     
-    protected $field = array('id', 'name', 'desc', 'rules', 'granted_menu');
+    protected $field;
     protected $com;
             
    

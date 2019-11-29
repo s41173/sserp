@@ -17,12 +17,12 @@ class Appayment_model extends Custom_Model
                              'bank', 'due', 'vendor', 'dates', 'acc', 'rate', 'discount', 'late', 'amount', 'over', 'over_stts',
                              'credit_over', 'approved', 'user', 'log');
     
-    function get_last($limit)
+    function get_last($limit,$offset=null)
     {
         $this->db->select($this->field);
         $this->db->from($this->tableName);
         $this->db->order_by('ap_payment.id', 'desc');
-        $this->db->limit($limit);
+        $this->db->limit($limit,$offset);
         return $this->db->get(); 
     }
 

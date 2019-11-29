@@ -1,15 +1,17 @@
 <?php if ( ! defined('BASEPATH')) exit('No direct script access allowed');
 
-class Adminmenu_lib extends Main_Model {
+class Adminmenu_lib extends Main_model {
 
     public function __construct($deleted=NULL)
     { 
         $this->deleted = $deleted;
         $this->role = new Role_lib();
+        $this->api = new Api_lib();
+        $this->decodedx = $this->api->otentikasi('decoded');
         $this->get_granted();
     }    
     
-    private $role,$granted;
+    private $role,$granted,$api,$decodedx;
 
     function combo()
     {
@@ -51,7 +53,7 @@ class Adminmenu_lib extends Main_Model {
     
     private function get_granted()
     {
-      $this->granted = explode(',', $this->role->get_granted_menu($this->session->userdata('role')));
+      $this->granted = explode(',', $this->role->get_granted_menu($this->decodedx->role));
     }
     
     public function get_parent_menu()
@@ -64,12 +66,13 @@ class Adminmenu_lib extends Main_Model {
        return $this->db->get($this->table)->result();
     }
     
-    public function get_child_menu($parent=0)
+    public function get_child_menu($parent=null)
     {
        $this->db->select($this->field); 
        $this->db->where('parent_status', 0);
        $this->db->where('deleted', $this->deleted);
-       $this->db->where('parent_id', $parent);
+//       $this->db->where('parent_id', $parent);
+       $this->cek_nol($parent, 'parent_id');
        $this->db->order_by('menu_order', 'asc');
        return $this->db->get($this->table)->result();
     }
@@ -82,7 +85,6 @@ class Adminmenu_lib extends Main_Model {
        $this->db->where('parent_id', $parent);
        if ( $this->db->get($this->table)->num_rows() > 0){ return TRUE; }else{ return FALSE; }
     }
-
 
 }
 

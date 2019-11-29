@@ -15,12 +15,12 @@ class Stock_adjustment_model extends Custom_Model
     
     protected $field = array('id', 'no', 'dates', 'currency', 'branch_id', 'desc', 'staff', 'user', 'approved', 'log');
     
-    function get_last($limit)
+    function get_last($limit,$offset=null)
     {
         $this->db->select($this->field);
         $this->db->from($this->tableName);
         $this->db->order_by('no', 'desc');
-        $this->db->limit($limit);
+        $this->db->limit($limit,$offset);
         return $this->db->get(); 
     }
 
@@ -81,7 +81,6 @@ class Stock_adjustment_model extends Custom_Model
         $query = $this->db->get($this->tableName)->num_rows();
         if($query > 0) {  return FALSE; } else { return TRUE; }
     }
-
 
 //    =========================================  REPORT  =================================================================
 

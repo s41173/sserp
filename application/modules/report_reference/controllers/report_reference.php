@@ -9,81 +9,137 @@ class Report_reference extends MX_Controller
         $this->load->model('Main_model', '', TRUE);
         
         $this->properti = $this->property->get();
-        $this->acl->otentikasi();
         $this->modul = $this->components->get(strtolower(get_class($this)));
         $this->title = strtolower(get_class($this));
         
         $this->load->library('user_agent');
         $this->properti = $this->property->get();
+        
+        $this->api = new Api_lib();
+        $this->acl = new Acl();
+        
+        header('Access-Control-Allow-Origin: *');
+        header('Access-Control-Allow-Methods: GET, POST, PATCH, PUT, DELETE, OPTIONS');
+        header('Access-Control-Allow-Headers: Origin, Content-Type, X-Auth-Token'); 
     }
 
     var $title = 'report_reference';
     var $limit = null;
-    private $properti,$vendor,$customer;
+    private $properti,$api,$acl;
+
+    protected $error = null;
+    protected $status = 200;
+    protected $output = null;
 
     function index()
-    {    
-       $this->main_panel();
-    }
-
-    function main_panel()
     {
-       $this->acl->otentikasi1($this->title); 
-//       
-       $data['name'] = $this->properti['name'];
-       $data['title'] = $this->properti['name'].' | Administrator  '.ucwords('Main Panel');
-       $data['h2title'] = "Financial Statement Reference";
-
-       $data['waktu'] = tgleng(date('Y-m-d')).' - '.waktuindo().' WIB';
-       $data['user_agent'] = $this->user_agent();
-       $data['main_view'] = 'report_reference/report_reference_view';
+       if ($this->acl->otentikasi2($this->title) == TRUE){  
        
        // period
         $ps = new Period();
         $ps = $ps->get();
         $data['month'] = get_month($ps->month);
         $data['year'] = $ps->year;
-
-       // chart json
-       $data['asset'] = site_url()."/report_reference/get_asset/".$this->input->post('cassettype');
-       $data['operating'] = site_url()."/report_reference/get_operating/".$this->input->post('coperatingtype');
-       $data['asset12'] = site_url()."/report_reference/get_asset12";
-       $data['cashbank'] = site_url()."/report_reference/get_cash_bank";
-       $data['income12'] = site_url()."/report_reference/get_income12/".$this->input->post('ctype');
-       $data['outcome12'] = site_url()."/report_reference/get_outcome12/";
+        
+       $data['asset'] = $this->get_asset($this->input->post('cassettype'));
+       $data['operating'] = $this->get_operating($this->input->post('coperatingtype'));
+       $data['asset12'] = $this->get_asset12();
+       $data['cashbank'] = $this->get_cash_bank();
+       $data['income12'] = $this->get_income12($this->input->post('ctype'));
+       $data['outcome12'] = $this->get_outcome12();
        $data['jenis'] = $this->input->post('ctype');
-       
-       $this->load->view('template', $data);
-
+              
+       }else{ $this->reject_token(); }
+       $this->api->response(array('error' => $this->error, 'content' => $data), $this->status); 
     }
     
-    function get_json()
-    {        
-        $data = $this->db->select('OrderDate, ProductName, Quantity')->from('coba')->get()->result();
+        // api purpose
+    function get_income(){
         
-        $datax = array();
-        foreach ($data as $res) 
-        {
-           $point = array("label" => $res->ProductName , "y" => $res->Quantity);
-           array_push($datax, $point);      
-        }
-        
-//        $data = array(
-//                    array(
-//                        "label" => "DodolMedan",
-//                        "y" => "50"
-//                    ),
-//                    array(
-//                        "label" => "DodolPulut",
-//                        "y" => "60"
-//                    ),
-//                    array(
-//                        "label" => "Gemblung",
-//                        "y" => "20"
-//                    )
-//                );
+        if ($this->acl->otentikasi1($this->title) == TRUE){  
+            
+            $start = $this->input->post('tstart');
+            $end = $this->input->post('tend');
+            $cur = $this->input->post('ccur');
+            $period = $this->input->post('period');
+            $type = $this->input->post('type');
+            
+            $ps = new Period();
+            $ps = $ps->get(); 
+            $model = new Account_model();
+            $cla = 16;
+            $trans = 0;
+            // 0 == 1 hari, 1 == 1 bulan, 2 == 1 tahun, 3 == custom
 
-       echo json_encode($datax, JSON_NUMERIC_CHECK);
+            if ($period == 0){ 
+                if ($type == 0){ $trans = $model->get_balance_period_by_classification($cur,$cla,$start,$start); }
+                else{ 
+$trans = $model->get_balance_period_by_classification($cur,$cla,$start,$start)+$model->get_balance_period_by_classification($cur,21,$start,$start)+$model->get_balance_period_by_classification($cur,37,$start,$start);
+                }                
+            }
+            elseif ($period == 1){ 
+                if ($type == 0){ $trans = $model->get_balance_by_classification($cur,$cla,$ps->month,$ps->year,$ps->month,$ps->year); }
+                else{
+$trans = $model->get_balance_by_classification($cur,$cla,$ps->month,$ps->year,$ps->month,$ps->year)+$model->get_balance_by_classification($cur,21,$ps->month,$ps->year,$ps->month,$ps->year)+$model->get_balance_by_classification($cur,37,$ps->month,$ps->year,$ps->month,$ps->year);
+                }
+            }
+            elseif ($period == 2){
+                if ($type == 0){ $trans = $model->get_balance_anual_by_classification($cur,$cla,$ps->year,$ps->year); }
+                else{
+$trans = $model->get_balance_anual_by_classification($cur,$cla,$ps->year,$ps->year)+$model->get_balance_anual_by_classification($cur,21,$ps->year,$ps->year)+$model->get_balance_anual_by_classification($cur,37,$ps->year,$ps->year);
+                }
+            }
+            elseif ($period == 3){ 
+                if ($type == 0){ $trans = $model->get_balance_period_by_classification($cur,$cla,$start,$end); }
+else{ $trans = $model->get_balance_period_by_classification($cur,$cla,$start,$end)+$model->get_balance_period_by_classification($cur,21,$start,$end)+$model->get_balance_period_by_classification($cur,37,$start,$end); }                
+            }
+            
+       }else{ $this->reject_token(); }
+       $this->api->response(array('error' => $this->error, 'content' => $trans), $this->status); 
+    }
+    
+    function get_outcome(){
+        
+        if ($this->acl->otentikasi1($this->title) == TRUE){  
+            
+            $start = $this->input->post('tstart');
+            $end = $this->input->post('tend');
+            $cur = $this->input->post('ccur');
+            $period = $this->input->post('period');
+            $type = $this->input->post('type');
+            
+            $ps = new Period();
+            $ps = $ps->get(); 
+            $model = new Account_model();
+            $cla = 15;
+            $trans = 0;
+            // 0 == 1 hari, 1 == 1 bulan, 2 == 1 tahun, 3 == custom
+
+            if ($period == 0){ 
+                if ($type == 0){ $trans = $model->get_balance_period_by_classification($cur,$cla,$start,$start)+$model->get_balance_period_by_classification($cur,19,$start,$start); }
+                else{ 
+$trans = $model->get_balance_period_by_classification($cur,$cla,$start,$start)+$model->get_balance_period_by_classification($cur,19,$start,$start)+$model->get_balance_period_by_classification($cur,24,$start,$start)+$model->get_balance_period_by_classification($cur,17,$start,$start)+$model->get_balance_period_by_classification($cur,25,$start,$start);
+                }                
+            }
+            elseif ($period == 1){ 
+                if ($type == 0){ $trans = $model->get_balance_by_classification($cur,$cla,$ps->month,$ps->year,$ps->month,$ps->year)+$model->get_balance_by_classification($cur,19,$ps->month,$ps->year,$ps->month,$ps->year); }
+                else{
+$trans = $model->get_balance_by_classification($cur,$cla,$ps->month,$ps->year,$ps->month,$ps->year)+$model->get_balance_by_classification($cur,19,$ps->month,$ps->year,$ps->month,$ps->year)+$model->get_balance_by_classification($cur,24,$ps->month,$ps->year,$ps->month,$ps->year)+$model->get_balance_by_classification($cur,17,$ps->month,$ps->year,$ps->month,$ps->year)+$model->get_balance_by_classification($cur,25,$ps->month,$ps->year,$ps->month,$ps->year);
+                }
+            }
+            elseif ($period == 2){
+                if ($type == 0){ $trans = $model->get_balance_anual_by_classification($cur,$cla,$ps->year,$ps->year)+$model->get_balance_anual_by_classification($cur,19,$ps->year,$ps->year); }
+                else{
+$trans = $model->get_balance_anual_by_classification($cur,$cla,$ps->year,$ps->year)+$model->get_balance_anual_by_classification($cur,19,$ps->year,$ps->year)+$model->get_balance_anual_by_classification($cur,24,$ps->year,$ps->year)+$model->get_balance_anual_by_classification($cur,17,$ps->year,$ps->year)+$model->get_balance_anual_by_classification($cur,25,$ps->year,$ps->year);
+                }
+            }
+            elseif ($period == 3){ 
+                if ($type == 0){ $trans = $model->get_balance_period_by_classification($cur,$cla,$start,$end)+$model->get_balance_period_by_classification($cur,19,$start,$end); }
+else{ $trans = $model->get_balance_period_by_classification($cur,$cla,$start,$end)+$model->get_balance_period_by_classification($cur,19,$start,$end)+$model->get_balance_period_by_classification($cur,24,$start,$end)+$model->get_balance_period_by_classification($cur,17,$start,$end)+$model->get_balance_period_by_classification($cur,25,$start,$end); }                
+            }
+            
+       }else{ $this->reject_token(); }
+       $this->api->response(array('error' => $this->error, 'content' => $trans), $this->status); 
     }
     
     function get_asset($month=null)
@@ -119,7 +175,8 @@ class Report_reference extends MX_Controller
                     array("label" => "Harta Lainnya", "y" => $hartalain)
                 );
 
-       echo json_encode($data, JSON_NUMERIC_CHECK);
+//       echo json_encode($data, JSON_NUMERIC_CHECK);
+        return $data;
     }
     
     private function get_trans($cur,$cla,$month,$year)
@@ -166,7 +223,7 @@ class Report_reference extends MX_Controller
                     array("label" => "Dec", "y" => intval($dec))
                 );
 
-       echo json_encode($data); 
+       return $data;
     }
     
     function get_asset12()
@@ -191,7 +248,7 @@ class Report_reference extends MX_Controller
                     array("label" => "Dec", "y" => $this->calculate_asset('IDR',12,$ps->year))
                 );
 
-       echo json_encode($data, JSON_NUMERIC_CHECK);
+       return $data;
     }
     
     function get_cash_bank()
@@ -210,7 +267,8 @@ class Report_reference extends MX_Controller
            array_push($datax, $point);      
         }
         
-        echo json_encode($datax, JSON_NUMERIC_CHECK);
+//        echo json_encode($datax, JSON_NUMERIC_CHECK);
+        return $datax;
     }
     
     private function get_balance_acc($acc,$month,$year)
@@ -285,7 +343,8 @@ class Report_reference extends MX_Controller
             );
         }
                     
-       echo json_encode($data, JSON_NUMERIC_CHECK);
+//       echo json_encode($data, JSON_NUMERIC_CHECK);
+        return $data;
     }
     
     private function get_trans_month($cur,$cla,$month,$year)
@@ -294,8 +353,7 @@ class Report_reference extends MX_Controller
         $trans = $model->get_balance_by_classification($cur,$cla,$month,$year,$month,$year);
         return intval($trans);
     }
-    
-    
+        
     function get_outcome12()
     {    
        $ps = new Period();
@@ -316,7 +374,8 @@ class Report_reference extends MX_Controller
             array("label" => "Dec", "y" => $this->calculate_outcome('IDR',12,$ps->year)),
         );
                     
-       echo json_encode($data, JSON_NUMERIC_CHECK);
+//       echo json_encode($data, JSON_NUMERIC_CHECK);
+        return $data;
     }
     
     private function calculate_outcome($cur='IDR',$month,$year)
@@ -325,6 +384,7 @@ class Report_reference extends MX_Controller
        
        $hpp = intval($model->get_balance_by_classification($cur,15,$month,$year,$month,$year));
        $operational = intval($model->get_balance_by_classification($cur,19,$month,$year,$month,$year));
+       
        $nonoperational = intval($model->get_balance_by_classification($cur,24,$month,$year,$month,$year));
        $othercost = intval($model->get_balance_by_classification($cur,17,$month,$year,$month,$year));
        $outcost = intval($model->get_balance_by_classification($cur,25,$month,$year,$month,$year));
@@ -340,20 +400,6 @@ class Report_reference extends MX_Controller
         elseif ($this->agent->is_mobile()){ $agent = $this->agent->mobile(); }
         else{ $agent = 'Unidentified User Agent'; }
         return $agent." - ".$this->agent->platform();
-    }
-
-    function registration()
-    {
-       $this->acl->otentikasi(); 
-       $data['name'] = $this->properti['name'];
-       $data['title'] = $this->properti['name'].' | Administrator  '.ucwords('Main Panel');
-       $data['h2title'] = "Student Registration";
-
-       $data['waktu'] = tgleng(date('Y-m-d')).' - '.waktuindo().' WIB';
-       $data['user_agent'] = $this->user_agent();
-       $data['main_view'] = 'academic/academic_registration';
-
-       $this->load->view('template', $data);
     }
     
     // ====================================== CLOSING ======================================

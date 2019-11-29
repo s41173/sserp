@@ -6,99 +6,59 @@ class Category extends MX_Controller
     {
         parent::__construct();
         
-        $this->load->model('Category_model', '', TRUE);
+        $this->load->model('Category_model', 'model', TRUE);
 
         $this->properti = $this->property->get();
-        $this->acl->otentikasi();
 
         $this->modul = $this->components->get(strtolower(get_class($this)));
         $this->title = strtolower(get_class($this));
         $this->product = new Product_lib();
         $this->category = new Categoryproduct_lib();
-        $this->model = new Categorys();
-
+        
+        $this->api = new Api_lib();
+        $this->acl = new Acl();
+        
+        header('Access-Control-Allow-Origin: *');
+        header('Access-Control-Allow-Methods: GET, POST, PATCH, PUT, DELETE, OPTIONS');
+        header('Access-Control-Allow-Headers: Origin, Content-Type, X-Auth-Token');  
     }
 
-    private $properti, $modul, $title;
-    private $product,$category,$model;
+    private $properti, $modul, $title, $api, $acl;
+    private $product,$category;
 
+    protected $error = null;
+    protected $status = 200;
+    protected $output = null;
+    
     function index()
     {
-       $this->get_last_category(); 
-    }
-    
-    function chart()
-    {
-        $this->db->select('playerid, score');
-        $this->db->from('score'); 
-        $result = $this->db->get()->result(); 
+        if ($this->acl->otentikasi1($this->title) == TRUE){
+        $datax = (array)json_decode(file_get_contents('php://input')); 
+        if (isset($datax['limit'])){ $this->limitx = $datax['limit']; }else{ $this->limitx = $this->modul['limit']; }
+        if (isset($datax['offset'])){ $this->offsetx = $datax['offset']; }
         
-        print json_encode($result); 
-    }
-    
-    public function getdatatable($search=null)
-    {
-        if(!$search){ $result = $this->Category_model->get_last_category($this->modul['limit'])->result(); }
-        
-        if ($result){
+        $result = $this->model->get_last_category($this->limitx, $this->offsetx)->result();
+        $resx = null;
 	foreach($result as $res)
 	{
-	   $output[] = array ($res->id, $res->name, $this->category->get_name($res->parent_id), base_url().'images/category/'.$res->image, $res->publish, $res->code);
+           $resx[] = array ("id"=>$res->id, "name"=>$res->name, "parent"=>$this->category->get_name($res->parent_id),
+                            "image"=>base_url().'images/category/'.$res->image, "publish"=>$res->publish, 
+                            "code"=>$res->code, "log"=> $this->decodedd->log);
 	}
-            $this->output
-            ->set_status_header(200)
-            ->set_content_type('application/json', 'utf-8')
-            ->set_output(json_encode($output))
-            ->_display();
-            exit; 
-        }
-    }
+        $data['result'] = $resx; $this->output = $data;
+        }else{ $this->reject_token(); }
+        $this->response('content');
+    } 
     
     function publish($uid = null)
     {
-       if ($this->acl->otentikasi2($this->title,'ajax') == TRUE){ 
-       $val = $this->Category_model->get_by_id($uid)->row();
-       if ($val->publish == 0){ $lng = array('publish' => 1); }else { $lng = array('publish' => 0); }
-       $this->Category_model->update($uid,$lng);
-       echo 'true|Status Changed...!';
-       }else{ echo "error|Sorry, you do not have the right to change publish status..!"; }
-    }
-
-    function get_last_category()
-    {
-        $this->acl->otentikasi1($this->title);
-
-        $data['title'] = $this->properti['name'].' | Administrator  '.ucwords($this->modul['title']);
-        $data['h2title'] = $this->modul['title'];
-        $data['main_view'] = 'category_view';
-	$data['form_action'] = site_url($this->title.'/add_process');
-        $data['form_action_update'] = site_url($this->title.'/update_process');
-        $data['form_action_del'] = site_url($this->title.'/delete_all');
-        $data['link'] = array('link_back' => anchor('main/','Back', array('class' => 'btn btn-danger')));
-
-        $data['parent'] = $this->category->combo();
-	// ---------------------------------------- //
- 
-        $config['first_tag_open'] = $config['last_tag_open']= $config['next_tag_open']= $config['prev_tag_open'] = $config['num_tag_open'] = '<li>';
-        $config['first_tag_close'] = $config['last_tag_close']= $config['next_tag_close']= $config['prev_tag_close'] = $config['num_tag_close'] = '</li>';
-
-        $config['cur_tag_open'] = "<li><span><b>";
-        $config['cur_tag_close'] = "</b></span></li>";
-
-        // library HTML table untuk membuat template table class zebra
-        $tmpl = array('table_open' => '<table id="datatable-buttons" class="table table-striped table-bordered">');
-
-        $this->table->set_template($tmpl);
-        $this->table->set_empty("&nbsp;");
-
-        //Set heading untuk table
-        $this->table->set_heading('#','No', 'Code', 'Name', 'Parent', 'Action');
-
-        $data['table'] = $this->table->generate();
-        $data['source'] = site_url('category/getdatatable');
-            
-        // Load absen view dengan melewatkan var $data sbgai parameter
-	$this->load->view('template', $data);
+      if ($this->acl->otentikasi2($this->title) == TRUE && $this->model->valid_add_trans($uid, $this->title) == TRUE){ 
+        $val = $this->model->get_by_id($uid)->row();
+        if ($val->publish == 0){ $lng = array('publish' => 1); }else { $lng = array('publish' => 0); }
+        $this->model->update($uid,$lng);
+        $this->error = 'Status Changed..!';
+      }else { $this->reject_token(); }
+      $this->response();
     }
     
     function delete_all()
@@ -116,11 +76,11 @@ class Category extends MX_Controller
         {
            if ( $this->cek_relation($cek[$i]) == TRUE ) 
            {
-              $img = $this->Category_model->get_by_id($cek[$i])->row();
+              $img = $this->model->get_by_id($cek[$i])->row();
               $img = $img->image;
               if ($img){ $img = "./images/category/".$img; unlink("$img"); }
 
-              $this->Category_model->delete($cek[$i]); 
+              $this->model->delete($cek[$i]); 
            }
            else { $x=$x+1; }
            
@@ -140,30 +100,26 @@ class Category extends MX_Controller
 
     function delete($uid,$type='soft')
     {
-        if ($this->acl->otentikasi_admin($this->title,'ajax') == TRUE){
-        if ($type == 'soft'){
-           $this->Category_model->delete($uid);
-           $this->session->set_flashdata('message', "1 $this->title successfully removed..!");
-           
-           echo "true|1 $this->title successfully soft removed..!";
-       }
-       else
-       {
-        if ( $this->cek_relation($uid) == TRUE )
-        {
-           $img = $this->Category_model->get_by_id($uid)->row();
-           $img = $img->image;
-           if ($img){ $img = "./images/category/".$img; unlink("$img"); }
+       if ($this->acl->otentikasi3($this->title) == TRUE && $this->model->valid_add_trans($uid, $this->title) == TRUE){
+            if ($type == 'soft'){
+               $this->model->delete($uid);
+               $this->error = "$this->title successfully soft removed..!";
+           }
+           else
+           {
+              if ( $this->cek_relation($uid) == TRUE )
+              {
+                 $img = $this->model->get_by_id($uid)->row();
+                 $img = $img->image;
+                 if ($img){ $img = "./images/category/".$img; unlink("$img"); }
 
-           $this->Category_model->delete($uid);
-           $this->session->set_flashdata('message', "1 $this->title successfully removed..!");
-           
-           echo "true|1 $this->title successfully removed..!";
-        }
-        else { $this->session->set_flashdata('message', "$this->title related to another component..!"); 
-        echo  "invalid|$this->title related to another component..!";} 
-       }
-       }else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
+                 $this->model->delete($uid);
+                 $this->error = "$this->title successfully removed..!";
+              }
+              else { $this->reject("$this->title related to another component..!"); } 
+           }
+      }else{ $this->reject_token(); }
+      $this->response();
     }
 
     private function cek_relation($id)
@@ -172,16 +128,11 @@ class Category extends MX_Controller
         if ($product == TRUE) { return TRUE; } else { return FALSE; }
     }
 
-    function add_process()
+    function add()
     {
-        if ($this->acl->otentikasi2($this->title,'ajax') == TRUE){
+        if ($this->acl->otentikasi2($this->title) == TRUE){
 
-        $data['title'] = $this->properti['name'].' | Administrator  '.ucwords($this->modul['title']);
-        $data['h2title'] = $this->modul['title'];
-        $data['main_view'] = 'category_view';
-	$data['form_action'] = site_url($this->title.'/add_process');
-	$data['link'] = array('link_back' => anchor('category/','<span>back</span>', array('class' => 'back')));
-
+        $data = null;    
 	// Form validation
         $this->form_validation->set_rules('tname', 'Name', 'required|callback_valid_category');
         $this->form_validation->set_rules('cparent', 'Parent Category', 'required');
@@ -218,39 +169,30 @@ class Category extends MX_Controller
                                   'image' => $info['file_name'], 'created' => date('Y-m-d H:i:s'));
             }
 
-            $this->Category_model->add($category);
-            $this->session->set_flashdata('message', "One $this->title data successfully saved!");
-//            redirect($this->title);
-            
-            if ($this->upload->display_errors()){ echo "warning|".$this->upload->display_errors(); }
-            else { echo 'true|'.$this->title.' successfully saved..!|'.base_url().'images/category/'.$info['file_name']; }
-            
-          //  echo 'true';
+            if ($this->model->add($category) != true && $this->upload->display_errors()){ $this->reject($this->upload->display_errors());
+            }else{ $this->error = $this->title.' successfully saved..!'; }
+            $this->output = $data;
         }
-        else{ echo "error|".validation_errors(); }
-        }else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
-
+        else{ $this->reject(validation_errors()); }
+        }else{ $this->reject_token(); }
+        $this->response('content');
     }
 
-    // Fungsi update untuk menset texfield dengan nilai dari database
-    function update($uid=null)
+    function get($uid=null)
     {        
-        $data['parent'] = $this->category->combo_update($uid);
-        $category = $this->Category_model->get_by_id($uid)->row();
-        $data['default']['name'] = $category->name;
-        $data['default']['parent'] = $category->parent_id;
-        $data['default']['image'] = base_url().'images/category/'.$category->image;
-//
-	$this->session->set_userdata('langid', $category->id);
-//        $this->load->view('category_update', $data);
-        
-        echo $uid.'|'.$category->name.'|'.$category->parent_id.'|'.base_url().'images/category/'.$category->image.'|'.$category->code;
+        if ($this->acl->otentikasi1($this->title) == TRUE && $this->model->valid_add_trans($uid, $this->title) == TRUE){
+          $category = $this->model->get_by_id($uid)->row();
+          $data['name'] = $category->name;
+          $data['parent'] = $category->parent_id;
+          $data['image'] = base_url().'images/category/'.$category->image;
+          $this->output = $data;
+        }else{ $this->reject_token(); }
+        $this->response('content');
     }
-
 
     public function valid_category($name)
     {
-        if ($this->Category_model->valid('name',$name) == FALSE)
+        if ($this->model->valid('name',$name) == FALSE)
         {
             $this->form_validation->set_message('valid_category', "This $this->title is already registered.!");
             return FALSE;
@@ -260,7 +202,7 @@ class Category extends MX_Controller
     
     public function valid_code($name)
     {
-        if ($this->Category_model->valid('code',$name) == FALSE)
+        if ($this->model->valid('code',$name) == FALSE)
         {
             $this->form_validation->set_message('valid_code', "This $this->title code is already registered.!");
             return FALSE;
@@ -268,10 +210,9 @@ class Category extends MX_Controller
         else{ return TRUE; }
     }
 
-    function validation_category($name)
+    function validation_category($name,$id)
     {
-	$id = $this->session->userdata('langid');
-	if ($this->Category_model->validating('name',$name,$id) == FALSE)
+	if ($this->model->validating('name',$name,$id) == FALSE)
         {
             $this->form_validation->set_message('validation_category', 'This category is already registered!');
             return FALSE;
@@ -282,7 +223,7 @@ class Category extends MX_Controller
     function validation_code($name)
     {
 	$id = $this->session->userdata('langid');
-	if ($this->Category_model->validating('code',$name,$id) == FALSE)
+	if ($this->model->validating('code',$name,$id) == FALSE)
         {
             $this->form_validation->set_message('validation_code', 'This category code is already registered!');
             return FALSE;
@@ -291,26 +232,20 @@ class Category extends MX_Controller
     }
 
     // Fungsi update untuk mengupdate db
-    function update_process()
+    function update($uid=null)
     {
-        if ($this->acl->otentikasi2($this->title,'ajax') == TRUE){
-
-        $data['title'] = $this->properti['name'].' | Administrator  '.ucwords($this->modul['title']);
-        $data['h2title'] = $this->modul['title'];
-        $data['main_view'] = 'category_update';
-	$data['form_action'] = site_url($this->title.'/update_process');
-	$data['link'] = array('link_back' => anchor('category/','<span>back</span>', array('class' => 'back')));
-        $data['parent'] = $this->category->combo_update($this->session->userdata('langid'));
-
+        if ($this->acl->otentikasi2($this->title) == TRUE && $this->model->valid_add_trans($uid, $this->title) == TRUE){
+            
+        $data = null;    
 	// Form validation
-        $this->form_validation->set_rules('tname_update', 'Name', 'required|max_length[100]|callback_validation_category');
-        $this->form_validation->set_rules('cparent_update', 'Parent Category', 'required');
-        $this->form_validation->set_rules('tcode_update', 'Code', 'required|callback_validating_code');
+        $this->form_validation->set_rules('tname', 'Name', 'required|max_length[100]|callback_validation_category['.$uid.']');
+        $this->form_validation->set_rules('cparent', 'Parent Category', 'required');
+        $this->form_validation->set_rules('tcode', 'Code', 'required|callback_validating_code');
         
         if ($this->form_validation->run($this) == TRUE)
         {
             $config['upload_path'] = './images/category/';
-            $config['file_name'] = $this->input->post('tname_update');
+            $config['file_name'] = $this->input->post('tname');
             $config['allowed_types'] = 'gif|jpg|png';
             $config['overwrite'] = true;
             $config['max_size']	= '10000';
@@ -320,40 +255,39 @@ class Category extends MX_Controller
 
             $this->load->library('upload', $config);
 
-            if ( !$this->upload->do_upload("userfile_update")) // if upload failure
+            if ( !$this->upload->do_upload("userfile")) // if upload failure
             {
                 $data['error'] = $this->upload->display_errors();
-                $category = array('name' => strtolower($this->input->post('tname_update')), 'code' => strtoupper($this->input->post('tcode_update')),
-                                  'parent_id' => $this->input->post('cparent_update'));
+                $category = array('name' => strtolower($this->input->post('tname')), 'code' => strtoupper($this->input->post('tcode')),
+                                  'parent_id' => $this->input->post('cparent'));
                 $img = null;
             }
             else
             {
+//                $this->remove_image($uid);
                 $info = $this->upload->data();
-                $category = array('name' => strtolower($this->input->post('tname_update')), 'code' => strtoupper($this->input->post('tcode_update')), 'parent_id' => $this->input->post('cparent_update'), 'image' => $info['file_name']);
+                $category = array('name' => strtolower($this->input->post('tname')), 'code' => strtoupper($this->input->post('tcode')), 'parent_id' => $this->input->post('cparent'), 'image' => $info['file_name']);
                 $img = base_url().'images/category/'.$info['file_name'];
             }
 
-	    $this->Category_model->update($this->session->userdata('langid'), $category);
-            $this->session->set_flashdata('message', "One $this->title has successfully updated!");
-            
-            if ($this->upload->display_errors()){ echo "warning|".$this->upload->display_errors(); }
-            else { echo 'true|Data successfully saved..!|'.base_url().'images/category/'.$info['file_name']; }
-            
+            if ($this->model->update($uid, $category) != true && $this->upload->display_errors()){ $this->reject($this->upload->display_errors());
+            }else{ $this->error = $this->title.' successfully saved..!'; }
+            $this->output = $data;
         }
-        else{ echo 'error|'.validation_errors(); }
-        }else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
+        else{ $this->reject(validation_errors()); }
+        }else{ $this->reject_token(); }
+        $this->response('content');
     }
     
-    function remove_image($uid)
+    private function remove_image($uid)
     {
-       $img = $this->Category_model->get_by_id($uid)->row();
+       $img = $this->model->get_by_id($uid)->row();
        $img = $img->image;
-       if ($img){ $img = "./images/category/".$img; unlink("$img"); } 
+       if ($img){ $img = "./images/category/".$img; return unlink("$img"); } 
     }
     
     // ====================================== CLOSING ======================================
-    function reset_process(){ $this->Category_model->closing(); } 
+    function reset_process(){ $this->model->closing(); } 
 
 }
 

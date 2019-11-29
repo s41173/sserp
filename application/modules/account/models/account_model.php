@@ -5,16 +5,16 @@ class Account_model extends Custom_Model
     protected $logs;
     
     function __construct()
-    {
+    {        
         parent::__construct();
         $this->logs = new Log_lib();
         $this->com = new Components();
+        $this->tableName = $this->com->get_table($this->com->get_id('account'));
         $this->com = $this->com->get_id('account');
-        $this->tableName = 'accounts';
+        $this->field = $this->db->list_fields($this->tableName);
     }
     
-    protected $field = array('id', 'classification_id', 'currency', 'code', 'name', 'alias', 'acc_no', 'bank', 
-                             'status', 'default', 'bank_stts', 'created', 'updated', 'deleted');
+    protected $field;
     protected $com;
     
     function get_last($limit, $offset=null)
@@ -35,6 +35,14 @@ class Account_model extends Custom_Model
         $this->cek_null($clas, 'classification_id');
         $this->db->order_by('code', 'asc'); 
         return $this->db->get(); 
+    }
+    
+    function get_by_code($code){
+      $this->db->select($this->field);
+      $this->db->from($this->tableName); 
+      $this->db->where('deleted', $this->deleted); 
+      $this->db->where('code', $code); 
+      return $this->db->get(); 
     }
     
     function search($clas=null,$publish=null)

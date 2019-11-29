@@ -1,4 +1,8 @@
 <?php if ( ! defined('BASEPATH')) exit('No direct script access allowed');
+require_once 'definer.php';
+
+require_once APPPATH.'libraries/jwt/JWT.php';
+use \Firebase\JWT\JWT;
 
 class Main extends MX_Controller
 {
@@ -11,22 +15,24 @@ class Main extends MX_Controller
         $this->load->library('user_agent');
         $this->properti = $this->property->get();
 
-        $this->acl->otentikasi();
+//        $this->acl->otentikasi();
         $this->period = new Period_lib();
         $this->period = $this->period->get();
         $this->customer = new Customer_lib();
         $this->vendor = new Vendor_lib();
+        $this->api = new Api_lib();
+        
+        header('Access-Control-Allow-Origin: *');
+        header('Access-Control-Allow-Methods: GET, POST, PATCH, PUT, DELETE, OPTIONS');
+        header('Access-Control-Allow-Headers: Origin, Content-Type, X-Auth-Token');  
     }
 
     var $title = 'main';
     var $limit = null;
-    private $properti,$period,$customer,$vendor;
-
-    function index()
-    {       
-	$this->main_panel();
-    }
-    
+    private $properti,$period,$customer,$vendor,$api;
+    protected $error = null;
+    protected $status = 200;
+    protected $output = null;
 
     private function user_agent()
     {
@@ -38,133 +44,51 @@ class Main extends MX_Controller
         return $agent." - ".$this->agent->platform();
     }
     
-    function main_panel()
+    function index()
     {
-       $data['name'] = $this->properti['name'];
-       $data['title'] = $this->properti['name'].' | Administrator  '.ucwords('Main Panel');
-       $data['h2title'] = "Main Panel";
+        if ($this->api->otentikasi() == TRUE){
+           $status = 200;
 
-       $data['waktu'] = tgleng(date('Y-m-d')).' - '.waktuindo().' WIB';
-       $data['user_agent'] = $this->user_agent();
-       $data['month'] = get_month($this->period->month);
-       $data['year'] = $this->period->year;
-       $data['main_view'] = 'main/main_view';
-       
-       // chart
-       $data['archart'] = site_url()."/main/ar_chart/";
-       $data['apchart'] = site_url()."/main/ap_chart/";
-       
-       // table
-       $data['salestable'] = $this->get_ar_list();
-       $data['purchasetable'] = $this->get_ap_list();
-       
-       // ============ check in ========================
-//       $data['checkintable'] = $this->get_check_in();
-       
-       // ============ check out ========================
-        $data['checkouttable'] = $this->get_check_out();
-        $data['producttable']  = $this->get_min_product();
-       
-       $this->load->view('template', $data);
+           $output['useragent'] = $this->user_agent();
+           $output['month'] = get_month($this->period->month);
+           $output['year'] = $this->period->year;
+           $output['com_name'] = $this->properti['name'];
+           $output['min_product'] = $this->get_min_product();
+           $output['check_out'] = $this->get_check_out();
+           $output['ar_list'] = $this->get_ar_list();
+           $output['ap_list'] = $this->get_ap_list();
+           $output['ap_chart'] = $this->ap_chart();
+           $output['ar_chart'] = $this->ar_chart();
 
+        }else{ $this->reject_token(); }
+        $this->api->response(array('error' => $this->error, 'content' => $this->output), $this->status);
     }
     
-    private function get_min_product()
-    {
-        $val = $this->Main_model->get_min_product()->result();
-        
-        $tmpl = array ('table_open'          => '<table class="table table-striped jambo_table bulk_action">',
-                       'heading_row_start'   => '<tr class="headings">'
-              );
-        
-        $this->table->set_template($tmpl);
-        $this->table->set_empty("&nbsp;");
-        $this->table->set_heading('No', 'Code', 'Name', 'Qty', 'Cur');
-        $i = 0;
-        foreach ($val as $sales)
-        { $this->table->add_row ( ++$i, $sales->sku, strtoupper($sales->name), $sales->qty.' '.$sales->unit, strtoupper($sales->currency)); }
-        $table = $this->table->generate();
-        return $table;
-    }
+    // ================ API =================
     
-    private function get_check_out()
-    {
-        $val = $this->Main_model->checkout('ap_payment')->result();
-
-        $tmpl = array ('table_open'          => '<table class="table table-striped jambo_table bulk_action">',
-                       'heading_row_start'   => '<tr class="headings">'
-              );
-        $this->table->set_template($tmpl);
-        $this->table->set_empty("&nbsp;");
-        $this->table->set_heading('No', 'Code', 'Check-No', 'Cur', 'Date', 'Due', 'Balance');
-        $i = 0;
-        foreach ($val as $sales)
-        { $this->table->add_row ( ++$i, 'CR-00'.$sales->no, $sales->check_no, $sales->currency, tglin($sales->dates), tglin($sales->due), idr_format($sales->amount) ); }
-        $table = $this->table->generate();
-        return $table;
-
-    }
-    
-    private function get_check_in()
-    {
-        $val = $this->Main_model->checkin()->result();
-
-         $tmpl = array ('table_open'          => '<table class="table table-striped jambo_table bulk_action">',
-                       'heading_row_start'   => '<tr class="headings">'
-              );
+    private function get_min_product(){
         
-        $this->table->set_template($tmpl);
-        $this->table->set_empty("&nbsp;");
-        $this->table->set_heading('No', 'Code', 'Check-No', 'Cur', 'Date', 'Due', 'Balance');
-        $i = 0;
-        foreach ($val as $sales)
-        { $this->table->add_row ( ++$i, 'CR-00'.$sales->no, $sales->check_no, $sales->currency, tglin($sales->dates), tglin($sales->due), idr_format($sales->amount) ); }
-        $table = $this->table->generate();
-        return $table;
-
-    }
-    
-    private function get_ar_list()
-    {
-        $val = $this->Main_model->get_ar_list()->result();
-
-        $tmpl = array ('table_open'          => '<table class="table table-striped jambo_table bulk_action">',
-                       'heading_row_start'   => '<tr class="headings">'
-              );
-        
-        $this->table->set_template($tmpl);
-        $this->table->set_empty("&nbsp;");
-        $this->table->set_heading('No', 'Code', 'Date', 'Customer', 'Balance');
-        $i = 0;
-        foreach ($val as $sales)
-        {
-            $this->table->add_row ( ++$i, 'SO-0'.$sales->id,  tglin($sales->dates), $this->customer->get_name($sales->cust_id), idr_format($sales->amount) ); 
+        $output = null;
+        $result = $this->Main_model->get_min_product()->result();
+        foreach($result as $res){
+          $output[] = array ("sku" => $res->sku, "name" => $res->name, "qty" => $res->qty, "unit" => $res->unit, "currency" => $res->currency);
         }
-        $table = $this->table->generate();
-        return $table;
-
+        return $output;
     }
     
-    private function get_ap_list()
-    {
-        $val = $this->Main_model->get_ap_list()->result();
-
-        $tmpl = array ('table_open'          => '<table class="table table-striped jambo_table bulk_action">',
-                       'heading_row_start'   => '<tr class="headings">'
-              );
+    private function get_check_out(){
         
-        $this->table->set_template($tmpl);
-        $this->table->set_empty("&nbsp;");
-        $this->table->set_heading('No', 'Code', 'Date', 'Vendor', 'Balance');
-        $i = 0;
-        foreach ($val as $sales)
-        { $this->table->add_row ( ++$i, 'PO-0'.$sales->no,  tglin($sales->dates), $this->vendor->get_vendor_name($sales->vendor), idr_format($sales->p2) ); }
-        $table = $this->table->generate();
-        return $table;
+        $output = null;
+        $result = $this->Main_model->checkout('ap_payment')->result();
 
+        foreach($result as $res){
+            $output[] = array ("code" => 'CR-00'.$res->no, "check_no" => $res->check_no, "currency" => $res->currency,
+                               "date" => tglin($res->dates), "due" => tglin($res->due), "amount" => idr_format($res->amount));
+        }
+        return $output;
     }
-    
-    function ar_chart()
+   
+    private function ar_chart()
     {        
         $val1 = $this->Main_model->get_last_ar_between(30,0)->row_array();
         $val2 = $this->Main_model->get_last_ar_between(60,30)->row_array();
@@ -174,25 +98,35 @@ class Main extends MX_Controller
         $data = array(
                     array(
                         "label" => "0 - 30 Day",
-                        "y" => $val1['amount']
+                        "y" => floatval($val1['amount'])
                     ),
                     array(
                         "label" => "30 - 60 Day",
-                        "y" => $val2['amount']
+                        "y" => floatval($val2['amount'])
                     ),
                     array(
                         "label" => "60 - 90 Day",
-                        "y" => $val3['amount']
+                        "y" => floatval($val3['amount'])
                     ),
                     array(
                         "label" => "> 90 Day",
-                        "y" => $val4['amount']
+                        "y" => floatval($val4['amount'])
                     )
                 );
-       echo json_encode($data, JSON_NUMERIC_CHECK);
+       return $data;
     }
     
-    function ap_chart()
+    private function get_ar_list(){
+        
+        $output = null;
+        $result = $this->Main_model->get_ar_list()->result();
+        foreach($result as $res){
+            $output[] = array ("code" => 'SO-0'.$res->id, "date" => tglin($res->dates), "customer" => $this->customer->get_name($res->cust_id), "amount" => idr_format($res->amount));
+        }
+        return $output;
+    }
+    
+    private function ap_chart()
     {        
         $val1 = $this->Main_model->get_last_ap_between(30,0)->row_array();
         $val2 = $this->Main_model->get_last_ap_between(60,30)->row_array();
@@ -202,39 +136,68 @@ class Main extends MX_Controller
         $data = array(
                     array(
                         "label" => "0 - 30 Day",
-                        "y" => $val1['total']
+                        "y" => floatval($val1['total'])
                     ),
                     array(
                         "label" => "30 - 60 Day",
-                        "y" => $val2['total']
+                        "y" => floatval($val2['total'])
                     ),
                     array(
                         "label" => "60 - 90 Day",
-                        "y" => $val3['total']
+                        "y" => floatval($val3['total'])
                     ),
                     array(
                         "label" => "> 90 Day",
-                        "y" => $val4['total']
+                        "y" => floatval($val4['total'])
                     )
                 );
-       echo json_encode($data, JSON_NUMERIC_CHECK);
+       return $data;
     }
 
-    function article()
-    {
-       otentikasi1($this->title);
-       $property = $this->Property_model->get_last_propery()->row();
-       $data['name'] = $property->name;
-       $data['title'] = propertyname('Article');
-       $data['h2title'] = "Article Panel";
-
-       $data['waktu'] = tgleng(date('Y-m-d')).' - '.waktuindo().' WIB';
-       $data['main_view'] = 'main/article';
-       $this->load->view('template', $data);
+    
+    private function get_ap_list(){
+        
+        $output = null;
+        $result = $this->Main_model->get_ap_list()->result();
+        foreach($result as $res){
+            $output[] = array ("code" => 'PO-0'.$res->no, "date" => tglin($res->dates), "vendor" => $this->vendor->get_vendor_name($res->vendor), "amount" => idr_format($res->p2));
+        }
+        return $output;
     }
     
-    // ====================================== CLOSING ======================================
-    function reset_process(){ }
+    // api mobile purpose
+    function ap_sum(){
+        if ($this->api->otentikasi() == TRUE){
+          $result = $this->Main_model->get_ap_sum($this->input->post('type'),$this->input->post('currency'), $this->input->post('tstart'),$this->input->post('tend'));
+        }else{ $this->reject_token(); }
+        $this->api->response(array('error' => $this->error, 'content' => $result), $this->status); 
+    }
+    
+    function ar_sum(){
+        if ($this->api->otentikasi() == TRUE){
+          $result = $this->Main_model->get_ar_sum($this->input->post('type'),$this->input->post('currency'), $this->input->post('tstart'),$this->input->post('tend'));
+        }else{ $this->reject_token(); }
+        $this->api->response(array('error' => $this->error, 'content' => $result), $this->status); 
+    }
+    
+    // ------- ringkasan mobile ---------------
+    
+    // tempel d modul pembelian
+    private function ap_summary($cur = 'IDR'){
+      $result['apcredit'] = $this->Main_model->get_ap_sum_credit($cur);
+      $result['apoverdue'] = $this->Main_model->get_ap_sum_credit_overdue($cur);
+      $result['appaymentsum'] = $this->Main_model->get_ap_payment_sum($cur);
+      return $result;
+    }
+    
+    // tempel d modul penjualan
+    private function ar_summary($cur = 'IDR'){
+//    jumlah penjualan yang belum d bayar / status 0
+      $result['arcredit'] = $this->Main_model->get_ar_sum_credit($cur);
+      $result['aroverdue'] = $this->Main_model->get_ar_sum_credit_overdue($cur);
+      $result['arpaymentsum'] = $this->Main_model->get_ar_payment_sum($cur);
+      return $result;
+    }
     
 }
 

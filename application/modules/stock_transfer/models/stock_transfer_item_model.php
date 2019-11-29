@@ -18,6 +18,13 @@ class Stock_transfer_item_model extends CI_Model
         return $this->db->get(); 
     }
     
+    function valid_add_trans($pid,$title='main')
+    {
+        if (!$pid){ return FALSE; }
+        $trans = $this->get_item_by_id($pid);
+        if (!$trans){ return FALSE; }else{ return TRUE; }
+    }
+    
     private function cek_null($val,$field)
     {
         if ($val == null){return null;}

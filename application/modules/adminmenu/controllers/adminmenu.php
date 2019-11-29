@@ -1,5 +1,8 @@
 <?php if (!defined('BASEPATH')) exit('No direct script access allowed');
 
+require_once APPPATH.'libraries/jwt/JWT.php';
+use \Firebase\JWT\JWT;
+
 class Adminmenu extends MX_Controller
 {
     function __construct()
@@ -7,9 +10,7 @@ class Adminmenu extends MX_Controller
         parent::__construct();
         
         $this->load->model('Adminmenu_model', 'model', TRUE);
-
         $this->properti = $this->property->get();
-        $this->acl->otentikasi();
 
         $this->modul = $this->components->get(strtolower(get_class($this)));
         $this->title = strtolower(get_class($this));
@@ -17,90 +18,79 @@ class Adminmenu extends MX_Controller
         $this->city = new City_lib();
         $this->menu = new Adminmenu_lib();
         $this->component = new Components();
+        $this->api = new Api_lib();
+        $this->acl = new Acl();
+        
+        header('Access-Control-Allow-Origin: *');
+        header('Access-Control-Allow-Methods: GET, POST, PATCH, PUT, DELETE, OPTIONS');
+        header('Access-Control-Allow-Headers: Origin, Content-Type, X-Auth-Token'); 
     }
 
-    private $properti, $modul, $title;
+    private $properti, $modul, $title, $api, $acl;
     private $role,$city,$menu,$component;
-
-    function index()
-    {
-       $this->get_last(); 
-    }
+    protected $error = null;
+    protected $status = 200;
+    protected $output = null;
      
-    public function getdatatable($search=null)
-    {
-        if(!$search){ $result = $this->model->get_last($this->modul['limit'])->result(); }
-	
-        $output = null;
-        if ($result){
+    // dashboard purpose 
+    function get(){
+        
+      if ($this->api->otentikasi() == TRUE){
+        $result = $this->menu->get_parent_menu();
+        foreach($result as $res){
             
-          foreach ($result as $res)    
-          {
-              if ($res->parent_status == 1){ $stts = 'parent'; }else { $stts = 'child'; }
-              $output[] = array ($res->id, $this->menu->getmenuname($res->parent_id), $res->name, $res->modul, $res->url, $res->menu_order,
-                                 $res->class_style, $res->id_style, $res->icon, $res->target, $stts
-                             );
-          }
-            
-        $this->output
-         ->set_status_header(200)
-         ->set_content_type('application/json', 'utf-8')
-         ->set_output(json_encode($output))
-         ->_display();
-         exit;  
+            if ($res->parent_status == 1){ $stts = 'parent'; }else { $stts = 'child'; }
+            $this->output[] = array ("id" => $res->id, "parent" => $this->menu->getmenuname($res->parent_id), "name" => $res->name,
+                               "modul" => $res->modul, "url" => $res->url, "order" => $res->menu_order, "class_style" => $res->class_style,
+                               "id_style" => $res->id_style, "icon" => $res->icon, "target" => $res->target, $stts);
         }
-    }
-
-    function get_last()
-    {
-        $this->acl->otentikasi1($this->title);
-
-        $data['title'] = $this->properti['name'].' | Configurationistrator  '.ucwords($this->modul['title']);
-        $data['h2title'] = $this->modul['title'];
-        $data['main_view'] = 'menu_view';
-        $data['form_action'] = site_url($this->title.'/add_process');
-        $data['form_action_update'] = site_url($this->title.'/update_process');
-        $data['form_action_del'] = site_url($this->title.'/delete_all');
-        $data['link'] = array('link_back' => anchor('main/','Back', array('class' => 'btn btn-danger')));
-
-        $data['parent'] = $this->menu->combo();
-        $data['modul'] = $this->component->combo();
-	// ---------------------------------------- //
- 
-        $config['first_tag_open'] = $config['last_tag_open']= $config['next_tag_open']= $config['prev_tag_open'] = $config['num_tag_open'] = '<li>';
-        $config['first_tag_close'] = $config['last_tag_close']= $config['next_tag_close']= $config['prev_tag_close'] = $config['num_tag_close'] = '</li>';
-
-        $config['cur_tag_open'] = "<li><span><b>";
-        $config['cur_tag_close'] = "</b></span></li>";
-
-        // library HTML table untuk membuat template table class zebra
-        $tmpl = array('table_open' => '<table id="datatable-buttons" class="table table-striped table-bordered">');
-
-        $this->table->set_template($tmpl);
-        $this->table->set_empty("&nbsp;");
-
-        //Set heading untuk table
-        $this->table->set_heading('#','No', 'Parent', 'Name', 'Modul', 'Url', 'Order', 'Class', 'ID', 'Target', 'Status', 'Action');
-
-        $data['table'] = $this->table->generate();
-        $data['source'] = site_url($this->title.'/getdatatable');
-            
-        // Load absen view dengan melewatkan var $data sbgai parameter
-	$this->load->view('template', $data);
+//        $response['content'] = $output;
+        
+     }else{ $this->reject_token(); }
+     $this->response('content');
     }
     
-    function add_process()
-    {
-        if ($this->acl->otentikasi_admin($this->title,'ajax') == TRUE){
+    function get_child($parent=null){
+        
+        if ($this->api->otentikasi() == TRUE){
+        
+        if ($parent != 0){ $result = $this->menu->get_child_menu($parent);
+        }else{ $result = $this->menu->get_child_menu(); }
+        
+        foreach($result as $res){
 
-            $data['title'] = $this->properti['name'].' | Administrator  '.ucwords($this->modul['title']);
-            $data['h2title'] = $this->modul['title'];
-            $data['main_view'] = 'admin_view';
-            $data['form_action'] = site_url($this->title.'/add_process');
-            $data['link'] = array('link_back' => anchor('admin/','<span>back</span>', array('class' => 'back')));
+            if ($res->parent_status == 1){ $stts = 'parent'; }else { $stts = 'child'; }
+            $this->output[] = array ("id" => $res->id, "parent" => $this->menu->getmenuname($res->parent_id), "name" => $res->name,
+                               "modul" => $res->modul, "url" => $res->url, "order" => $res->menu_order, "class_style" => $res->class_style,
+                               "id_style" => $res->id_style, "icon" => $res->icon, "target" => $res->target, $stts);
+        }
+     }else{ $this->reject_token(); }
+     $this->response('content');
+    }
+    
+    function index()
+    {
+        if ($this->acl->otentikasi_admin() == TRUE){
+           
+            $result = $this->model->get_last($this->modul['limit'])->result();
+            
+            foreach($result as $res){
+
+                if ($res->parent_status == 1){ $stts = 'parent'; }else { $stts = 'child'; }
+                $this->output[] = array ("id" => $res->id, "parent" => $this->menu->getmenuname($res->parent_id), "name" => $res->name,
+                                   "modul" => $res->modul, "url" => $res->url, "order" => $res->menu_order, "class_style" => $res->class_style,
+                                   "id_style" => $res->id_style, "icon" => $res->icon, "target" => $res->target, $stts);
+            }
+        }else{ $this->reject_token(); }
+        $this->response('content');
+    }
+    
+    function add()
+    {
+        if ($this->acl->otentikasi_admin() == TRUE){
 
             // Form validation
-            $this->form_validation->set_rules('tname', 'Password', 'required|callback_valid_name');
+            $this->form_validation->set_rules('tname', 'Name', 'required|callback_valid_name');
             $this->form_validation->set_rules('cparent', 'Parent Adminmenu', 'callback_valid_parent');
             $this->form_validation->set_rules('cmodul', 'Modul', 'required');
             $this->form_validation->set_rules('turl', 'URL', 'required');
@@ -120,18 +110,12 @@ class Adminmenu extends MX_Controller
                               'parent_status' => $this->input->post('cstatus'), 'created' => date('Y-m-d H:i:s'));
 
                 $this->model->add($menu);
-                $this->session->set_flashdata('message', "One $this->title data successfully saved!");
-                echo 'true|Data successfully saved..!';
+                $this->error = 'Data successfully saved..!';
             }
-            else
-            {
-    //            $this->load->view('template', $data);
-    //            echo validation_errors();
-                echo 'warning|'.validation_errors();
-            }
+            else{ $this->error = validation_errors(); $this->status = 401; }
         }
-        else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
-
+        else { $this->reject_token(); }
+        $this->response();
     }
     
     function delete_all()
@@ -166,14 +150,12 @@ class Adminmenu extends MX_Controller
     
     function delete($uid)
     {
-        if ($this->acl->otentikasi_admin($this->title,'ajax') == TRUE){
+        if ($this->acl->otentikasi_admin($this->title) == TRUE){
             $this->model->delete_child($uid); // delete child related parent menu
             $this->model->force_delete($uid);
-            $this->session->set_flashdata('message', "1 $this->title successfully removed..!");
-
-            echo "true|1 $this->title successfully removed..!";
-        }else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
-        
+            $this->error = "1 $this->title successfully removed..!";
+        }else { $this->reject_token(); }
+        $this->response();
     }
     
     function update($uid=null)
@@ -222,7 +204,6 @@ class Adminmenu extends MX_Controller
             $this->session->set_flashdata('message', "One $this->title has successfully updated!");
           //  $this->session->unset_userdata('langid');
             echo "true|One $this->title has successfully updated..!";
-
         }
         else{ echo 'warning|'.validation_errors(); }
         }else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; }

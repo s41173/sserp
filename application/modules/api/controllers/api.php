@@ -2,18 +2,19 @@
 
 class Api extends MX_Controller {
 
-
    public function __construct()
    {
         parent::__construct();
-
 
         $this->load->helper('date');
         $this->log = new Log_lib();
         $this->load->library('email');
         $this->login = new Login_lib();
         $this->com = new Components();
-        $this->com = $this->com->get_id('login');
+//        $this->com = $this->com->get_id('login');
+        
+        $this->api = new Api_lib();
+        $this->acl = new Acl();
 
         $this->properti = $this->property->get();
         
@@ -24,12 +25,30 @@ class Api extends MX_Controller {
         // Your own constructor code
    }
 
-   private $date,$time,$log,$login;
+   private $log,$login,$api,$acl;
    private $properti,$com;
+   private $error = null;
+   private $status = 200;
+   private $output = null;
 
-   function index()
-   {
-       redirect('login');
+   function index(){}
+   
+   function otentikasi($title=null,$type=null){
+       
+        if ($this->api->otentikasi() == TRUE){    
+          if ($title != null && $this->com->valid($title) != FALSE){  
+            $res = FALSE;  
+            
+            if ($type == null || $type == 1){$res = $this->acl->otentikasi1($title);}
+            elseif ($type == 2){$res = $this->acl->otentikasi2($title);}
+            elseif ($type == 3){$res = $this->acl->otentikasi3($title);}
+            elseif ($type == 4){$res = $this->acl->otentikasi4($title);}
+
+            if ($res == FALSE){ $this->error = 'Invalid Authentication'; $this->status = 401; }
+            
+          }else{ $this->error = 'Component title required'; $this->status = 404; }  
+        }else{ $this->error = 'Invalid Token or Expired..!'; $this->status = 400; }
+       $this->api->response(array('error' => $this->error, 'content' => $this->output), $this->status); 
    }
     
     function contact(){

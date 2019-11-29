@@ -33,8 +33,8 @@ class Vendor_model extends Custom_Model
         $this->db->select($this->field);
         $this->db->from($this->tableName); 
         $this->db->where('deleted', $this->deleted);
-        $this->cek_null_string($cat, 'city');
-        $this->cek_null_string($publish, 'status');
+        $this->cek_null($cat, 'city');
+        $this->cek_nol($publish, 'status');
         
         $this->db->order_by('id', 'asc'); 
         return $this->db->get(); 

@@ -13,7 +13,7 @@ class Checkout_model extends CI_Model
         elseif($val == 'ar_refund') { $val = 'ar_refund'; } elseif($val == 'nar_refund') { $val = 'nar_refund'; } return $val;
     }
     
-    function search($no,$start,$end,$type)
+    function search($no,$start,$end,$type='purchase')
     {
         $this->db->select('check_no, no, bank, account, currency, dates, due, amount');
         $this->db->from($this->table($type));

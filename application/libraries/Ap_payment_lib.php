@@ -65,7 +65,7 @@ class Ap_payment_lib extends Custom_Model {
     function set_over_stts($no, $users)
     {
         $this->db->where('no', $no);
-        $this->db->update($this->table, $users);
+        return $this->db->update($this->table, $users);
     }
     
     function set_post_stts($no, $users)

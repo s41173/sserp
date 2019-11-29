@@ -63,17 +63,18 @@
         <div style='margin-top: 10px;' id="output"> </div>
         </div>
 
-		<table id="input" border="0" width="100%" style="visibility:hidden;">
-		 <thead>
+		<table id="input" border="0" width="100%">
+		   <thead>
            <tr>
- 	       <th> No </th> <th> User </th> <th> Date </th> <th> Time </th> <th> Component </th> <th> Activity </th>  
+ 	       <th> Log-ID </th> <th> User </th> <th> Date </th> <th> Time </th> <th> Component </th> <th> Activity </th> 
+           <th> Field </th> 
 		   </tr>
-         </thead>
-
-          <tbody>
-		  <?php
-
-		  	  function user($val=null)
+           </thead>
+		  
+          <tbody> 
+		  <?php 
+		  
+		      function user($val=null)
 			  {
 				 $user = new Admin_lib(); 
 				 return $user->get_username($val);
@@ -84,7 +85,7 @@
 				 $user = new Components(); 
 				 return $user->get_name($val);
 			  }  
-
+			  		  
 		      $i=1; 
 			  if ($reports)
 			  {
@@ -92,20 +93,19 @@
 				{	
 				   echo " 
 				   <tr> 
-				       <td class=\"strongs\">".$i."</td> 
+				       <td class=\"strongs\">".$res->id."</td> 
 					   <td class=\"strongs\">".user($res->userid)."</td> 
 					   <td class=\"strongs\">".tglin($res->date)."</td> 
 					   <td class=\"strongs\">".$res->time."</td>
 					   <td class=\"strongs\">".com($res->component_id)."</td> 
    					   <td class=\"strongs\">".$res->activity."</td> 
+                       <td class=\"strongs\">".$res->field."</td> 
 				   </tr>";
 				   $i++;
 				}
-			  }  
+			 }  
 		  ?>
-
-          </tbody>
-
+		</tbody>   
 		</table>
 	</div>
 	

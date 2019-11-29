@@ -15,12 +15,12 @@ class Stock_transfer_model extends Custom_Model
     
     protected $field = array('id', 'no', 'dates', 'currency', 'branch_from', 'branch_to', 'desc', 'staff', 'user', 'balance', 'approved', 'log');
     
-    function get_last($limit)
+    function get_last($limit,$offset=null)
     {
         $this->db->select($this->field);
         $this->db->from($this->tableName);
         $this->db->order_by('no', 'desc');
-        $this->db->limit($limit);
+        $this->db->limit($limit,$offset);
         return $this->db->get(); 
     }
 

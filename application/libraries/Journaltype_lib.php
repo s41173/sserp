@@ -49,6 +49,13 @@ class Journaltype_lib extends Custom_Model {
         $res = $this->db->get()->row();
         return $res->code;
     }
+    
+    function valid_code($val){
+        $this->db->select('code');
+        $this->db->from($this->tableName);
+        $this->db->where('code', $val);
+        if ($this->db->get()->num_rows() > 0){ return TRUE; }else{ return FALSE; } 
+    }
 
 
 }

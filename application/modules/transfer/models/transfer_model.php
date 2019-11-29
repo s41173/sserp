@@ -21,11 +21,11 @@ class Transfer_model extends Custom_Model
         return $this->db->count_all($this->tableName);
     }
     
-    function get_last_transfer($limit)
+    function get_last_transfer($limit,$offset=null)
     {
         $this->db->select($this->field);
         $this->db->order_by('no', 'desc');
-        $this->db->limit($limit);
+        $this->db->limit($limit,$offset);
         return $this->db->get($this->tableName);
     }
 
@@ -62,13 +62,13 @@ class Transfer_model extends Custom_Model
     function update($uid, $users)
     {
         $this->db->where('no', $uid);
-        $this->db->update($this->tableName, $users);
+        return $this->db->update($this->tableName, $users);
     }
 
     function update_id($uid, $users)
     {
         $this->db->where('id', $uid);
-        $this->db->update($this->tableName, $users);
+        return $this->db->update($this->tableName, $users);
     }
 
     function valid_no($no)

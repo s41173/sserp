@@ -40,7 +40,8 @@
 
 $route['default_controller'] = "main";
 $route['404_override'] = '';
-
+////$route['*']['OPTIONS'] = 'login/preflight';
+//$route['(:any)']['OPTIONS'] = "login/preflight";
 
 /* End of file routes.php */
 /* Location: ./application/config/routes.php */

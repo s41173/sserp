@@ -9,103 +9,76 @@ class Configuration extends MX_Controller
         $this->load->model('Configuration_model', '', TRUE);
 
         $this->properti = $this->property->get();
-        $this->acl->otentikasi();
 
         $this->modul = $this->components->get(strtolower(get_class($this)));
         $this->title = strtolower(get_class($this));
         $this->role = new Role_lib();
         $this->city = new City_lib();
         $this->period = new Period_lib();
+        
+        $this->api = new Api_lib();
+        $this->acl = new Acl();
+        
+        header('Access-Control-Allow-Origin: *');
+        header('Access-Control-Allow-Methods: GET, POST, PATCH, PUT, DELETE, OPTIONS');
+        header('Access-Control-Allow-Headers: Origin, Content-Type, X-Auth-Token');  
     }
 
     private $properti, $modul, $title;
-    private $role,$city,$period;
+    private $role,$city,$period,$api,$acl;
+    protected $error = null;
+    protected $status = 200;
+    protected $output = null;
 
     function index()
     {
-       $this->get_last(); 
+       if ($this->acl->otentikasi_admin() == TRUE){
+          $ps = $this->period->get(); 
+          $result = $this->Configuration_model->get_last($this->modul['limit'])->row_array();
+          $period = array('logo_url' => $result['logo'], 'month' => $ps->month, 'year' => $ps->year, 'start_month' => $ps->start_month,
+                          'start_year' => $ps->start_year, 'closing_month' => $ps->closing_month, 
+                          'url_upload' => $result['url_upload'], 'image_url' => $result['image_url']);
+          
+          $this->output = array_merge($result,$period);
+
+       }else{ $this->reject_token(); }
+       $this->api->response(array('error' => $this->error, 'content' => $this->output), $this->status);
     }
-     
-    public function getdatatable($search=null)
+    
+    function get_city()
     {
-        if(!$search){ $result = $this->Configuration_model->get_last($this->modul['limit'])->row(); }
-	
-        $output = null;
-        if ($result){
-        $ps = $this->period->get();        
-        $output[] = array ($result->id, $result->name, $result->address, $result->phone1, $result->phone2, $result->email,
-                              $result->billing_email, $result->technical_email, $result->cc_email, $result->zip, $result->account_name,
-                              $result->account_no, $result->bank, $result->city, $result->site_name, $result->meta_description,
-                              $result->meta_keyword, $result->logo, $result->manager, $result->accounting, $ps->month, $ps->year, $ps->start_month, 
-                              $ps->start_year, $ps->closing_month
-                             );
-         
-        $this->output
-         ->set_status_header(200)
-         ->set_content_type('application/json', 'utf-8')
-         ->set_output(json_encode($output))
-         ->_display();
-         exit;  
-        }
-    }
+      if ($this->api->otentikasi() == TRUE){
+        $curl = curl_init();
 
-    function get_last()
-    {
-        $this->acl->otentikasi1($this->title);
+        curl_setopt_array($curl, array(
+//          CURLOPT_URL => "http://api.rajaongkir.com/starter/province",
+          CURLOPT_URL => "http://api.rajaongkir.com/starter/city",
+          CURLOPT_RETURNTRANSFER => true,
+          CURLOPT_ENCODING => "",
+          CURLOPT_MAXREDIRS => 10,
+          CURLOPT_TIMEOUT => 30,
+          CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+          CURLOPT_CUSTOMREQUEST => "GET",
+          CURLOPT_HTTPHEADER => array(
+            "key: eb7f7529d68f6a2933b5a042ffeeac9d"
+          ),
+        ));
 
-        $data['title'] = $this->properti['name'].' | Configurationistrator  '.ucwords($this->modul['title']);
-        $data['h2title'] = $this->modul['title'];
-        $data['main_view'] = 'configuration_view';
-        $data['form_action1'] = site_url($this->title.'/update_process/1');
-        $data['form_action2'] = site_url($this->title.'/update_process/2');
-        $data['form_action3'] = site_url($this->title.'/update_process/3');
-        $data['form_action4'] = site_url($this->title.'/update_process/4');
-        $data['form_action5'] = site_url($this->title.'/update_process/5');
-        $data['link'] = array('link_back' => anchor('main/','Back', array('class' => 'btn btn-danger')));
+        $response = curl_exec($curl);
+        $err = curl_error($curl);
+        curl_close($curl);
 
-        $data['roles'] = $this->role->combo();
-        $data['city'] = $this->city->combo_city_name();
+        if ($err) { $this->error = "cURL Error #:" . $err; $this->status = 401;} 
+        else { $this->output = json_decode($response, true); }
         
-        // period setting
-        $data['cmonth'] = combo_month();
-	// ---------------------------------------- //
- 
-        $config['first_tag_open'] = $config['last_tag_open']= $config['next_tag_open']= $config['prev_tag_open'] = $config['num_tag_open'] = '<li>';
-        $config['first_tag_close'] = $config['last_tag_close']= $config['next_tag_close']= $config['prev_tag_close'] = $config['num_tag_close'] = '</li>';
-
-        $config['cur_tag_open'] = "<li><span><b>";
-        $config['cur_tag_close'] = "</b></span></li>";
-
-        // library HTML table untuk membuat template table class zebra
-        $tmpl = array('table_open' => '<table id="datatable-buttons" class="table table-striped table-bordered">');
-
-        $this->table->set_template($tmpl);
-        $this->table->set_empty("&nbsp;");
-
-        //Set heading untuk table
-        $this->table->set_heading('#','No', 'Username', 'E-mail', 'Role', 'Status', 'Action');
-
-        $data['table'] = $this->table->generate();
-        $data['source'] = site_url($this->title.'/getdatatable');
-            
-        // Load absen view dengan melewatkan var $data sbgai parameter
-	$this->load->view('template', $data);
+        }else{ $this->reject_token(); }
+       $this->api->response(array('error' => $this->error, 'content' => $this->output), $this->status);
     }
 
     // Fungsi update untuk mengupdate db
-    function update_process($param=0)
+    function update($param=0)
     {
-        if ($this->acl->otentikasi3($this->title,'ajax') == TRUE){
-
-        $data['title'] = $this->properti['name'].' | Configurationistrator  '.ucwords($this->modul['title']);
-        $data['h2title'] = $this->modul['title'];
-        $data['main_view'] = 'admin_update';
-	$data['form_action1'] = site_url($this->title.'/update_process/1');
-        $data['form_action2'] = site_url($this->title.'/update_process/2');
-        $data['form_action3'] = site_url($this->title.'/update_process/3');
-        $data['form_action4'] = site_url($this->title.'/update_process/4');
-        $data['form_action5'] = site_url($this->title.'/update_process/5');
-	$data['link'] = array('link_back' => anchor('admin/','<span>back</span>', array('class' => 'back')));
+        if ($this->acl->otentikasi3($this->title) == TRUE){
 
 	// Form validation
         if ($param == 1)
@@ -138,6 +111,8 @@ class Configuration extends MX_Controller
             $this->form_validation->set_rules('tmanager', 'Manager', '');
             $this->form_validation->set_rules('taccounting', 'Accounting', '');
             $this->form_validation->set_rules('twebmail', 'Webmail', '');
+            $this->form_validation->set_rules('turl_upload', 'Url Upload', '');
+            $this->form_validation->set_rules('timage_url', 'Image Url', '');
         }
         elseif ($param == 5)
         {
@@ -147,7 +122,6 @@ class Configuration extends MX_Controller
             $this->form_validation->set_rules('tyear', 'Period Year', 'required|numeric'); 
             $this->form_validation->set_rules('cend_month', 'End-Closing Month', 'required'); 
         }
-
 
         if ($this->form_validation->run($this) == TRUE)
         {
@@ -160,19 +134,20 @@ class Configuration extends MX_Controller
                                   'zip' => $this->input->post('tzip'),'city' => $this->input->post('ccity'));
 
                 $this->Configuration_model->update(1, $property);
-                echo "true|One $this->title has successfully updated..! ";
+                $this->error = "One $this->title has successfully updated..! ";
             }
             elseif ($param == 2)
             {
                 $property = array( 'bank' => $this->input->post('tbank'), 'account_name' => $this->input->post('taccount_name'), 'account_no' => $this->input->post('taccount_no'));
                 $this->Configuration_model->update(1, $property);
-                echo "true|One $this->title has successfully updated..! ";
+                $this->error = "One $this->title has successfully updated..! ";
             }
             elseif ($param == 4)
             {   
-                $property = array( 'manager' => $this->input->post('tmanager'), 'accounting' => $this->input->post('taccounting'), 'email_link' => $this->input->post('twebmail'));
+                $property = array( 'manager' => $this->input->post('tmanager'), 'url_upload' => setnull($this->input->post("turl_upload")), 'image_url' => setnull($this->input->post("timage_url")),
+                                   'accounting' => $this->input->post('taccounting'), 'email_link' => $this->input->post('twebmail'));
                 $this->Configuration_model->update(1, $property);
-                echo "true|One $this->title has successfully updated..! ";
+                $this->error = "One $this->title has successfully updated..! ";
             }
             elseif ($param == 5)
             {   
@@ -199,9 +174,8 @@ class Configuration extends MX_Controller
                                    'closing_month' => $monthend
                                  );
                 
-//                 echo $startmonth.'|'.$startyear.'|'.$monthperiod.'|'.$monthend;
                 $this->period->update_period(1, $property);
-                echo "true|One $this->title has successfully updated..! ";
+                $this->error = "One $this->title has successfully updated..! ";
             }
             elseif ($param == 3){
             
@@ -221,17 +195,18 @@ class Configuration extends MX_Controller
                }
                else{
                    $info = $this->upload->data();
-                   $property = array('site_name' => $this->input->post('tsitename'), 'meta_description' => $this->input->post('tmetadesc'), 'meta_keyword' => $this->input->post('tmetakey'), 'logo' => $info['file_name']);
+                   $property = array('site_name' => $this->input->post('tsitename'), 'meta_description' => $this->input->post('tmetadesc'), 'meta_keyword' => $this->input->post('tmetakey'), 'logo' => base_url().'images/property/'.$info['file_name']);
                }
                
                $this->Configuration_model->update(1, $property);
-               if ($this->upload->display_errors()){ echo "warning|".$this->upload->display_errors(); }
-               else { echo "true|One $this->title has successfully updated..! "; }
+               if ($this->upload->display_errors()){ $this->error = $this->upload->display_errors(); $this->status = 401; }
+               else { $this->error = "One $this->title has successfully updated..! "; $this->status = 401; }
             }
             
-        } else{ echo 'error|'.validation_errors(); }
+        } else{ $this->error = validation_errors(); $this->status = 401; }
       }
-      else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
+      else{ $this->reject_token(); }
+      $this->api->response(array('error' => $this->error), $this->status);
     }
     
     function remove_img()
@@ -277,11 +252,7 @@ class Configuration extends MX_Controller
             else { return TRUE; }
         }
     }
-    
-    // ====================================== CLOSING ======================================
-    function reset_process(){ } 
-
-
+   
 }
 
 ?>

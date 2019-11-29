@@ -9,7 +9,6 @@ class Transfer extends MX_Controller
         $this->load->model('Transfer_model', 'model', TRUE);
 
         $this->properti = $this->property->get();
-        $this->acl->otentikasi();
 
         $this->modul = $this->components->get(strtolower(get_class($this)));
         $this->title = strtolower(get_class($this));
@@ -19,91 +18,58 @@ class Transfer extends MX_Controller
         $this->journalgl = $this->load->library('journalgl_lib');
         $this->account = new Account_lib();
         $this->ledger  = new Cash_ledger_lib();
+        
+        $this->api = new Api_lib();
+        $this->acl = new Acl();
+        
+        header('Access-Control-Allow-Origin: *');
+        header('Access-Control-Allow-Methods: GET, POST, PATCH, PUT, DELETE, OPTIONS');
+        header('Access-Control-Allow-Headers: Origin, Content-Type, X-Auth-Token');  
     }
 
-    private $properti, $modul, $title, $account, $ledger;
+    private $properti, $modul, $title, $account, $ledger, $api, $acl;
     private $vendor,$user,$currency,$journalgl;
-
+    protected $error = null;
+    protected $status = 200;
+    protected $output = null;
+    
     function index()
     {
-       $this->get_last();
-    }
-    
-    public function getdatatable($search=null,$date='null')
-    {
-        if(!$search){ $result = $this->model->get_last_transfer($this->modul['limit'])->result(); }
-        else{ $result = $this->model->search($date)->result(); }
+        if ($this->acl->otentikasi1($this->title) == TRUE){
+        $datax = (array)json_decode(file_get_contents('php://input')); 
+        if (isset($datax['limit'])){ $this->limitx = $datax['limit']; }else{ $this->limitx = $this->modul['limit']; }
+        if (isset($datax['offset'])){ $this->offsetx = $datax['offset']; }
+            
+        $date = null;
+        if (isset($datax['date'])){ $date = $datax['date']; }
         
-        if ($result){
+        if(!$date){ $result = $this->model->get_last_transfer($this->limitx, $this->offsetx)->result(); }
+        else{ $result = $this->model->search($date)->result(); }
+        $resx = null;
 	foreach($result as $res)
 	{
-	   $output[] = array ($res->id, $res->no, $res->notes, tglin($res->dates), $res->currency, $this->get_acc($res->from), $this->get_acc($res->to), 
-                              $res->approved, idr_format($res->amount));
+           $resx[] = array ("id"=>$res->id, "no"=>$res->no, "notes"=>$res->notes, "dates"=>tglin($res->dates), 
+                                    "currency"=>$res->currency, "from"=>$this->get_acc($res->from), "to"=>$this->get_acc($res->to), 
+                                    "posted"=>$res->approved, "amount"=>$res->amount);
 	}
-            $this->output
-            ->set_status_header(200)
-            ->set_content_type('application/json', 'utf-8')
-            ->set_output(json_encode($output))
-            ->_display();
-            exit; 
-        }
+        $data['result'] = $resx; $data['counter'] = $this->model->counter(); $data['asset'] = $this->account->combo_asset();
+        $this->output = $data;
+        }else{ $this->reject_token(); }
+        $this->response('content');
     }
     
-    function get_last()
-    {
-        $this->acl->otentikasi1($this->title);
-
-        $data['title'] = $this->properti['name'].' | Administrator  '.ucwords($this->modul['title']);
-        $data['h2title'] = $this->modul['title'];
-        $data['main_view'] = 'transfer_view';
-	$data['form_action'] = site_url($this->title.'/add_process');
-        $data['form_action_update'] = site_url($this->title.'/update_process');
-        $data['form_action_del'] = site_url($this->title.'/delete_all');
-        $data['form_action_report'] = site_url($this->title.'/report_process');
-        $data['link'] = array('link_back' => anchor('main/','Back', array('class' => 'btn btn-danger')));
-        
-        $data['currency'] = $this->currency->combo();
-        $data['account'] = $this->account->combo_asset();
-        $data['code'] = $this->model->counter();
-	// ---------------------------------------- //
- 
-        $config['first_tag_open'] = $config['last_tag_open']= $config['next_tag_open']= $config['prev_tag_open'] = $config['num_tag_open'] = '<li>';
-        $config['first_tag_close'] = $config['last_tag_close']= $config['next_tag_close']= $config['prev_tag_close'] = $config['num_tag_close'] = '</li>';
-
-        $config['cur_tag_open'] = "<li><span><b>";
-        $config['cur_tag_close'] = "</b></span></li>";
-
-        // library HTML table untuk membuat template table class zebra
-        $tmpl = array('table_open' => '<table id="datatable-buttons" class="table table-striped table-bordered">');
-
-        $this->table->set_template($tmpl);
-        $this->table->set_empty("&nbsp;");
-
-        //Set heading untuk table
-        $this->table->set_heading('#','No', 'Code', 'Date', 'Notes', 'Currency', 'From Acc', 'To Acc', 'Amount', 'Action');
-
-        $data['table'] = $this->table->generate();
-        $data['source'] = site_url($this->title.'/getdatatable');
-            
-        // Load absen view dengan melewatkan var $data sbgai parameter
-	$this->load->view('template', $data);
-    }
-    
-    private function get_acc($acc)
-    {
-        return $this->account->get_code($acc).' : '.$this->account->get_name($acc);
-    }
+    private function get_acc($acc){ return $this->account->get_code($acc).' : '.$this->account->get_name($acc);}
 
     function confirmation($pid)
     {
-        if ($this->acl->otentikasi3($this->title,'ajax') == TRUE){
+        if ($this->acl->otentikasi3($this->title) == TRUE && $this->model->valid_add_trans($pid, $this->title) == TRUE){
         $transfer = $this->model->get_transfer_by_id($pid)->row();
 
-        if ($transfer->approved == 1){ echo "warning|$this->title already approved..!"; }
+        if ($transfer->approved == 1){ $this->reject("$this->title already approved..!"); }
         else
         {
             $total = $transfer->amount;
-            if ($total == 0){ echo "error|$this->title has no value..!"; }
+            if ($total == 0){ $this->reject("$this->title has no value..!"); }
             else
             {
                 $data = array('approved' => 1);
@@ -119,17 +85,16 @@ class Transfer extends MX_Controller
                 $this->ledger->remove($transfer->dates, "TR-00".$transfer->no);
                 $this->ledger->add($this->get_acc_type($transfer->to), "TR-00".$transfer->no, $transfer->currency, $transfer->dates, $transfer->amount, 0);
 
-                
-                $this->journalgl->new_journal('0'.$transfer->no,$transfer->dates,'TR',$transfer->currency, 'Transfer from : '.$this->acc_type($transfer->from).' to '.$this->acc_type($transfer->to), $transfer->amount, $this->session->userdata('log'));
+                $this->journalgl->new_journal('0'.$transfer->no,$transfer->dates,'TR',$transfer->currency, 'Transfer from : '.$this->acc_type($transfer->from).' to '.$this->acc_type($transfer->to), $transfer->amount, $this->decodedd->log);
                 $dpid = $this->journalgl->get_journal_id('TR','0'.$transfer->no);
                 
                 $this->journalgl->add_trans($dpid,$to,$transfer->amount,0); // to
                 $this->journalgl->add_trans($dpid,$from,0,$transfer->amount); // from
-
-                echo "true|$this->title TR-00$transfer->no confirmed..!";
+                $this->error = "TR-0$transfer->no confirmed..!";
             }
         }
-        }else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
+        }else { $this->reject_token(); }
+        $this->response();
     }
     
     private function get_acc_type($account)
@@ -139,13 +104,11 @@ class Transfer extends MX_Controller
        else { return 'bank'; }
     }
 
-
 //    ===================== approval ===========================================
 
-
-    function delete($uid)
+    function delete($uid=null)
     {
-        $this->acl->otentikasi_admin($this->title);
+        if ($this->acl->otentikasi3($this->title) == TRUE && $this->model->valid_add_trans($uid, $this->title) == TRUE){
         $transfer = $this->model->get_by_id($uid)->row();
 
         if ($this->valid_period($transfer->dates) == TRUE ) // cek journal harian sudah di approve atau belum
@@ -156,68 +119,21 @@ class Transfer extends MX_Controller
               $this->journalgl->remove_journal('TR', '0'.$transfer->no);
               $data = array('approved' => 0);
               $this->model->update_id($uid, $data);
+              $this->error = "1 $this->title successfully rollback..!";
             }
             else 
             {  $this->ledger->remove($transfer->dates, "TR-00".$transfer->no); // cash ledger  
-               $this->model->force_delete($uid); 
+               if ($this->model->force_delete($uid) == true){ $this->error = "1 $this->title successfully removed..!"; } 
             }
-            
-            echo "warning|1 $this->title successfully removed..!";
         }
-        else{  echo "error|1 $this->title can't removed, journal approved..!"; } 
-    }
-
-    private function counter()
-    {
-        $res = 0;
-        if ( $this->model->count() > 0 )
-        {
-           $this->model->select_max('no')->get();
-           $res = intval($this->model->no+1);
-        }
-        else{ $res = 1; }
-        return $res;
+        else{ $this->reject("1 $this->title can't removed, journal approved..!"); } 
+        }else { $this->reject_token(); }
+        $this->response();
     }
 
     function add()
     {
-        $this->acl->otentikasi2($this->title);
-
-        $data['title'] = $this->properti['name'].' | Administrator '.ucwords($this->modul['title']);
-        $data['h2title'] = 'Create New '.$this->modul['title'];
-	$data['form_action'] = site_url($this->title.'/add_process');
-        $data['form_action_item'] = site_url($this->title.'/add_item/');
-        
-        $data['currency'] = $this->currency->combo();
-        $data['code'] = $this->counter();
-        $data['user'] = $this->session->userdata("username");
-        $data['account'] = $this->account->combo_asset();
-        $data['customer'] = $this->customer->combo();
-        
-        $data['main_view'] = 'cash_form';
-        $data['source'] = site_url($this->title.'/getdatatable');
-        $data['link'] = array('link_back' => anchor($this->title,'Back', array('class' => 'btn btn-danger')));
-        
-        $data['total'] = 0;
-        $data['items'] = null;
-        
-        $this->load->view('template', $data);
-    }
-    
-
-    function add_process()
-    {
-         if ($this->acl->otentikasi2($this->title,'ajax') == TRUE){
-
-        $data['title'] = $this->properti['name'].' | Administrator  '.ucwords($this->modul['title']);
-        $data['h2title'] = $this->modul['title'];
-        $data['main_view'] = 'cash_form';
-	$data['form_action'] = site_url($this->title.'/add_process');
-        
-        $data['currency'] = $this->currency->combo();
-        $data['code'] = $this->model->counter();
-        $data['user'] = $this->session->userdata("username");
-        $data['account'] = $this->account->combo_asset();
+       if ($this->acl->otentikasi2($this->title) == TRUE){
 
 	// Form validation
         $this->form_validation->set_rules('tno', 'GJ - No', 'required|numeric|callback_valid_no');
@@ -231,116 +147,29 @@ class Transfer extends MX_Controller
         if ($this->form_validation->run($this) == TRUE)
         {
             $transfer = array('no' => $this->input->post('tno'), 'from' => $this->input->post('cfrom'), 'to' => $this->input->post('cto'),
-                        'dates' => $this->input->post('tdate'), 'currency' => $this->input->post('ccurrency'), 'notes' => $this->input->post('tnote'),
-                        'amount' => $this->input->post('tamount'), 'log' => $this->session->userdata('log'));
+                              'dates' => $this->input->post('tdate'), 'currency' => $this->input->post('ccurrency'), 'notes' => $this->input->post('tnote'),
+                              'amount' => $this->input->post('tamount'), 'log' => $this->decodedd->log);
             
-            $this->model->add($transfer);
-            echo "true|One $this->title data successfully saved!|";
+            if ($this->model->add($transfer) == true){ $this->error = $this->title.' successfully saved..!'; }else{ $this->reject(); }
         }
-        else{ echo "error|".validation_errors(); }
-        }else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
-
-    }
-    
-    function add_trans($id)
-    {
-        $this->acl->otentikasi2($this->title);
-        $this->model->valid_add_trans($id, $this->title);
-        
-        $cash = $this->model->where('id',$id)->get();
-        
-        $data['title'] = $this->properti['name'].' | Administrator '.ucwords($this->modul['title']);
-        $data['h2title'] = 'Create New '.$this->modul['title'];
-	$data['form_action'] = site_url($this->title.'/update_process/'.$id);
-        $data['form_action_item'] = site_url($this->title.'/add_item/'.$id);
-        
-        $data['customer'] = $this->customer->combo();
-        $data['currency'] = $this->currency->combo();
-        
-        $data['code'] = $cash->no;
-        $data['user'] = $this->session->userdata("username");
-        $data['account'] = $this->account->combo_asset();
-        
-        $data['main_view'] = 'cash_form';
-        $data['source'] = site_url($this->title.'/getdatatable');
-        $data['link'] = array('link_back' => anchor($this->title,'Back', array('class' => 'btn btn-danger')));
-        
-        $data['default']['dates'] = $cash->dates;
-        $data['default']['customer'] = $cash->customer;
-        $data['default']['currency'] = $cash->currency;
-        $data['default']['note'] = $cash->notes;
-        $data['default']['desc'] = $cash->desc;
-        $data['default']['acc'] = $cash->acc;
-        $data['total'] = $cash->amount;
-        $data['items'] = $this->transmodel->get_last_item($cash->id)->result();
-        
-        $this->load->view('template', $data);
+        else{ $this->reject(validation_errors()); }
+        }else{ $this->reject_token(); }
+        $this->response();
     }
 
-
-//    ======================  Item Transaction   ===============================================================
-
-    function add_item($po=null)
-    {
-        $this->form_validation->set_rules('titem', 'Item Name', 'required');
-        $this->form_validation->set_rules('tcredit', 'Credit', 'required|numeric');
-
-        if ($this->form_validation->run($this) == TRUE && $this->valid_confirmation($po) == TRUE)
-        {
-            $pitem = array('cash_id' => $po, 
-                           'account_id' => $this->account->get_id_code($this->input->post('titem')),
-                           'balance' => $this->input->post('tcredit'));
-            
-            $this->transmodel->add($pitem);
-            $this->update_trans($po);
-            echo 'true';
-        }
-        elseif ( $this->valid_confirmation($po) != TRUE ){ echo "error|Can't change value - Journal approved..!"; }
-        else{ echo 'error|'.validation_errors(); } 
-    }
-
-    private function update_trans($po)
-    {
-        $total = $this->transmodel->total($po);
-        $this->model->where('id', $po)->get();
-        $this->model->amount = $total['balance'];
-        $this->model->save();
-    }
-
-    function delete_item($id)
-    {
-        if ($this->acl->otentikasi_admin($this->title,'ajax') == TRUE){
-            
-        $jid = $this->transmodel->get_by_id($id)->row();
-        if ( $this->valid_confirmation($jid->cash_id) == TRUE )
-        {
-            $this->transmodel->force_delete($id);
-            $this->update_trans($jid->cash_id);
-            echo 'true|Transaction removed..!';
-        }
-        else{ echo "warning|Journal approved, can't deleted..!"; }
-        }else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
-    }
-//    ==========================================================================================
-    function update($uid=null)
+    function get($uid=null)
     {        
-        $res = $this->model->get_by_id($uid)->row_array();
-	$this->session->set_userdata('langid', $uid);
-        
-        echo implode("|", $res);
+       if ($this->acl->otentikasi1($this->title) == TRUE && $this->model->valid_add_trans($uid, $this->title) == TRUE){
+         $this->output = $this->model->get_by_id($uid)->row_array();
+       }else { $this->reject_token(); }
+       $this->response('content');
     }
     
     
     // Fungsi update untuk mengupdate db
-    function update_process()
+    function update($uid=null)
     {
-        if ($this->acl->otentikasi2($this->title,'ajax') == TRUE){
-
-        $jid = $this->session->userdata('langid');
-        $data['title'] = $this->properti['name'].' | Administrator  '.ucwords($this->modul['title']);
-        $data['h2title'] = $this->modul['title'];
-	$data['form_action'] = site_url($this->title.'/update_process/'.$jid);
-	$data['link'] = array('link_back' => anchor($this->title,'<span>back</span>', array('class' => 'back')));
+        if ($this->acl->otentikasi2($this->title) == TRUE && $this->model->valid_add_trans($uid, $this->title) == TRUE){
 
 	// Form validation
         $this->form_validation->set_rules('tdate', 'Date', 'required|callback_valid_period');
@@ -350,19 +179,18 @@ class Transfer extends MX_Controller
         $this->form_validation->set_rules('cfrom', 'From', 'required');
         $this->form_validation->set_rules('cto', 'To', 'required|callback_valid_acc');
 
-        if ($this->form_validation->run($this) == TRUE && $this->valid_confirmation($jid) == TRUE)
+        if ($this->form_validation->run($this) == TRUE && $this->valid_confirmation($uid) == TRUE)
         {
             $transfer = array('from' => $this->input->post('cfrom'), 'to' => $this->input->post('cto'),
                               'dates' => $this->input->post('tdate'), 'currency' => $this->input->post('ccurrency'), 'notes' => $this->input->post('tnote'),
-                              'amount' => $this->input->post('tamount'), 'log' => $this->session->userdata('log'));
+                              'amount' => $this->input->post('tamount'), 'log' => $this->decodedd->log);
 
-            $this->model->update_id($jid, $transfer);
-
-            echo "true|One $this->title data successfully updated!|";
+            if ($this->model->update_id($uid, $transfer) == true){ $this->error = 'Data successfully saved..'; }else{ $this->reject(); }
         }
-        elseif ($this->valid_confirmation($jid) != TRUE){ echo "warning|Journal approved, can't updated..!"; }
-        else{ echo 'error|'.validation_errors(); }
-        }else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
+        elseif ($this->valid_confirmation($uid) != TRUE){ $this->reject("Journal approved, can't updated..!"); }
+        else{ $this->reject(validation_errors()); }
+        }else { $this->reject_token(); }
+        $this->response();
     }
     
     public function valid_confirmation($id)
@@ -419,10 +247,10 @@ class Transfer extends MX_Controller
 
    function invoice($id=null)
    {
-       $this->acl->otentikasi2($this->title);
+       if ($this->acl->otentikasi1($this->title) == TRUE && $this->model->valid_add_trans($id, $this->title) == TRUE){
        $ap = $this->model->get_by_id($id)->row();
 
-       $data['h2title'] = 'Print Invoice'.$this->modul['title'];
+       $data['h2title'] = 'Print Invoice '.$this->modul['title'];
 
        $data['pono'] = $ap->no;
        $data['podate'] = tglin($ap->dates);
@@ -430,7 +258,7 @@ class Transfer extends MX_Controller
        $data['from'] = $this->acc_type($ap->from);
        $data['to'] = $this->acc_type($ap->to);
        $data['currency'] = $ap->currency;
-       $data['log'] = $this->session->userdata('log');
+       $data['log'] = $this->decodedd->log;
 
        $data['amount'] = $ap->amount;
        $terbilang = $this->load->library('terbilang');
@@ -440,116 +268,44 @@ class Transfer extends MX_Controller
        
        if($ap->approved == 1){ $stts = 'A'; }else{ $stts = 'NA'; }
        $data['stts'] = $stts;
-
-//       if ($ap->approved != 1){ $this->load->view('rejected', $data); }
-//       else { $this->load->view('apc_invoice', $data); }
-       $this->load->view('transfer_invoice', $data);
-
-   }
-   
-   function invoice_po($no=null)
-   {
-       $this->acl->otentikasi2($this->title);
-       $ap = $this->model->get_transfer_by_no($no)->row();
-
-       $data['h2title'] = 'Print Invoice'.$this->modul['title'];
-
-       $data['pono'] = $ap->no;
-       $data['podate'] = tglin($ap->dates);
-       $data['notes'] = $ap->notes;
-       $data['from'] = $this->acc_type($ap->from);
-       $data['to'] = $this->acc_type($ap->to);
-       $data['currency'] = $ap->currency;
-       $data['log'] = $this->session->userdata('log');
-
-       $data['amount'] = $ap->amount;
-       $terbilang = $this->load->library('terbilang');
-       if ($ap->currency == 'IDR')
-       { $data['terbilang'] = ucwords($terbilang->baca($ap->amount)).' Rupiah'; }
-       else { $data['terbilang'] = ucwords($terbilang->baca($ap->amount)); }
+       $this->output = $data;
        
-       if($ap->approved == 1){ $stts = 'A'; }else{ $stts = 'NA'; }
-       $data['stts'] = $stts;
-
-//       if ($ap->approved != 1){ $this->load->view('rejected', $data); }
-//       else { $this->load->view('apc_invoice', $data); }
-       $this->load->view('transfer_invoice', $data);
-
+       }else { $this->reject_token(); }
+       $this->response('content');
    }
    
-    private function acc_type($val=null)
-    {
-        return $this->account->get_code($val).'-'.$this->account->get_name($val);
-    }
-
+    private function acc_type($val=null){ return $this->account->get_code($val).'-'.$this->account->get_name($val); }
    
-   function print_expediter($po=null)
-   {
-       $this->acl->otentikasi2($this->title);
-
-       $data['h2title'] = 'Print Expediter'.$this->modul['title'];
-
-       $cash = $this->Purchase_model->get_journal_by_no($po)->row();
-
-       $data['pono'] = $po;
-       $data['podate'] = tgleng($cash->dates);
-       $data['vendor'] = $cash->prefix.' '.$cash->name;
-       $data['address'] = $cash->address;
-       $data['shipdate'] = tgleng($cash->shipping_date);
-       $data['city'] = $cash->city;
-       $data['phone'] = $cash->phone1;
-       $data['phone2'] = $cash->phone2;
-       $data['desc'] = $cash->desc;
-       $data['user'] = $this->user->get_username($cash->user);
-       $data['currency'] = $this->currency->get_code($cash->currency);
-       $data['docno'] = $cash->docno;
-
-       $data['cost'] = $cash->costs;
-       $data['p2'] = $cash->p2;
-       $data['p1'] = $cash->p1;
-
-       $data['items'] = $this->Purchase_item_model->get_last_item($po)->result();
-
-       // property display
-       $data['p_name'] = $this->properti['name'];
-       $data['paddress'] = $this->properti['address'];
-       $data['p_phone1'] = $this->properti['phone1'];
-       $data['p_phone2'] = $this->properti['phone2'];
-       $data['p_city'] = ucfirst($this->properti['city']);
-       $data['p_zip'] = $this->properti['zip'];
-       $data['p_npwp'] = $this->properti['npwp'];
-
-       $this->load->view('journal_expediter', $data);
-   }
-
 // ===================================== PRINT ===========================================
 
 // ====================================== REPORT =========================================
 
-    function report_process()
+    function report()
     {
-        $this->acl->otentikasi2($this->title);
-        $data['title'] = $this->properti['name'].' | Report '.ucwords($this->modul['title']);
+        if ($this->acl->otentikasi2($this->title) == TRUE){
+            $cur = $this->input->post('ccurrency');
+            $start = $this->input->post('start');
+            $end = $this->input->post('end');
 
-        $cur = $this->input->post('ccurrency');
-        $period = $this->input->post('reservation');  
-        $start = picker_between_split($period, 0);
-        $end = picker_between_split($period, 1);
+            $data['currency'] = $cur;
+            $data['start'] = tglin($start);
+            $data['end'] = tglin($end);
+            $data['rundate'] = tglin(date('Y-m-d'));
+            $data['log'] = $this->decodedd->log;
 
-        $data['currency'] = $cur;
-        $data['start'] = $start;
-        $data['end'] = $end;
-        $data['rundate'] = tglin(date('Y-m-d'));
-        $data['log'] = $this->session->userdata('log');
+    //        Property Details
+            $data['company'] = $this->properti['name'];
 
-//        Property Details
-        $data['company'] = $this->properti['name'];
-        $data['reports'] = $this->model->report($cur,$start,$end)->result();
-        
-        $this->load->view('transfer_report', $data); 
-        
+            $result = null;
+            foreach ($this->model->report($cur,$start,$end)->result() as $res) {
+               $result[] = array ("id"=>$res->id, "no"=>$res->no, "notes"=>$res->notes, "dates"=>tglin($res->dates), 
+                                    "currency"=>$res->currency, "from"=>$this->get_acc($res->from), "to"=>$this->get_acc($res->to), 
+                                    "posted"=>$res->approved, "amount"=>$res->amount);
+            }
+            $data['result'] = $result;  $this->output = $data;
+        }else { $this->reject_token(); }
+        $this->response('content');
     }
-
 
 // ====================================== REPORT =========================================
     

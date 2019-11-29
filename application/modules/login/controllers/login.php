@@ -1,5 +1,8 @@
 <?php if ( ! defined('BASEPATH')) exit('No direct script access allowed');
 
+require_once APPPATH.'libraries/jwt/JWT.php';
+use \Firebase\JWT\JWT;
+
 class Login extends MX_Controller {
 
 
@@ -17,108 +20,31 @@ class Login extends MX_Controller {
         $this->com = $this->com->get_id('login');
 
         $this->properti = $this->property->get();
+        $this->api = new Api_lib();
+        $this->user = new Admin_lib();
 
-        // Your own constructor code
+        header('Access-Control-Allow-Origin: *');
+        header('Access-Control-Allow-Methods: GET, POST, PATCH, PUT, DELETE, OPTIONS');
+        header('Access-Control-Allow-Headers: Origin, Content-Type, X-Auth-Token'); 
    }
 
    private $date,$time,$log,$login;
-   private $properti,$com;
-
-   function index()
-   {
-        $data['pname'] = $this->properti['name'];
-        $data['logo'] = $this->properti['logo'];
-        $data['form_action'] = site_url('login/login_process');
-
-        $this->load->view('login_view', $data);
-    }
-    
-    function response_json(){
-      
-       $datax = (array)json_decode(file_get_contents('php://input')); 
-
-       $pesan = $datax['pesan'].' berasal dari php';
-        
-       $response = array('success' => false, 'user' => 'sanjaya kirana', 'pesan' => $pesan); 
-       $this->output
-        ->set_status_header(201)
-        ->set_content_type('application/json', 'utf-8')
-        ->set_output(json_encode($response, 128))
-        ->_display();
-        exit;
-       
-   }
-    
-    function curl_function()
-    {
-        $user = 'admins';
-        $pass = 'admin';
-        $nilai = '{ "user":"'.$user.'", "pass": "'.$pass.'"}';
-        
-        $curl = curl_init();
-        $url = 'http://cms.delicaindonesia.com/index.php/login/login_process';
-        
-        curl_setopt_array($curl, array(
-        CURLOPT_URL => $url,
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_ENCODING => "",
-        CURLOPT_MAXREDIRS => 10,
-        CURLOPT_TIMEOUT => 30,
-        CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-        CURLOPT_CUSTOMREQUEST => "POST",
-        CURLOPT_POSTFIELDS => $nilai,
-        CURLOPT_HTTPHEADER => array(
-        'Content-Type: application/json'
-        ),
-      ));
-
-        $response = curl_exec($curl);
-        $err = curl_error($curl);
-//        $data = json_decode($response, true); 
-
-        curl_close($curl);
-        if ($err) { echo $err; }
-        else { echo $response; }
-    }
-    
-    function kirim_email(){
-        
-        $this->load->library('email');
-        
-        $config['protocol'] = 'smtp';
-        $config['smtp_host'] = "mail.sejahtera-sports.com";
-        $config['smtp_user'] = "info@sejahtera-sports.com";
-        $config['smtp_pass'] = "medan2017";
-        $config['mailpath'] = '/usr/sbin/sendmail';
-        $config['charset']  = 'utf-8';
-        $config['wordwrap'] = TRUE;
-        $config['mailtype'] = 'text';
-        
-        $this->email->initialize($config);
-        
-        $this->email->from('info@sejahtera-sports.com', 'SS');
-        $this->email->to('sanjaya.kiran@gmail.com'); 
-//        $this->email->cc('another@another-example.com'); 
-//        $this->email->bcc('them@their-example.com'); 
-
-        $this->email->subject('Email Test');
-        $this->email->message('Testing the email class.');	
-
-        $this->email->send();
-
-        echo $this->email->print_debugger();
-        
-    }
-
+   private $properti,$com,$api,$user;
+   
     // function untuk memeriksa input user dari form sebagai admin
-    function login_process()
+    function index()
     {
-        
         $datax = (array)json_decode(file_get_contents('php://input')); 
 
+        $status = 200;
+        $error = "null";
+        $logid = null;
+        $token = null;
         $username = $datax['user'];
         $password = $datax['pass'];
-
+        
+        if ($username != null && $password != null){
+            
             if ($this->Login_model->check_user($username,$password) == TRUE)
             {
                 $this->date  = date('Y-m-d');
@@ -127,111 +53,100 @@ class Login extends MX_Controller {
                 $role = $this->Login_model->get_role($username);
                 $rules = $this->Login_model->get_rules($role);
                 $branch = $this->Login_model->get_branch($username);
-                $logid = $this->log->max_log();
+                $logid = intval($this->log->max_log()+1);
                 $waktu = tgleng(date('Y-m-d')).' - '.waktuindo().' WIB';
-
-                $this->log->insert($userid, $this->date, $this->time, 'login');
-                $this->login->add($userid, $logid);
-
-                $data = array('username' => $username, 'userid' => $userid, 'role' => $role, 'rules' => $rules, 'log' => $logid, 'login' => TRUE, 'waktu' => $waktu);
-                $this->session->set_userdata($data);
                 
                 // create branch
                 if ($branch){ $this->session->set_userdata('branch', $branch); }
                 
-                $response = array(
-                  'Success' => true,
-		  'User' => $datax['user'],
-                  'Info' => 'Login Success'); 
+                // add JWT
+                $payload['userid'] = $userid;
+                $payload['role'] = $role;
+                $payload['rules'] = $rules;
+                $payload['log'] = $logid;
+                $payload['time'] = $waktu;
+                $payload['branch'] = $branch;
+                $token = JWT::encode($payload, 'dswip');
+                
+                $this->log->insert($userid, $this->date, $this->time, 'login');
+                $this->login->add($userid, $logid, $token);
             }
-            else
-            {
-                $response = array(
-                'Success' => false,
-                'Info' => 'Invalid Login..!!');
-            }
-            
-        $this->output
-        ->set_status_header(201)
-        ->set_content_type('application/json', 'utf-8')
-        ->set_output(json_encode($response))
-        ->_display();
-        exit;
+            else{ $status = 401; $error = 'Invalid Login'; }
+       }else{ $status = 401; $error = 'Invalid Format'; }   
+       
+       $output = array('token' => $token,'error' => $error, 'log' => $logid); 
+       $this->api->response($output,$status); 
     }
 
     // function untuk logout
-    function process_logout()
-    {
-        $userid = $this->Login_model->get_userid($this->session->userdata('username'));
-        $this->date  = date('Y-m-d');
-        $this->time  = waktuindo();
-        
-        $this->log->insert($userid, $this->date, $this->time, 'logout');
-        $this->session->sess_destroy();
-        redirect('login');
+    function logout()
+    {             
+        if ($this->api->otentikasi() == TRUE){
+            
+          $status = 200;
+          $error = "null";
+          $decoded = $this->api->otentikasi('decoded');
+          
+          $this->login->logout($decoded->userid);
+          
+          $this->date  = date('Y-m-d');
+          $this->time  = waktuindo();
+          $this->log->insert($decoded->userid, $this->date, $this->time, 'logout');
+            
+        }else{ $response = 'Invalid Token or Expired..!'; $status = 400; }
+        $this->api->response(array('error' => @$error), $status);
     }
 
-    function forgot()
-    {
-	$data['form_action'] = site_url('login/send_password');
-        $data['pname'] = $this->properti['name'];
-        $data['logo'] = $this->properti['logo'];
-        $this->load->view('forgot_view' ,$data);
-    }
-
-    function send_password()
-    {
-        $datax = (array)json_decode(file_get_contents('php://input')); 
-
-        $username = $datax['user'];
+    function decode_token(){
         
-        if ($this->Login_model->check_username($username) == FALSE)
-        {
-           $this->session->set_flashdata('message', 'Username not registered ..!!');
-
-           $response = array(
-              'Success' => false,
-              'User' => $username,
-              'Info' => 'Username / Email not registered...!'); 
-        }
-        else
-        {  
-            try
-            {
-              if ($this->send_email($username) == TRUE){
-                  $response = array(
-                    'Success' => true,
-                    'User' => $username,
-                    'Info' => 'Password has been sent to your email..!');  
-              }else{
-                  $response = array(
-               'Success' => false,
-               'User' => $username,
-               'Info' => 'Password Submission Process Failed..!');  
-              }
-              
-              
-            }
-            catch(Exception $e) {  
-//                echo 'Pesan Error: ' .$e->getMessage();  
-                $this->log->insert(0, date('Y-m-d'), waktuindo(), 'error', $this->com, $e->getMessage());
-                $response = array(
-               'Success' => false,
-               'User' => $username,
-               'Info' => $e->getMessage());    
-            } 
-        }
-        
-        $this->output
-        ->set_status_header(201)
-        ->set_content_type('application/json', 'utf-8')
-        ->set_output(json_encode($response, JSON_PRETTY_PRINT))
-        ->_display();
-        exit;
+        $status = 200;
+        $response = null;
+        if ($this->api->otentikasi() == TRUE){
+            
+            $decoded = $this->api->otentikasi('decoded');
+            $response = array('userid' => $decoded->userid, 'username' => $this->user->get_username($decoded->userid), 'role' => $decoded->role, 'rules' => $decoded->rules, 'log' => $decoded->log, 'time' => $decoded->time, 'branch' => $decoded->branch);
+//            print_r($decoded->userid);
+        }else{ $response = 'Invalid Token or Expired..!'; $status = 401; }
+        $this->api->response(array('content' => $response), $status);
     }
     
-    // ajax function
-    function cek_login(){ if ($this->session->userdata('username')){ echo 'true'; }else{ echo 'false'; } }
+    function forgot()
+    {
+        $datax = (array)json_decode(file_get_contents('php://input')); 
+        $status = 200;
+        $error = "null";
+
+        $username = $datax['user'];
+        if ($username != null){
+            
+            if ($this->Login_model->check_username($username) == FALSE)
+            {
+               $this->session->set_flashdata('message', 'Username not registered ..!!');
+               $error = 'Username / Email not registered...!'; $status = 401;
+            }
+            else
+            {  
+                try
+                {
+                  if ($this->send_email($username) == TRUE){ $error = 'Password has been sent to your email..!';
+                  }else{ $error = 'Password Submission Process Failed..!'; $status = 401;}
+                }
+                catch(Exception $e) {  
+                    $this->log->insert(0, date('Y-m-d'), waktuindo(), 'error', $this->com, $e->getMessage());
+                    $error = $e->getMessage(); $status = 404;
+                } 
+            } 
+        }else{ $error = 'Invalid Format'; $status = 400; }
+        
+        $output = array('error' => $error); 
+        $this->api->response($output,$status); 
+    }
+    
+    // ajax function not neccesaary when use postman
+    function cek_login(){
+//        if ($this->session->userdata('username')){ echo 'true'; }else{ echo 'false'; } 
+      if ($this->acl->otentikasi1('main','ajax') == FALSE){ echo 'false'; }else{ echo 'true'; }    
+    }
     
     private function send_email($username)
     {
@@ -251,12 +166,9 @@ DO NOT REPLY TO THIS MESSAGE. For further help or to contact support, please ema
         $params = array($this->properti['email'], $this->properti['name'], $email, 'Password Recovery', $mess, 'html');
         $se = $this->load->library('send_email',$params);
 
-        if ( $se->send_process() == TRUE ){ return TRUE; }
-        else { return FALSE;}
+        if ( $se->send_process() == TRUE ){ return TRUE; }else { return FALSE;}
     }
     
-        // ====================================== CLOSING ======================================
-    function reset_process(){ }
 
 }
 

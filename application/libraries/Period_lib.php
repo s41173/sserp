@@ -31,6 +31,21 @@ class Period_lib extends Main_model {
         $this->db->where('id', $uid);
         $this->db->update($this->tableName, $val);
     }
+    
+    function next_period()
+    {
+        $ps = new Period();
+        $ps = $ps->get();
+        
+        $month = $ps->month;
+        $year = $ps->year;
+        
+        if ($month == 12){$nmonth = 1;}else { $nmonth = $month +1; }
+        if ($month == 12){ $nyear = $year+1; }else{ $nyear = $year; }
+        $res[0] = $nmonth; $res[1] = $nyear;
+        return $res;
+    }
+    
 }
 
 /* End of file Property.php */

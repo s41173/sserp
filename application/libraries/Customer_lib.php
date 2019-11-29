@@ -19,7 +19,6 @@ class Customer_lib extends Main_model {
             $val = $this->db->get($this->tableName)->row();
             if ($val){ return ucfirst($val->first_name.' '.$val->last_name); }
         }
-        else if($id == 0){ return 'Top'; }
         else { return ''; }
     }
     

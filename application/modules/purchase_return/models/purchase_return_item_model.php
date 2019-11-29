@@ -38,18 +38,18 @@ class Purchase_return_item_model extends CI_Model
     function delete($uid)
     {
         $this->db->where('id', $uid);
-        $this->db->delete($this->table); // perintah untuk delete data dari db
+        return $this->db->delete($this->table); // perintah untuk delete data dari db
     }
 
     function delete_po($uid)
     {
         $this->db->where('purchase_return_id', $uid);
-        $this->db->delete($this->table); // perintah untuk delete data dari db
+        return $this->db->delete($this->table); // perintah untuk delete data dari db
     }
     
     function add($users)
     {
-        $this->db->insert($this->table, $users);
+       return $this->db->insert($this->table, $users);
     }
 
     function valid_item($product,$po)
@@ -60,6 +60,12 @@ class Purchase_return_item_model extends CI_Model
         if ($query > 0){ return FALSE;} else { return TRUE;}
     }
     
+    function valid_add_trans($pid)
+    {
+        if (!$pid){ return FALSE; }
+        $trans = $this->get_by_id($pid)->row();
+        if (!$trans){ return FALSE; }else{ return TRUE; }
+    }
 
 }
 

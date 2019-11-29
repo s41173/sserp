@@ -15,7 +15,7 @@ class Components {
     {
         $this->ci->db->where('name', $name);
         $res = $this->ci->db->get($this->tableName)->row();
-        $val = array('id' => $res->id, 'name' => $res->name, 'title' => $res->title, 'limit' => $res->limit, 'publish' => $res->publish,
+        $val = array('id' => $res->id, 'name' => $res->name, 'title' => $res->title, 'table' => $res->table_name, 'limit' => $res->limit, 'publish' => $res->publish,
                      'status' => $res->status,'aktif' => $res->aktif, 'role' => $res->role, 'icon' => $res->icon, 'order' => $res->order
                     );
         return $val;
@@ -28,11 +28,32 @@ class Components {
         if ($res){ return $res->name; }
     }
     
-     public function get_id($name = null)
+    public function get_title($name = null)
+    {
+        $this->ci->db->where('name', $name);
+        $res = $this->ci->db->get($this->tableName)->row();
+        if ($res){ return $res->title; }
+    }
+    
+    public function get_id($name = null)
     {
         $this->ci->db->where('name', $name);
         $res = $this->ci->db->get($this->tableName)->row();
         if ($res){ return $res->id; }
+    }
+    
+    public function valid($name = null)
+    {
+        $this->ci->db->where('name', $name);
+        $res = $this->ci->db->get($this->tableName)->num_rows();
+        if ($res>0){ return TRUE; }else{ return FALSE; }
+    }
+    
+    public function get_table($id = null)
+    {
+        $this->ci->db->where('id', $id);
+        $res = $this->ci->db->get($this->tableName)->row();
+        if ($res){ return $res->table_name; }
     }
 
     function combo()

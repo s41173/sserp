@@ -6,10 +6,12 @@ class Account_lib extends Main_model {
     {
         $this->deleted = $deleted;
         $this->tableName = 'accounts';
+        $this->cl = new Classification_lib();
     }
     
     protected $field = array('id', 'classification_id', 'currency', 'code', 'name', 'alias', 'acc_no', 'bank', 
                              'status', 'default', 'bank_stts', 'created', 'updated', 'deleted');
+    private $cl;
     
     function valid_coa($coa){
         
@@ -116,9 +118,7 @@ class Account_lib extends Main_model {
 //        $this->db->where_in('classification_id', $val);
         $this->db->where('status', 1);
         $this->db->where('bank_stts', 1);
-        $val = $this->db->get($this->tableName)->result();
-        foreach($val as $row){$data['options'][$row->id] = $row->code.' : '.$row->name;}
-        return $data;
+        return $this->db->get($this->tableName)->result();
     }
 
     function combo_all()
@@ -129,6 +129,13 @@ class Account_lib extends Main_model {
         $data['options'][''] = '-- All --';
         foreach($val as $row){$data['options'][$row->code] = $row->name;}
         return $data;
+    }
+    
+    function get_acc_type($acc)
+    {
+       $cla = $this->get_classi($acc);
+       $type = $this->cl->get_type($cla);
+       return $type;
     }
 
 

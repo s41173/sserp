@@ -9,82 +9,55 @@ class Log extends MX_Controller
         $this->load->model('Log_model', 'model', TRUE);
 
         $this->properti = $this->property->get();
-        $this->acl->otentikasi();
 
         $this->modul = $this->components->get(strtolower(get_class($this)));
         $this->title = strtolower(get_class($this));
         $this->user = new Admin_lib();
         $this->com = new Components();
+        
+        $this->api = new Api_lib();
+        $this->acl = new Acl();
+        $this->decoded = $this->api->otentikasi('decoded');
+        
+        header('Access-Control-Allow-Origin: *');
+        header('Access-Control-Allow-Methods: GET, POST, PATCH, PUT, DELETE, OPTIONS');
+        header('Access-Control-Allow-Headers: Origin, Content-Type, X-Auth-Token'); 
     }
 
-    private $properti, $modul, $title;
+    private $properti, $modul, $title, $api, $acl, $decoded;
     private $user,$com;
+    protected $error = null;
+    protected $status = 200;
+    protected $output = null;
 
+     
     function index()
     {
-       $this->get_last();
-    }
-     
-    public function getdatatable($search=null)
-    {
-        if(!$search){ $result = $this->model->get_last_user($this->modul['limit'])->result(); }
-	
-        $output = null;
-        if ($result){
-            
+       if ($this->acl->otentikasi_admin() == TRUE){ 
+        $datax = (array)json_decode(file_get_contents('php://input')); 
+        if (isset($datax['limit'])){ $this->limitx = $datax['limit']; }else{ $this->limitx = $this->modul['limit']; }
+        if (isset($datax['offset'])){ $this->offsetx = $datax['offset']; }
+        
+        $logid = null; $user = null; $activity = null; $modul = null; $date = null;
+        if (isset($datax['logid'])){ $logid = $datax['logid']; }
+        if (isset($datax['user'])){ $user = $datax['user']; }
+        if (isset($datax['activity'])){ $activity = $datax['activity']; }
+        if (isset($datax['modul'])){ $modul = $datax['modul']; }
+        if (isset($datax['date'])){ $date = $datax['date']; }
+        
+        if ($logid != null){ $result = $this->model->search($logid)->result(); }
+        else{ $result = $this->model->search($logid,$user,$activity,$modul,$date, $this->limitx, $this->offsetx)->result(); }
+        
          foreach($result as $res)
 	 {
-	   $output[] = array ($res->id, $this->user->get_username($res->userid), tglin($res->date), $res->time, $this->com->get_name($res->component_id), $res->activity,
-                              $res->created, $res->updated, $res->deleted
+            $this->output[] = array ("id"=>$res->id, "user"=>$this->user->get_username($res->userid), "date"=>tglin($res->date), 
+                                     "time"=>$res->time, "component"=>$this->com->get_name($res->component_id), "activity"=>$res->activity,
+                                     "field"=>$res->field, "desc"=>$res->description, "pre_val"=>$res->prev_val,
+                                     "created"=>$res->created, "updated"=>$res->updated, "deleted"=>$res->deleted
                              );
 	 } 
-         
-        $this->output
-         ->set_status_header(200)
-         ->set_content_type('application/json', 'utf-8')
-         ->set_output(json_encode($output))
-         ->_display();
-         exit;  
-        }
-    }
-
-    function get_last()
-    {
-        $this->acl->otentikasi1($this->title);
-
-        $data['title'] = $this->properti['name'].' | Administrator  '.ucwords($this->modul['title']);
-        $data['h2title'] = $this->modul['title'];
-        $data['main_view'] = 'log_view';
-	$data['form_action'] = site_url($this->title.'/add_process');
-        $data['form_action_update'] = site_url($this->title.'/update_process');
-        $data['form_action_report'] = site_url($this->title.'/report_process');
-        $data['form_action_del'] = site_url($this->title.'/delete_all');
-        $data['link'] = array('link_back' => anchor('main/','Back', array('class' => 'btn btn-danger')));
-
-        $data['user'] = $this->user->combo_all();
-        $data['modul'] = $this->com->combo_id_all();
-	// ---------------------------------------- //
- 
-        $config['first_tag_open'] = $config['last_tag_open']= $config['next_tag_open']= $config['prev_tag_open'] = $config['num_tag_open'] = '<li>';
-        $config['first_tag_close'] = $config['last_tag_close']= $config['next_tag_close']= $config['prev_tag_close'] = $config['num_tag_close'] = '</li>';
-
-        $config['cur_tag_open'] = "<li><span><b>";
-        $config['cur_tag_close'] = "</b></span></li>";
-
-        // library HTML table untuk membuat template table class zebra
-        $tmpl = array('table_open' => '<table id="datatable-buttons" class="table table-striped table-bordered">');
-
-        $this->table->set_template($tmpl);
-        $this->table->set_empty("&nbsp;");
-
-        //Set heading untuk table
-        $this->table->set_heading('#','No', 'Username', 'Date', 'Time', 'Component', 'Activity', 'Action');
-
-        $data['table'] = $this->table->generate();
-        $data['source'] = site_url($this->title.'/getdatatable');
-            
-        // Load absen view dengan melewatkan var $data sbgai parameter
-	$this->load->view('template', $data);
+       }else{ $this->reject_token(); }
+       $this->response('content');
     }
     
     function delete_all()
@@ -118,68 +91,26 @@ class Log extends MX_Controller
 
     function delete($uid)
     {
-        if ($this->acl->otentikasi_admin($this->title,'ajax') == TRUE){
-        $this->model->delete($uid);
-        $this->session->set_flashdata('message', "1 $this->title successfully removed..!");
-           
-        echo "true|1 $this->title successfully removed..!";
-       }
-       else { echo "error|Sorry, you do not have the right to edit $this->title component..!"; }
-    }
-
-    function add_process()
-    {
-        $this->acl->otentikasi2($this->title);
-
-        $data['title'] = $this->properti['name'].' | Administrator  '.ucwords($this->modul['title']);
-        $data['h2title'] = $this->modul['title'];
-        $data['main_view'] = 'admin_view';
-	$data['form_action'] = site_url($this->title.'/add_process');
-	$data['link'] = array('link_back' => anchor('admin/','<span>back</span>', array('class' => 'back')));
-
-	// Form validation
-        $this->form_validation->set_rules('tusername', 'UserName', 'required|callback_valid_username');
-	$this->form_validation->set_rules('tpassword', 'Password', 'required');
-        $this->form_validation->set_rules('tname', 'Name', 'required');
-        $this->form_validation->set_rules('taddress', 'Address', 'required');
-        $this->form_validation->set_rules('tphone', 'Phone', 'required|numeric');
-        $this->form_validation->set_rules('ccity', 'City', 'required');
-        $this->form_validation->set_rules('tmail', 'Email', 'required|valid_email');
-        $this->form_validation->set_rules('crole', 'Role', 'required');
-        $this->form_validation->set_rules('tid', 'Yahoo Id', '');
-        $this->form_validation->set_rules('rstatus', 'Status', 'required');
-
-        if ($this->form_validation->run($this) == TRUE)
-        {//
-            $users = array('username' => $this->input->post('tusername'),'password' => $this->input->post('tpassword'),'name' => $this->input->post('tname'),
-                           'address' => $this->input->post('taddress'), 'phone1' => $this->input->post('tphone'), 'city' => $this->input->post('ccity'),
-                           'email' => $this->input->post('tmail'), 'yahooid' => setnull($this->input->post('tid')), 'role' => $this->input->post('crole'), 
-                           'status' => $this->input->post('rstatus'), 'created' => date('Y-m-d H:i:s'));
-
-            $this->model->add($users);
-            $this->session->set_flashdata('message', "One $this->title data successfully saved!");
-            echo 'true|Data successfully saved..!';
-        }
-        else
-        {
-//            $this->load->view('template', $data);
-//            echo validation_errors();
-            echo 'invalid|'.validation_errors();
-        }
-
+       if ($this->acl->otentikasi_admin() == TRUE && $this->model->valid_add_trans($uid, $this->title) == TRUE){ 
+         if ($this->model->delete($uid) == true){ $this->error = "$this->title successfully removed..!"; }else{ $this->reject('Failed to deleted');}         
+       }else{ $this->reject_token(); }
+       $this->response();
     }
 
     // Fungsi update untuk menset texfield dengan nilai dari database
-    function update($uid=null)
+    function get($uid=null)
     {        
-        $admin = $this->model->get_user_by_id($uid)->row();
-               
-	$this->session->set_userdata('langid', $admin->id);
-        
-        echo $uid.'|'.$admin->username.'|'.$admin->name.'|'.$admin->address.'|'.$admin->phone1.
-             '|'.$admin->city.'|'.$admin->email.'|'.$admin->role.'|'.$admin->status;
+       if ($this->acl->otentikasi_admin() == TRUE && $this->model->valid_add_trans($uid, $this->title) == TRUE){  
+        $res = $this->model->get_by_id($uid)->row();
+        $this->output = array ("id"=>$res->id, "user"=>$this->user->get_username($res->userid), "date"=>tglin($res->date), 
+                                     "time"=>$res->time, "component"=>$this->com->get_name($res->component_id), "activity"=>$res->activity,
+                                     "field"=>$res->field, "desc"=>$res->description, "pre_val"=>$res->prev_val,
+                                     "created"=>$res->created, "updated"=>$res->updated, "deleted"=>$res->deleted
+                             );   
+	
+        }else{ $this->reject_token(); }
+       $this->response('content');
     }
-
 
     function valid_username()
     {
@@ -203,82 +134,38 @@ class Log extends MX_Controller
         }
         else{ return TRUE; }
     }
-
-    // Fungsi update untuk mengupdate db
-    function update_process()
-    {
-        $this->acl->otentikasi2($this->title);
-
-        $data['title'] = $this->properti['name'].' | Administrator  '.ucwords($this->modul['title']);
-        $data['h2title'] = $this->modul['title'];
-        $data['main_view'] = 'admin_update';
-	$data['form_action'] = site_url($this->title.'/update_process');
-	$data['link'] = array('link_back' => anchor('admin/','<span>back</span>', array('class' => 'back')));
-
-	// Form validation
-        $this->form_validation->set_rules('tusername', 'UserName', 'required|callback_validation_username');
-	$this->form_validation->set_rules('tpassword', 'Password', '');
-        $this->form_validation->set_rules('tname', 'Name', 'required');
-        $this->form_validation->set_rules('taddress', 'Address', 'required');
-        $this->form_validation->set_rules('tphone', 'Phone', 'required|numeric');
-        $this->form_validation->set_rules('ccity', 'City', 'required');
-        $this->form_validation->set_rules('tmail', 'Email', 'required|valid_email');
-        $this->form_validation->set_rules('crole', 'Role', 'required');
-        $this->form_validation->set_rules('rstatus', 'Status', 'required');
-
-        if ($this->form_validation->run($this) == TRUE)
-        {
-            if ($this->input->post('tpassword')){
-            
-              $users = array('username' => $this->input->post('tusername'),'password' => $this->input->post('tpassword'),'name' => $this->input->post('tname'),
-                           'address' => $this->input->post('taddress'), 'phone1' => $this->input->post('tphone'), 'city' => $this->input->post('ccity'),
-                           'email' => $this->input->post('tmail'), 'yahooid' => setnull($this->input->post('tid')), 'role' => $this->input->post('crole'), 
-                           'status' => $this->input->post('rstatus'));     
-            }
-            else {
-              $users = array('username' => $this->input->post('tusername'),'name' => $this->input->post('tname'),
-                           'address' => $this->input->post('taddress'), 'phone1' => $this->input->post('tphone'), 'city' => $this->input->post('ccity'),
-                           'email' => $this->input->post('tmail'), 'yahooid' => setnull($this->input->post('tid')), 'role' => $this->input->post('crole'), 
-                           'status' => $this->input->post('rstatus'));
-            }
-
-	    $this->model->update($this->session->userdata('langid'), $users);
-            $this->session->set_flashdata('message', "One $this->title has successfully updated!");
-          //  $this->session->unset_userdata('langid');
-            echo "true|One $this->title has successfully updated..!";
-
-        }
-        else
-        {
-            echo 'invalid|'.validation_errors();
-        }
-    }
     
-    function report_process()
+    function report()
     {
-        $this->acl->otentikasi2($this->title);
+       if ($this->acl->otentikasi_admin() == TRUE){  
         $data['title'] = $this->properti['name'].' | Report '.ucwords($this->modul['title']);
 
         $user  = $this->input->post('cuser');
         $modul = $this->input->post('ccom');
-        
-        $period = $this->input->post('reservation');  
-        $start = picker_between_split($period, 0);
-        $end = picker_between_split($period, 1);
+        $start = $this->input->post('start');
+        $end = $this->input->post('end');
 
-        $data['start'] = $start;
-        $data['end'] = $end;
+        $data['start'] = tglin($start);
+        $data['end'] = tglin($end);
         $data['user'] = $this->user->get_username($user);
         $data['modul'] = $this->com->get_name($modul);
         $data['rundate'] = tglin(date('Y-m-d'));
-        $data['log'] = $this->session->userdata('log');
+        $data['log'] = $this->decoded->log;
 
 //        Property Details
         $data['company'] = $this->properti['name'];
-        $data['reports'] = $this->model->report($user,$modul,$start,$end)->result();
-
-        if ($this->input->post('ctype') == 0){ $this->load->view('log_report', $data); }
-        else { $this->load->view('log_pivot', $data); } 
+        $result = null;
+        foreach ($this->model->report($user,$modul,$start,$end)->result() as $res) {
+            $result[] = array ("id"=>$res->id, "user"=>$this->user->get_username($res->userid), "date"=>tglin($res->date), 
+                                     "time"=>$res->time, "component"=>$this->com->get_name($res->component_id), "activity"=>$res->activity,
+                                     "field"=>$res->field, "desc"=>$res->description, "pre_val"=>$res->prev_val,
+                                     "created"=>$res->created, "updated"=>$res->updated, "deleted"=>$res->deleted
+                             );   
+        }
+        $data['result'] = $result;
+        $this->output = $data;
+       }else{ $this->reject_token(); }
+       $this->response('content');
     }
     
             

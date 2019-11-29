@@ -5,12 +5,13 @@ class Controls_model extends Custom_Model
     protected $logs;
     
     function __construct()
-    {
+    {   
         parent::__construct();
         $this->logs = new Log_lib();
         $this->com = new Components();
+        $this->tableName = $this->com->get_table($this->com->get_id('controls'));
         $this->com = $this->com->get_id('controls');
-        $this->tableName = 'controls';
+        $this->field = $this->db->list_fields($this->tableName);
     }
     
     protected $field = array('id', 'no', 'desc', 'account_id', 'modul', 'status');
